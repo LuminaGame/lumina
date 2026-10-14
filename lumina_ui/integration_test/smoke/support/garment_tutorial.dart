@@ -28,6 +28,7 @@ class GarmentTutorialSetup {
     required this.blueprintPath,
     required this.slotComponentId,
     required this.garmentName,
+    this.slotsToClear = const {},
   });
 
   final String sourceFile, sourceSearch, bodyFile, bodySearch;
@@ -35,6 +36,10 @@ class GarmentTutorialSetup {
 
   /// The garment in the captions (Turkish), e.g. "kırmızı elbise".
   final String garmentName;
+
+  /// Slot components emptied after the garment is in (component id →
+  /// caption), e.g. trousers a dress should cover; one step each.
+  final Map<String, String> slotsToClear;
 }
 
 /// The steps the tutorial shows (for the caption counter).
@@ -209,12 +214,23 @@ Future<void> runGarmentTutorial(
   await tutor.click(find.text('3D Viewport'));
   final garmentFile = created.relativePath.split('/').last;
   await pick('bp_asset_${s.slotComponentId}_skeletalMeshAsset', 'bp_asset_skeletalMeshAsset', garmentFile, garmentFile.split('.').first);
+  for (final e in s.slotsToClear.entries) {
+    await tutor.step(e.value);
+    await tutor.click(find.descendant(of: find.byType(BlueprintComponentTree), matching: find.byKey(ValueKey('component_row_${e.key}'))));
+    final picker = find.byKey(ValueKey('bp_asset_${e.key}_skeletalMeshAsset'));
+    final r = tester.getRect(picker);
+    await tutor.clickAt(Offset(r.left + r.width * 0.4, r.center.dy));
+    await frames(8);
+    await tutor.click(find.byKey(const ValueKey('bp_asset_skeletalMeshAsset_clear')));
+  }
   await tutor.step('Giysi gövdeye uydurulur ve altındaki gövde maskelenir — Blueprint viewport\'ta görünür');
   await until(() => bp.preview.actor != null);
   var ready = false;
   LuminaCharacterSlots.of(bp.preview.actor!).ready.then((_) => ready = true);
   await until(() => ready, maxFrames: 2400);
-  // F frames the character; then a look from both sides.
+  // F frames the character (the viewport takes the keys once pressed);
+  // then a look from both sides.
+  await tester.tapAt(rect().center, buttons: kSecondaryButton, kind: PointerDeviceKind.mouse);
   await tester.sendKeyEvent(LogicalKeyboardKey.keyF);
   await tutor.hold(const Duration(seconds: 2));
   await shot('05 in the blueprint slot');
