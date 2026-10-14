@@ -53,7 +53,7 @@ Base class for all entities/objects that can be spawned or placed in a [LuminaWo
 | `onRegister` | `void onRegister(LuminaWorld world)` | Called when spawned or registered in a world. |
 | `onInitialize` | `void onInitialize()` | Called after registration to initialize components. |
 | `onBeginPlay` | `void onBeginPlay()` | Called when play begins. |
-| `onTick` | `void onTick(double deltaTime)` | Called on every frame tick update. |
+| `onTick` | `void onTick(double deltaTime)` | Called on every frame tick update: ticks the components in order, except that a component another one must follow (`LuminaActorComponent.ticksBefore`, e.g. a skeletal mesh after its Animation Blueprint, even when the mesh is the root) waits for it, so the pose chosen in a frame is drawn in that frame. |
 | `onRenderPrep` | `void onRenderPrep(LuminaWorld world)` | Called during post-physics render prep phase. |
 | `onUnregister` | `void onUnregister()` | Called when actor is destroyed or level unloads. |
 | `isDestroyed` | `bool get isDestroyed` | True if this actor has been removed from the world or is pending kill. |

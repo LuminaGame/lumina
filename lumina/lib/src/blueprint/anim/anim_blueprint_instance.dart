@@ -294,6 +294,11 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
     return true;
   }
 
+  /// Before its mesh, wherever the mesh is in the actor (its root too): the
+  /// pose chosen in a frame is the pose drawn in that frame.
+  @override
+  LuminaActorComponent? get ticksBefore => mesh;
+
   @override
   void onTick(double deltaTime) {
     super.onTick(deltaTime);

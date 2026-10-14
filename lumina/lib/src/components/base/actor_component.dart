@@ -38,6 +38,12 @@ abstract class LuminaActorComponent extends LuminaObject with LuminaSaveable {
   /// Called during the world tick update step.
   void onTick(double deltaTime) {}
 
+  /// A component of the same actor that ticks after this one in every frame,
+  /// even when it comes first in the actor (an Animation Blueprint picks the
+  /// pose its mesh, even the actor's root, then applies in the same frame);
+  /// null when the order does not matter.
+  LuminaActorComponent? get ticksBefore => null;
+
   /// Called during the post-physics render prep phase to sync transforms and native handles.
   void onRenderPrep(LuminaWorld world) {}
 

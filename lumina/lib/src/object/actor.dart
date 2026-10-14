@@ -383,11 +383,47 @@ class LuminaActor extends LuminaObject with LuminaSaveable {
     }
   }
 
+  /// Ticks the components in order, except that a component another one
+  /// must follow ([LuminaActorComponent.ticksBefore]: a mesh after its
+  /// Animation Blueprint) waits until that one has ticked.
+  void _tickComponents(double deltaTime) {
+    Map<LuminaActorComponent, LuminaActorComponent>? after;
+    for (final comp in _components) {
+      final target = comp.ticksBefore;
+      if (target != null && !identical(target, comp) && _components.contains(target)) (after ??= {})[target] = comp;
+    }
+    if (after == null) {
+      for (final comp in _components) {
+        comp.onTick(deltaTime);
+      }
+      return;
+    }
+    final ticked = <LuminaActorComponent>{};
+    final waiting = <LuminaActorComponent>[];
+    for (final comp in _components) {
+      final first = after[comp];
+      if (first != null && !ticked.contains(first)) {
+        waiting.add(comp);
+        continue;
+      }
+      comp.onTick(deltaTime);
+      ticked.add(comp);
+      for (final w in waiting.toList()) {
+        if (ticked.contains(after[w])) {
+          waiting.remove(w);
+          w.onTick(deltaTime);
+          ticked.add(w);
+        }
+      }
+    }
+    for (final w in waiting) {
+      w.onTick(deltaTime);
+    }
+  }
+
   /// Called on every frame tick update.
   void onTick(double deltaTime) {
-    for (final comp in _components) {
-      comp.onTick(deltaTime);
-    }
+    _tickComponents(deltaTime);
     if (_lifeSpan > 0.0) {
       _lifeSpan -= deltaTime;
       if (_lifeSpan <= 1e-9) {
