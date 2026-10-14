@@ -281,7 +281,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                     if (event is KeyDownEvent || event is KeyRepeatEvent) {
                       if (_handleGizmoKey(event)) return KeyEventResult.handled;
                       if (event.logicalKey == LogicalKeyboardKey.keyF) {
-                        _resetCamera();
+                        _frameOrReset();
                         return KeyEventResult.handled;
                       }
                       final label = event.logicalKey.keyLabel.toLowerCase();

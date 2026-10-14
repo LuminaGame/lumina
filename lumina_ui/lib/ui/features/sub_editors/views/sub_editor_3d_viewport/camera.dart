@@ -186,6 +186,25 @@ mixin _SubEditor3DViewportCamera on _SubEditor3DViewportStateBase {
     });
   }
 
+  /// F: centres the orbit on what [SubEditor3DViewport.onFrame] gives (the
+  /// selection, or everything) at its fitting distance, keeping the angle;
+  /// without it, the view resets.
+  void _frameOrReset() {
+    final frame = widget.onFrame?.call();
+    if (frame == null) {
+      _resetCamera();
+      return;
+    }
+    setState(() {
+      _targetCenterX = frame.target.x;
+      _targetCenterY = frame.target.y;
+      _targetCenterZ = frame.target.z;
+      _cameraPan = Offset.zero;
+      _cameraDistance = frame.distance;
+      _updateNativeCamera();
+    });
+  }
+
   void _resetCamera() {
     setState(() {
       final isNative = _nativeScale;

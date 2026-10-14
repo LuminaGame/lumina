@@ -479,6 +479,7 @@ Every world the viewport hands over gets a fresh actor (switching tabs remounts 
 | `centerOfMassOf` | `static Vector3 centerOfMassOf(LuminaPrimitivePhysics component)` | Where [component]'s body turns about, world space (runtime, cm): its shapes' centroid moved by its (or its mesh's) centre-of-mass offset. |
 | `overlays` | `List<SubEditorLineSet> get overlays` | The line overlays, in runtime space (Y up, cm). |
 | `framing` | `({Vector3 target, double distance}) get framing` | Where the viewport's orbit camera starts (runtime space, cm): centred on the actor's body — its capsule and meshes, framing a Blueprint by its primitives — from twice the distance that fits them in the 45° view, which leaves the boom and the camera behind it in frame. |
+| `frameOf` | `({Vector3 target, double distance}) frameOf(String? id)` | What F frames in the 3D Viewport: component [id] (a mesh by its drawn bounds, skinned and fitted meshes included; another component by a 60 cm sphere round it) or, with none selected, the whole Blueprint, at the distance that fits it in the 45° view with a margin. |
 
 ## `lib/ui/features/sub_editors/view_models/blueprint_enum_view_model.dart`
 

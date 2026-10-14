@@ -109,6 +109,8 @@ mixin _BlueprintSubEditorViewportGizmo on _BlueprintSubEditorStateBase {
       initialCameraYaw: 145.0,
       initialCameraDistance: framing.distance,
       initialCameraTarget: framing.target,
+      // F: the selected component, or the whole Blueprint.
+      onFrame: () => preview.frameOf(_viewModel.selectedComponentId),
       gridExtent: 1000.0,
       gridStep: 50.0,
       overlayLines: preview.overlays,

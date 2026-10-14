@@ -149,6 +149,10 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
         target: _yUpTarget(),
       );
 
+  /// The orbit camera's target (runtime space) and distance now.
+  @visibleForTesting
+  ({Vector3 target, double distance}) get cameraForTest => (target: _yUpTarget(), distance: _cameraDistance);
+
   /// The gizmo handle under the pointer, or null.
   @visibleForTesting
   String? get hoveredGizmoHandleForTest => _gizmoHover;

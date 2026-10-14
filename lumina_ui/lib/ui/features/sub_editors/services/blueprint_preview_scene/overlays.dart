@@ -86,6 +86,30 @@ mixin _BlueprintPreviewSceneOverlays on _BlueprintPreviewSceneState {
     return out;
   }
 
+  /// What F frames (runtime space, cm): component [id] — a mesh by its
+  /// drawn bounds (a skinned or fitted mesh too), any other component by a
+  /// 60 cm sphere round its location — or, without one, the whole Blueprint
+  /// ([framing]'s box); at the distance that fits it in the 45° view with a
+  /// margin.
+  ({Vector3 target, double distance}) frameOf(String? id) {
+    final c = id == null ? null : _built[id];
+    if (c is LuminaStaticMeshComponent && c.localBounds != null) {
+      final points = _bounds(c);
+      final lo = Vector3.copy(points.first), hi = Vector3.copy(points.first);
+      for (final p in points) {
+        Vector3.min(lo, p, lo);
+        Vector3.max(hi, p, hi);
+      }
+      final radius = math.max((hi - lo).length / 2, 10.0);
+      return (target: (lo + hi) * 0.5, distance: radius / math.sin(22.5 * math.pi / 180.0) * 1.15);
+    }
+    if (c is LuminaSceneComponent) {
+      return (target: c.worldLocation, distance: 60.0 / math.sin(22.5 * math.pi / 180.0) * 1.15);
+    }
+    final whole = framing;
+    return (target: whole.target, distance: whole.distance / 2.0 * 1.15);
+  }
+
   /// Where the viewport's orbit camera starts (runtime space, cm): centred
   /// on the actor's body — its capsule and meshes, framing a Blueprint by
   /// its primitives — from twice the distance that fits them in

@@ -128,6 +128,10 @@ class SubEditor3DViewport extends StatefulWidget {
   /// Blueprint preview frames the character's torso rather than its feet.
   final Vector3? initialCameraTarget;
 
+  /// What F frames (runtime space, world units): the selection, or the
+  /// whole scene without one; null frames nothing and F resets the view.
+  final ({Vector3 target, double distance})? Function()? onFrame;
+
   /// Replaces the bottom stats strip (used by previews whose content is not
   /// a single mesh, so the mesh-derived counts would be meaningless).
   final String? statsLabel;
@@ -246,6 +250,7 @@ class SubEditor3DViewport extends StatefulWidget {
     this.yUpCamera = false,
     this.initialCameraDistance,
     this.initialCameraTarget,
+    this.onFrame,
     this.statsLabel,
     this.onFloorTap,
     this.floorTapPlaneY = 0.0,
