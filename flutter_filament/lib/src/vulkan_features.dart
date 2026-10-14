@@ -115,8 +115,9 @@ abstract final class VulkanFeatures {
 
   /// Asks for one feature member, and for its extension when it has one.
   static void requestFeature(String requester, VulkanFeature feature) {
-    if (feature.extension.isNotEmpty)
+    if (feature.extension.isNotEmpty) {
       requestExtension(requester, feature.extension);
+    }
     final r = requester.toNativeUtf8();
     final e = feature.extension.toNativeUtf8();
     try {

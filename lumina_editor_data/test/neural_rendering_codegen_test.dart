@@ -1,4 +1,3 @@
-import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:test/test.dart';
 

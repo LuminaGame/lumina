@@ -68,7 +68,7 @@ void main() {
     ]);
     expect(code, contains("details: <String, dynamic>{'castShadow': false, 'slot': 'Hair', 'poseFrom': 'body_1'}"));
     expect(code, contains("LuminaLevelSkeletalMesh.build(key: const LuminaObjectKey('body_1'), meshAssetPath: "));
-    expect(RegExp("LuminaObjectKey\('body_1'\)[^\n]*details:").hasMatch(code), isFalse, reason: 'None is no pose from');
+    expect(RegExp(r"LuminaObjectKey\('body_1'\)[^\n]*details:").hasMatch(code), isFalse, reason: 'None is no pose from');
   });
 
   test('a spring component on a static mesh is not a skeletal one: unchanged', () {
