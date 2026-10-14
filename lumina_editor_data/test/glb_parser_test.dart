@@ -1,12 +1,13 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
+import 'package:lumina/testing.dart';
 
 void main() {
   group('GlbParserService Tests', () {
     test('Should parse real non-indexed GLB file YVO3D_44368.glb', () async {
-      final file = File('${Directory.current.parent.path}/test-assets/fixtures/YVO3D_44368.glb');
-      expect(file.existsSync(), isTrue);
+      final file = File('${SmokeArtifacts.testAssetsDir.path}/fixtures/YVO3D_44368.glb');
+      if (!file.existsSync()) return markTestSkipped('test-assets missing: fixtures/YVO3D_44368.glb');
 
       final bytes = file.readAsBytesSync();
       final meshData = await GlbParserService.parseGlb(bytes);
@@ -18,8 +19,8 @@ void main() {
     });
 
     test('Should parse Draco compressed GLB file attackhelicopter.entity.glb', () async {
-      final file = File('${Directory.current.parent.path}/test-assets/fixtures/attackhelicopter.entity.glb');
-      expect(file.existsSync(), isTrue);
+      final file = File('${SmokeArtifacts.testAssetsDir.path}/fixtures/attackhelicopter.entity.glb');
+      if (!file.existsSync()) return markTestSkipped('test-assets missing: fixtures/attackhelicopter.entity.glb');
 
       final bytes = file.readAsBytesSync();
       final meshData = await GlbParserService.parseGlb(bytes);
