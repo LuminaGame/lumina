@@ -49,10 +49,14 @@ void main() {
     expect(main, contains("LuminaLevelPreloader.instance.manifestResolver = (levelName) => _projectLevelManifests[levelName];"));
     expect(main, contains("  'L_First': LFirst.assetManifest,"));
     expect(main, contains("  'L_Second': LSecond.assetManifest,"));
-    expect(main, contains('LuminaGame.onChangeLevelRequested = _changeLevel;'));
-    expect(main, contains('await LuminaLevelPreloader.instance.changeLevel(levelName, () async {'));
-    expect(main, contains('LuminaGame.onOpenLevelRequested = (levelName, options) => scheduleMicrotask(() => _openLevel(levelName));'));
-    expect(main, contains('LuminaGame.onChangeLevelRequested = null;'), reason: 'unhooked on dispose');
+    // Change Level and Open Level are the game host's (lumina_widgets'
+    // LuminaGameHost hooks LuminaGame.onChangeLevelRequested and preloads
+    // through LuminaLevelPreloader; its own test covers that): the main
+    // gives it the levels and how to start a game on one.
+    expect(main, contains("initialLevel: 'L_First',"));
+    expect(main, contains("levelNames: {'L_First', 'L_Second'},"));
+    expect(main, contains('createGame: _createGame,'));
+    expect(main, isNot(contains('LuminaGame.onChangeLevelRequested')), reason: 'hooked once, by the host');
   });
 
   test('a scaffolded project with the level-loading Blueprint and two levels generates and analyzes clean', () async {
