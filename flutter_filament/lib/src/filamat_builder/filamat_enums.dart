@@ -207,7 +207,14 @@ enum Interpolation {
 
 /// Bitmask constants for user variant filtering.
 abstract final class UserVariantFilterBit {
+  /// Since Filament 1.78 directional lighting is a specialization constant:
+  /// the bit only prunes pipelines a runtime `Material.compile` would build.
+  /// matc ignores `directionalLighting` in a `.mat` `variantFilter`.
   static const int directionalLighting = 0x01;
+
+  /// Dynamic lighting is a specialization constant: the bit only prunes
+  /// pipelines at runtime. matc 1.78 rejects `dynamicLighting` in a `.mat`
+  /// `variantFilter`.
   static const int dynamicLighting = 0x02;
   static const int shadowReceiver = 0x04;
   static const int skinning = 0x08;

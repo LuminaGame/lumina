@@ -321,11 +321,31 @@ void filament_gltfio_asset_loader_gc(void* loader) {
 }
 #include <gltfio/TextureProvider.h>
 
+// ResourceConfiguration::gltfPath is deprecated (Filament plans to remove it in 2027): external
+// buffers and textures are meant to reach the loader through addResourceData(). It is set only
+// for a caller that still passes a base path; nullptr leaves it unset.
+static void setDeprecatedGltfPath(ResourceConfiguration& config, const char* path) {
+    if (!path) return;
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#endif
+    config.gltfPath = path;
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+}
+
 void* filament_gltfio_resource_loader_create(void* engine, const char* default_path, bool normalize_skinning_weights) {
     FFI_TRY
-    ResourceConfiguration config;
+    ResourceConfiguration config{};
     config.engine = toEngine(engine);
-    config.gltfPath = default_path;
+    setDeprecatedGltfPath(config, default_path);
     config.normalizeSkinningWeights = normalize_skinning_weights;
     auto loader = new ResourceLoader(config);
 
@@ -354,9 +374,10 @@ bool filament_gltfio_resource_loader_load_resources(void* resource_loader, void*
 }
 void filament_gltfio_resource_loader_set_configuration(void* resource_loader, const char* default_path, bool normalize_skinning_weights) {
     FFI_TRY {
-        filament::gltfio::ResourceConfiguration config;
+        filament::gltfio::ResourceConfiguration config{};
         config.engine = nullptr; // Note: Engine is not retained or required for just path updates
-        config.gltfPath = default_path;
+        // setConfiguration() copies the path into a std::string: never hand it nullptr.
+        setDeprecatedGltfPath(config, default_path ? default_path : "");
         config.normalizeSkinningWeights = normalize_skinning_weights;
         toResourceLoader(resource_loader)->setConfiguration(config);
     } FFI_CATCH()

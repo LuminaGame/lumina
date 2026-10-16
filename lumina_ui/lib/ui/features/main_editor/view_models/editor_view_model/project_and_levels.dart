@@ -182,6 +182,8 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
     sourceControl.refresh();
     // …and queue a thumbnail for every asset that has none or an old one.
     _enqueueStaleThumbnails();
+    // …and bring materials compiled for an older Filament to the linked one.
+    _upgradeStaleMaterials();
     unawaited(_streamActorMeshes(List.of(_actors)));
     // umg.maxViewports for the designer's and the editor panels' Viewports.
     LuminaViewportBudget.projectMaxViewports = _project.ui.maxViewports > 0 ? _project.ui.maxViewports : null;

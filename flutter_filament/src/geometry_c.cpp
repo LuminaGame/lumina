@@ -743,9 +743,8 @@ void filament_renderable_get_entities(void* engine, uint32_t* out_entities, uint
     FFI_TRY
     if (!engine || !out_entities || capacity == 0) return;
     auto& rm = toEngine(engine)->getRenderableManager();
-    size_t count = rm.getComponentCount();
-    size_t n = std::min(count, static_cast<size_t>(capacity));
-    utils::Entity const* entities = rm.getEntities();
+    auto const entities = rm.getAllEntities();
+    size_t n = std::min(entities.size(), static_cast<size_t>(capacity));
     for (size_t i = 0; i < n; ++i) {
         out_entities[i] = static_cast<uint32_t>(entities[i].getId());
     }

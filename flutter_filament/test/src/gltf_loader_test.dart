@@ -19,11 +19,24 @@ void main() {
     test('FilamentResourceLoader lifecycle', () {
       final resourceLoader = FilamentResourceLoader.create(
         engine: engine,
-        defaultPath: '/tmp',
         normalizeSkinningWeights: true,
       );
 
       expect(resourceLoader.isDisposed, isFalse);
+      // Without a base path (resources come from addResourceData).
+      resourceLoader.setConfiguration(normalizeSkinningWeights: false);
+      resourceLoader.dispose();
+      expect(resourceLoader.isDisposed, isTrue);
+    });
+
+    test('the deprecated base path is still accepted', () {
+      final resourceLoader = FilamentResourceLoader.create(
+        engine: engine,
+        // ignore: deprecated_member_use_from_same_package
+        defaultPath: Directory.systemTemp.path,
+      );
+      // ignore: deprecated_member_use_from_same_package
+      resourceLoader.setConfiguration(gltfPath: Directory.systemTemp.path);
       resourceLoader.dispose();
       expect(resourceLoader.isDisposed, isTrue);
     });

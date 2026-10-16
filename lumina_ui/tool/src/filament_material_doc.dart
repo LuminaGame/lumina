@@ -23,6 +23,14 @@ class FilamentMaterialDoc {
   final List<MatTypeInfo> typeAliases;
   final List<MatConstantInfo> constants;
 
+  /// Property name → description, from the material model tables (they also
+  /// describe fields the `MaterialInputs` listing leaves out).
+  final Map<String, String> propertyDescriptions;
+
+  /// The properties the "Unlit model" section lists (the other models'
+  /// sections refer to the lit one instead of listing theirs).
+  final Set<String> unlitProperties;
+
   const FilamentMaterialDoc({
     required this.headerKeys,
     required this.parameterTypes,
@@ -37,6 +45,8 @@ class FilamentMaterialDoc {
     required this.functions,
     required this.typeAliases,
     required this.constants,
+    this.propertyDescriptions = const {},
+    this.unlitProperties = const {},
   });
 
   /// The headings of the "Shader public APIs" tables the functions come from.
@@ -243,6 +253,8 @@ class _DocParser {
         for (final r in boldRows(section('Math', level: 3)))
           if (!r[0].contains('(')) MatConstantInfo(_expandRange(r[0]).single, r[1], cleanDocText(r[2])),
       ],
+      propertyDescriptions: {for (final MapEntry(:key, :value) in props.entries) key: value.$1},
+      unlitProperties: {for (final r in boldRows(section('Unlit model', level: 2))) _expandRange(r[0]).single},
     );
   }
 

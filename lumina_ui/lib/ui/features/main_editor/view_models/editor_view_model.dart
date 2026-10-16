@@ -47,6 +47,7 @@ import 'package:lumina_ui/ui/features/main_editor/commands/editor_command.dart';
 import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/pie_controller.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/material_asset_upgrader.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/blueprint_play_support.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/project_blueprint_functions.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/standalone_game_runner.dart';
@@ -85,6 +86,7 @@ part 'editor_view_model/camera_navigation.dart';
 part 'editor_view_model/assets_and_content_browser.dart';
 part 'editor_view_model/asset_operations.dart';
 part 'editor_view_model/thumbnails.dart';
+part 'editor_view_model/material_upgrades.dart';
 part 'editor_view_model/import.dart';
 part 'editor_view_model/sub_editor_tabs.dart';
 part 'editor_view_model/blueprints_and_level_blueprints.dart';
@@ -344,6 +346,7 @@ class EditorViewModel extends _EditorViewModelState
         _EditorAssetsAndContentBrowser,
         _EditorAssetOperations,
         _EditorThumbnails,
+        _EditorMaterialUpgrades,
         _EditorImport,
         _EditorSubEditorTabs,
         _EditorBlueprintsAndLevelBlueprints,

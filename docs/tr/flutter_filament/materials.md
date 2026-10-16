@@ -427,6 +427,8 @@ Interpolation mode for attributes in fragment shader.
 
 Bitmask constants for user variant filtering.
 
+Filament 1.78'den beri yönlü ve dinamik aydınlatma specialization constant'tır: `directionalLighting` ve `dynamicLighting` yalnızca çalışma zamanında `Material.compile`'ın kurduğu pipeline'ları budar. Bir `.mat` `variantFilter` içinde matc `directionalLighting`'i yok sayar, `dynamicLighting`'i reddeder.
+
 #### `class FilamentMaterialBuilder`
 
 Dynamically builds and compiles GLSL material shaders into binary `.filamat` packages at runtime.

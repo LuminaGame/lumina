@@ -5,7 +5,7 @@
 library;
 
 /// Which shader block a function may be called from.
-enum MatStage { any, vertex, fragment }
+enum MatStage { any, vertex, fragment, compute }
 
 /// A property of the `material { }` header block.
 class MatHeaderKeyInfo {
@@ -24,8 +24,21 @@ class MatHeaderKeyInfo {
   /// The default value, as the documentation states it; null when none.
   final String? defaultValue;
 
-  /// The documentation's description, one paragraph.
+  /// The documentation's description, one paragraph; for a key the
+  /// documentation leaves out, the comment of the `MaterialBuilder` method it sets.
   final String description;
+
+  /// False for a key matc accepts that the material documentation does not describe.
+  final bool documented;
+
+  /// Values the documentation (or an earlier Filament) lists that matc no
+  /// longer accepts or ignores → why. The editor does not suggest them and
+  /// rewrites them out of a source (`MatMigration`).
+  final Map<String, String> removedValues;
+
+  /// Values matc still accepts for backward compatibility → the current value
+  /// they stand for (`true` → `simple`). Not suggested; rewritten to the current one.
+  final Map<String, String> valueAliases;
 
   const MatHeaderKeyInfo({
     required this.name,
@@ -34,6 +47,9 @@ class MatHeaderKeyInfo {
     this.values = const [],
     this.defaultValue,
     required this.description,
+    this.documented = true,
+    this.removedValues = const {},
+    this.valueAliases = const {},
   });
 }
 
@@ -75,6 +91,9 @@ class MatStructFieldInfo {
   /// The material API level the field needs.
   final int apiLevel;
 
+  /// False for a field the shaders declare that the documentation's structure leaves out.
+  final bool documented;
+
   const MatStructFieldInfo({
     required this.name,
     required this.glslType,
@@ -83,6 +102,7 @@ class MatStructFieldInfo {
     this.availability = '',
     this.description = '',
     this.apiLevel = 1,
+    this.documented = true,
   });
 
   bool availableWith(String shadingModel) => shadingModels.isEmpty || shadingModels.contains(shadingModel);
@@ -104,6 +124,17 @@ class MatFunctionInfo {
   /// The documentation table (`Math`, `Fragment only`, `GLSL`, …).
   final String category;
 
+  /// The shaders' `@deprecated` note; null for a current function. A
+  /// deprecated function is not suggested.
+  final String? deprecated;
+
+  /// The expression a call of a deprecated getter is rewritten to (its body
+  /// in the shaders), e.g. `getUserWorldFromWorldMatrix()[3].xyz`.
+  final String? replacement;
+
+  /// False for a public API the shaders mark that the documentation does not list.
+  final bool documented;
+
   const MatFunctionInfo({
     required this.name,
     required this.signature,
@@ -112,6 +143,9 @@ class MatFunctionInfo {
     required this.description,
     this.apiLevel = 1,
     this.category = '',
+    this.deprecated,
+    this.replacement,
+    this.documented = true,
   });
 
   /// Whether the function takes arguments (the caret goes inside `()`).

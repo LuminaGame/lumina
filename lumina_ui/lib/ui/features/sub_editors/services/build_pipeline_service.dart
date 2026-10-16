@@ -8,6 +8,8 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart' show Aabb3, Vector3;
 
 import 'package:lumina_ui/ui/features/sub_editors/services/flutter_filament_web_module.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/mat_language/mat_migration.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/material_asset_upgrader.dart';
 
 export 'package:lumina_ui/ui/features/sub_editors/services/flutter_filament_web_module.dart' show FlutterFilamentWebModule;
 

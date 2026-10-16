@@ -266,6 +266,8 @@ Controls loading external buffer/texture resources for a [FilamentAsset].
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
+| `create` | `static FilamentResourceLoader create({required FilamentEngine engine, String? defaultPath, bool normalizeSkinningWeights = true})` | Bir ResourceLoader oluşturur. Harici buffer'lar ve dokular ona `addResourceData` ile verilir. `defaultPath` (göreli URI'leri diskte çözmek için glTF dosyasının yolu) `@Deprecated`'dır: Filament `ResourceConfiguration::gltfPath`'i deprecated etti ve kaldırmayı planlıyor; yalnızca verildiğinde iletilir. |
+| `setConfiguration` | `void setConfiguration({String? gltfPath, bool normalizeSkinningWeights = true})` | Bu ResourceLoader'ı yapılandırır; `gltfPath`, `defaultPath` gibi `@Deprecated`'dır (verilmezse yükleyici boş bir temel yol alır). |
 | `loadResources` | `bool loadResources(FilamentAsset asset)` | Loads resources (buffers, textures) for [asset]. |
 | `dispose` | `void dispose()` | Destroys this ResourceLoader. |
 | `isDisposed` | `bool get isDisposed` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |

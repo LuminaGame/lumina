@@ -46,6 +46,10 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   /// Whether stale thumbnails are queued automatically (off in tests that
   /// construct the editor with `enableTimers: false`, unless asked for).
   final bool _autoThumbnails;
+
+  /// Whether scanned material assets are brought to the linked Filament
+  /// release in the background (off in tests that construct the view model).
+  final bool _autoUpgradeMaterials;
   AssetReferenceGraph? _referenceGraph;
   final List<String> _thumbnailQueue = [];
   final Set<String> _forcedThumbnails = {};
@@ -402,10 +406,12 @@ abstract class _EditorViewModelState extends ChangeNotifier {
     EditorCameraStore? cameraStore,
     ThumbnailService? thumbnailService,
     bool? autoGenerateThumbnails,
+    bool? autoUpgradeMaterials,
   }) : _qualityStore = qualityStore ?? EditorQualityStore(),
        _cameraStore = cameraStore ?? EditorCameraStore(),
        _thumbnailService = thumbnailService ?? ThumbnailService(),
        _autoThumbnails = autoGenerateThumbnails ?? enableTimers,
+       _autoUpgradeMaterials = autoUpgradeMaterials ?? enableTimers,
        _debounceCameraSave = enableTimers,
        _customProjectLocation = projectDirPath ?? projectLocation,
        _projectDir = projectDir == null ? null : _trimSeparators(projectDir),
@@ -583,6 +589,9 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   Future<void> thumbnailsFor(Iterable<RealAssetInfo> assets);
   void _enqueueStaleThumbnails();
   void _thumbnailAfterSubEditorChange(String tabId);
+
+  // editor_view_model/material_upgrades.dart
+  void _upgradeStaleMaterials();
 
   // editor_view_model/import.dart
   ImportQueue get importQueue;

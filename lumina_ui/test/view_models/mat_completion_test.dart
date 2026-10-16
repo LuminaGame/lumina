@@ -97,7 +97,9 @@ void main() {
 
     test('filters MaterialInputs fields by the header shading model', () {
       final unlit = suggestAt(fragmentSource('material.$caret', header: 'shadingModel : unlit,'));
-      expect(labels(unlit), unorderedEquals(['baseColor', 'emissive', 'postLightingColor']));
+      // postLightingMixFactor: the shaders declare it with postLightingColor;
+      // the documentation's MaterialInputs listing leaves it out.
+      expect(labels(unlit), unorderedEquals(['baseColor', 'emissive', 'postLightingColor', 'postLightingMixFactor']));
       final cloth = suggestAt(fragmentSource('material.$caret', header: 'shadingModel : cloth,'));
       expect(labels(cloth), containsAll(['sheenColor', 'subsurfaceColor', 'roughness']));
       expect(labels(cloth), isNot(contains('metallic')));

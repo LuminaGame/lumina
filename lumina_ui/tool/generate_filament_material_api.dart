@@ -1,5 +1,8 @@
 /// Generates `lib/ui/features/sub_editors/services/mat_language/filament_material_api.g.dart`
-/// (the `.mat` completion tables) from Filament's material documentation.
+/// (the `.mat` completion tables) from Filament's material documentation,
+/// checked against Filament's source (matc, filamat and the shaders: see
+/// `src/filament_material_code.dart`), which decides what is valid and what
+/// is deprecated.
 ///
 /// ```
 /// dart run tool/generate_filament_material_api.dart [<Materials.md.html>] [--version <x.y.z>]
@@ -18,7 +21,9 @@ import 'package:lumina_core/lumina_core.dart' show LuminaWorkspace;
 import 'package:path/path.dart' as p;
 
 import 'src/filament_material_api_writer.dart';
+import 'src/filament_material_code.dart';
 import 'src/filament_material_doc.dart';
+import 'src/filament_material_merge.dart';
 
 /// The material documentation inside a Filament checkout.
 const materialsDocRelativePath = 'docs_src/src_markdeep/Materials.md.html';
@@ -54,7 +59,18 @@ Future<void> main(List<String> args) async {
       version = RegExp(r'^VERSION_NAME=(.+)$', multiLine: true).firstMatch(await props.readAsString())?[1]?.trim();
     }
   }
-  final parsed = FilamentMaterialDoc.parse(await doc.readAsString());
+  // docs_src/src_markdeep/Materials.md.html -> the checkout's root.
+  final root = p.dirname(p.dirname(p.dirname(docPath)));
+  if (!FilamentMaterialCode.existsIn(root)) {
+    stderr.writeln('Filament source not found next to the documentation '
+        '(${FilamentMaterialCode.parametersProcessorPath} under $root): the tables are checked against it.');
+    exitCode = 2;
+    return;
+  }
+  final parsed = mergeFilamentMaterialCode(
+    FilamentMaterialDoc.parse(await doc.readAsString()),
+    FilamentMaterialCode.read(root),
+  );
   final out = File(p.join(
     p.dirname(p.dirname(Platform.script.toFilePath())),
     'lib/ui/features/sub_editors/services/mat_language/filament_material_api.g.dart',

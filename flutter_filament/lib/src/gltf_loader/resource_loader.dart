@@ -8,8 +8,13 @@ class FilamentResourceLoader {
   FilamentResourceLoader._(this._ptr);
 
   /// Creates a ResourceLoader.
+  ///
+  /// External buffers and textures reach it through [addResourceData].
+  /// [defaultPath] (the glTF file's path, for resolving their relative URIs
+  /// on disk) is deprecated in Filament, which plans to remove it.
   static FilamentResourceLoader create({
     required FilamentEngine engine,
+    @Deprecated('Feed external buffers and textures with addResourceData; Filament deprecated ResourceConfiguration::gltfPath.')
     String? defaultPath,
     bool normalizeSkinningWeights = true,
   }) {
@@ -71,6 +76,7 @@ class FilamentResourceLoader {
   }
   /// Configures this ResourceLoader.
   void setConfiguration({
+    @Deprecated('Feed external buffers and textures with addResourceData; Filament deprecated ResourceConfiguration::gltfPath.')
     String? gltfPath,
     bool normalizeSkinningWeights = true,
   }) {

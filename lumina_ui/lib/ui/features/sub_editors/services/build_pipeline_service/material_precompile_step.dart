@@ -67,19 +67,30 @@ class FilamentMaterialCompiler {
   Future<MaterialCompileOutcome> call(MaterialCompileInput input) async {
     Uint8List package = input.package;
     String? note;
-    if (!isFilamatPackage(package)) {
+    // A package compiled for another material version is refused by the
+    // engine: it is built again from the source, like a missing one.
+    final version = MaterialAssetUpgrader.packageVersion(package);
+    final stale = version != null && version != filamentExpectedMaterialVersion;
+    if (!isFilamatPackage(package) || stale) {
       if (input.source.trim().isEmpty) {
-        return MaterialCompileOutcome.failed(
-            'no compiled filamat package (${package.length} bytes) and no .mat source — compile it in the Material Editor first');
+        return MaterialCompileOutcome.failed(stale
+            ? 'compiled for material version $version (this Filament reads $filamentExpectedMaterialVersion) and no '
+                '.mat source to compile it again'
+            : 'no compiled filamat package (${package.length} bytes) and no .mat source — compile it in the Material Editor first');
       }
       try {
-        final result = buildPackageFromSource(input.name, input.source, includeDirectory: input.includeDirectory);
+        // What this Filament deprecated or removed is compiled as its current form.
+        final source = MatMigration.of(input.source).source;
+        final result = buildPackageFromSource(input.name, source, includeDirectory: input.includeDirectory);
         final built = result.package;
         if (built == null || !isFilamatPackage(built)) {
           return MaterialCompileOutcome.failed('matc: ${result.errorText}');
         }
         package = built;
-        note = 'compiled from .mat source (${built.length} byte package, not written back)';
+        note = stale
+            ? 'compiled for material version $version, compiled again from .mat source (${built.length} byte package, '
+                'not written back)'
+            : 'compiled from .mat source (${built.length} byte package, not written back)';
       } catch (e) {
         return MaterialCompileOutcome.failed('material compiler failed: $e');
       }
@@ -139,7 +150,15 @@ class FilamentMaterialCompiler {
 
 class MaterialPrecompileStep implements BuildStep {
   final MaterialCompiler _compiler;
-  MaterialPrecompileStep({MaterialCompiler? compiler}) : _compiler = compiler ?? FilamentMaterialCompiler().call;
+
+  /// Brings a material compiled for another Filament (or using what it
+  /// deprecated) to the linked release and writes it back before it is
+  /// compiled, so the build packs current packages.
+  final MaterialAssetUpgrader _upgrader;
+
+  MaterialPrecompileStep({MaterialCompiler? compiler, MaterialAssetUpgrader? upgrader})
+      : _compiler = compiler ?? FilamentMaterialCompiler().call,
+        _upgrader = upgrader ?? MaterialAssetUpgrader();
 
   @override
   BuildStepKind get kind => BuildStepKind.precompileMaterials;
@@ -156,11 +175,17 @@ class MaterialPrecompileStep implements BuildStep {
     for (final m in materials) {
       if (ctx.token.isCancelled) return StepResult.cancelled('Material precompile cancelled after $done/${materials.length}');
       final sw = Stopwatch()..start();
+      var asset = m.asset;
+      final upgrade = await _upgrader.upgrade(m.file.path);
+      if (upgrade != null) {
+        ctx.log('${upgrade.describe()} — ${m.relativePath}', level: upgrade.upgraded ? 'info' : 'warning');
+        if (upgrade.upgraded) asset = LuminaAsset.fromBytes(await m.file.readAsBytes());
+      }
       final outcome = await _compiler(MaterialCompileInput(
-        name: m.asset.name,
+        name: asset.name,
         relativePath: m.relativePath,
-        package: m.asset.rawPayload ?? Uint8List(0),
-        source: m.asset.rawMatSource,
+        package: asset.rawPayload ?? Uint8List(0),
+        source: asset.rawMatSource,
         includeDirectory: m.file.parent.path,
       ));
       done++;

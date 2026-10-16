@@ -435,9 +435,8 @@ void filament_light_get_entities(void* engine, uint32_t* out_entities, uint32_t 
     FFI_TRY
     if (!engine || !out_entities || capacity == 0) return;
     auto& lm = toEngine(engine)->getLightManager();
-    size_t count = lm.getComponentCount();
-    size_t to_copy = std::min(count, static_cast<size_t>(capacity));
-    auto* entities = lm.getEntities();
+    auto const entities = lm.getAllEntities();
+    size_t to_copy = std::min(entities.size(), static_cast<size_t>(capacity));
     for (size_t i = 0; i < to_copy; i++) {
         out_entities[i] = static_cast<uint32_t>(entities[i].getId());
     }

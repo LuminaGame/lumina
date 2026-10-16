@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Nothing deprecated in Filament 1.78 is called any more: the renderable and light entity lists read
+  `getAllEntities()`, and `ResourceConfiguration::gltfPath` is set only when a caller passes a base path
+  (`FilamentResourceLoader.create(defaultPath:)` and `setConfiguration(gltfPath:)` are `@Deprecated`: feed external
+  resources with `addResourceData`). `setConfiguration` without a path no longer hands gltfio a null string.
+  `UserVariantFilterBit.directionalLighting` / `dynamicLighting` document that they only prune runtime pipelines.
 - Filament upgraded to v1.78.0 (prebuilt `1.78.0-lumina.1`): the twenty Lumina patches rebased onto the new tag,
   every compiled material rebuilt for material version 78 (older `.filamat` packages are refused by the engine), and the
   vendored filament-matp updated (matc ignores the deprecated `directionalLighting` variant filter and no longer accepts

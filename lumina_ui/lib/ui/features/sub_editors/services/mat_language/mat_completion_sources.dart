@@ -1,6 +1,9 @@
 /// The candidate suggestions of each `.mat` completion context, built from
-/// Filament's documented tables, the GLSL built-ins and what the source
-/// itself declares. The static candidate lists are built once. Pure Dart.
+/// Filament's tables (its documentation checked against its source), the
+/// GLSL built-ins and what the source itself declares. Only what the current
+/// Filament accepts is suggested: no deprecated function, no value matc
+/// ignores or keeps only for backward compatibility. The static candidate
+/// lists are built once. Pure Dart.
 library;
 
 import 'package:lumina_ui/ui/features/sub_editors/services/mat_language/filament_material_api.g.dart';
@@ -26,8 +29,13 @@ class MatCompletionSources {
     documentation: _lines([
       '${k.group}: ${k.name}',
       k.description,
+      if (!k.documented) 'Not in the material documentation: matc accepts it.',
       if (k.values.isNotEmpty) 'Values: ${k.values.join(', ')}',
       if (k.defaultValue != null) 'Default: ${k.defaultValue}',
+      if (k.removedValues.isNotEmpty)
+        'No longer valid: ${k.removedValues.entries.map((e) => '${e.key} (${e.value})').join('; ')}',
+      if (k.valueAliases.isNotEmpty)
+        'Old spellings: ${k.valueAliases.entries.map((e) => '${e.key} means ${e.value}').join(', ')}',
     ]),
     insertText: '${k.name} : ',
   );
@@ -148,6 +156,7 @@ class MatCompletionSources {
       if (f.defaultValue != null) 'Default: ${f.defaultValue}',
       if (f.availability.isNotEmpty) 'Availability: ${f.availability}',
       if (f.apiLevel > 1) 'API level ${f.apiLevel}',
+      if (!f.documented) 'Not in the material documentation: the shaders declare it.',
     ]),
   );
 
@@ -200,7 +209,8 @@ class MatCompletionSources {
     };
     final functions = <String, List<MatFunctionInfo>>{};
     for (final f in [...filamentFunctions, ...glslBuiltinFunctions]) {
-      if (f.availableIn(stage)) (functions[f.name] ??= []).add(f);
+      // A deprecated getter is rewritten by MatMigration, never suggested.
+      if (f.deprecated == null && f.availableIn(stage)) (functions[f.name] ??= []).add(f);
     }
     final items = <MatCompletionItem>[];
     for (final MapEntry(key: name, value: overloads) in functions.entries) {
@@ -209,7 +219,8 @@ class MatCompletionSources {
         overloads.map((o) => o.signature).join('\n'),
         first.description,
         [
-          if (first.category.isNotEmpty) first.category,
+          if (!first.documented) 'Not in the material documentation',
+          if (first.category.isNotEmpty && first.documented) first.category,
           if (first.stage != MatStage.any) '${first.stage.name} block only',
           if (first.apiLevel > 1) 'API level ${first.apiLevel}',
         ].join(' · '),

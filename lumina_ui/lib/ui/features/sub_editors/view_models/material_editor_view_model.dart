@@ -6,6 +6,8 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/mat_language/mat_migration.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/material_asset_upgrader.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_graph_controller.dart';
 
@@ -31,6 +33,10 @@ class MaterialEditorViewModel extends ChangeNotifier {
   bool _doubleSided = false;
   List<MaterialParamModel> _parameters = [];
   bool _isParamDirty = false;
+
+  /// The stored package was compiled for another material version and was
+  /// compiled again on open: saving writes the current one.
+  bool _isPackageDirty = false;
 
   /// The material as a node graph: the other view of [currentCode].
   late final MaterialGraphController graph = MaterialGraphController(this);
@@ -65,7 +71,8 @@ class MaterialEditorViewModel extends ChangeNotifier {
   String get syntaxStatus => _syntaxStatus;
   List<MaterialCompileIssue> get issues => List.unmodifiable(_issues);
   int get bodyLineOffset => _bodyLineOffset;
-  bool get isDirty => (_currentCode != _onDiskCode) || _isParamDirty || graph.isLayoutDirty || graph.isAhead;
+  bool get isDirty =>
+      (_currentCode != _onDiskCode) || _isParamDirty || _isPackageDirty || graph.isLayoutDirty || graph.isAhead;
   FilamatShading get shading => _shading;
   BlendingMode get blending => _blending;
   bool get doubleSided => _doubleSided;
@@ -159,6 +166,9 @@ class MaterialEditorViewModel extends ChangeNotifier {
     // Re-read everything the header declares. Without this a material opened
     // from disk reports zero parameters in the inspector and hands the compiler
     // nothing, so every `materialParams…` reference it uses is undefined.
+    // What the linked Filament deprecated or removed becomes the current
+    // form (shown as an unsaved edit).
+    final migrated = _migrateToCurrentFilament();
     _shading = _parseShadingModel(_currentCode);
     _blending = _parseBlendingMode(_currentCode);
     _doubleSided = _parseDoubleSided(_currentCode);
@@ -170,11 +180,39 @@ class MaterialEditorViewModel extends ChangeNotifier {
     // by the importer carries only source. Without bytes the 3D preview has no
     // material to put on the sphere and falls back to the default colour, so
     // opening an imported material showed nothing of the material. Compile it
-    // once on open.
-    if ((_compiledBytes == null || _compiledBytes!.isEmpty) &&
+    // once on open; also when the bytes were compiled for another material
+    // version (the engine refuses them) or the source was just rewritten.
+    final version = MaterialAssetUpgrader.packageVersion(_compiledBytes);
+    final stale = version != null && version != filamentExpectedMaterialVersion;
+    if (((_compiledBytes == null || _compiledBytes!.isEmpty) || stale || migrated) &&
         _currentCode.trim().isNotEmpty) {
-      await compile();
+      if (stale) {
+        EngineLoggerService().log(
+          'Material "${_asset!.name}" was compiled for material version $version; this Filament reads '
+          '$filamentExpectedMaterialVersion: compiling it again.',
+          level: 'info',
+          source: 'MaterialEditor',
+        );
+      }
+      final ok = await compile();
+      if (ok && stale) {
+        _isPackageDirty = true;
+        notifyListeners();
+      }
     }
+  }
+
+  /// Rewrites [currentCode] with [MatMigration] (line count unchanged) and logs
+  /// each rewrite; true when it changed.
+  bool _migrateToCurrentFilament() {
+    final migration = MatMigration.of(_currentCode);
+    if (!migration.changed) return false;
+    _currentCode = migration.source;
+    final name = _asset?.name ?? File(assetPath).uri.pathSegments.last;
+    for (final change in migration.changes) {
+      EngineLoggerService().log('Material "$name", $change', level: 'info', source: 'MaterialEditor');
+    }
+    return true;
   }
 
   /// Quick structural hints while typing (blocks and braces, read like the
@@ -258,6 +296,8 @@ class MaterialEditorViewModel extends ChangeNotifier {
       showGraphIssues(graph.issues);
       return false;
     }
+    // A pasted or typed deprecated construct compiles as its current form.
+    _migrateToCurrentFilament();
     _validateDartSyntax();
     // Declarations and header values edited by hand reach the panel and the
     // header bar too.
@@ -568,6 +608,7 @@ class MaterialEditorViewModel extends ChangeNotifier {
       _asset = updatedAsset;
       _onDiskCode = _currentCode;
       _isParamDirty = false;
+      _isPackageDirty = false;
       if (graph.isInitialized) graph.markSaved();
       EngineLoggerService().log('Saved material asset to $assetPath', level: 'info');
       notifyListeners();
