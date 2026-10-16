@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Filament upgraded to v1.78.0 (prebuilt `1.78.0-lumina.1`): the twenty Lumina patches rebased onto the new tag,
+  every compiled material rebuilt for material version 78 (older `.filamat` packages are refused by the engine), and the
+  vendored filament-matp updated (matc ignores the deprecated `directionalLighting` variant filter and no longer accepts
+  `dynamicLighting`). `TransformInstance` handles are valid only until the end of the current frame: Filament now
+  reorders the TransformManager's components in `endFrame`, so keep the entity and call `getInstance` again.
 - The prebuilt Filament builds on Linux again (prebuilt `1.77.2-lumina.18`, Filament patch `0016`): the present pacer's
   Windows timer field is declared only on Windows, so clang's `-Werror` no longer stops the backend.
 - `Dlss.available` (and the availability checks built on it) reads the cached GPU list instead of creating a Vulkan

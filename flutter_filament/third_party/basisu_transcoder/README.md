@@ -5,7 +5,7 @@ The public headers of the Basis Universal transcoder (`basist::ktx2_transcoder`)
 pixels on the CPU, without an engine: the editor's thumbnails, previews and material textures read KTX2 textures
 (`KHR_texture_basisu`) this way.
 
-- Source: Google Filament **1.77.2**, `third_party/basisu/transcoder/` (`basisu.h`, `basisu_containers.h`,
+- Source: Google Filament **1.78.0**, `third_party/basisu/transcoder/` (`basisu.h`, `basisu_containers.h`,
   `basisu_file_headers.h`, `basisu_transcoder.h`, `basisu_transcoder_internal.h`, `basisu_transcoder_uastc.h`,
   `basisu_astc_helpers.h`), copied unmodified.
 - Licence: Apache License 2.0 (`LICENSE`, Basis Universal's own).

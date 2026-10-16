@@ -55,6 +55,8 @@ void main() {
     expect(metallic.availableWith('cloth'), isFalse);
     expect(metallic.defaultValue, '0.0');
     expect(filamentFunctions.firstWhere((f) => f.name == 'getWorldRayFromClip').apiLevel, 2);
-    expect(filamentMaterialApiVersion, '1.77.2');
+    // The table is generated from the release the prebuilt Filament names (tool/filament/VERSION).
+    final prebuilt = File(p.join(LuminaWorkspace.root, 'tool', 'filament', 'VERSION'));
+    expect(filamentMaterialApiVersion, prebuilt.readAsStringSync().trim().split('-').first);
   });
 }

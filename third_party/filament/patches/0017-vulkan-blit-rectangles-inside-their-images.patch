@@ -18,7 +18,7 @@ lies inside both images, in the same proportion, and skips a blit with
 nothing left.
 
 diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
-index a5610d33..7b5628a0 100644
+index 9fbe0b1b..cd9281a9 100644
 --- a/filament/backend/src/vulkan/VulkanDriver.cpp
 +++ b/filament/backend/src/vulkan/VulkanDriver.cpp
 @@ -48,7 +48,9 @@
@@ -31,7 +31,7 @@ index a5610d33..7b5628a0 100644
  #include <mutex>
  #ifndef NDEBUG
  #include <set>  // For VulkanDriver::debugCommandBegin
-@@ -2920,6 +2922,37 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
+@@ -2937,6 +2939,37 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
      VkExtent2D const srcExtent = srcTarget->getExtent();
      VkExtent2D const dstExtent = dstTarget->getExtent();
  

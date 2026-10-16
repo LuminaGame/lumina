@@ -39,7 +39,12 @@ namespace flutter_filament::ngx {
 // Lumina's NGX project id: stable across releases, identifies the integration to the driver
 // (no account or registration is attached to it).
 constexpr const char* kProjectId = "a1f0c3a0-4e7b-4d4a-9b2e-6c3f1d8e2b11";
-constexpr const char* kEngineVersion = "lumina-filament-1.77.2";
+// The linked Filament release, from the version the build stamps (the define is the bare
+// version, see engine_c.cpp), e.g. "lumina-filament-1.78.0".
+#define FLUTTER_FILAMENT_NGX_STR2(x) #x
+#define FLUTTER_FILAMENT_NGX_STR(x) FLUTTER_FILAMENT_NGX_STR2(x)
+constexpr const char* kEngineVersion =
+        "lumina-filament-" FLUTTER_FILAMENT_NGX_STR(FLUTTER_FILAMENT_FILAMENT_VERSION);
 
 const char* resultName(NVSDK_NGX_Result r);
 std::string describe(const char* what, NVSDK_NGX_Result r);

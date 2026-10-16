@@ -16,7 +16,7 @@ The offset is now a number of texels' world size at the pixel's distance
 and the target height: the same on screen whatever the scene's unit.
 ---
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index c3d3c4d2..9fffe5b4 100644
+index 52d554a6..c37fea2d 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
 @@ -232,6 +232,19 @@ static constexpr auto halton() {

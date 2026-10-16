@@ -659,14 +659,14 @@ Manages transform components for entities.  Transform components give entities a
 | :--- | :--- | :--- |
 | `engine` | `FilamentEngine engine` | Holds the `engine` property or configuration state. |
 | `transaction` | `void transaction(void Function() body)` | Executes [body] synchronously inside an open local-transform transaction.  During the transaction, local transform updates are batched without recomputing world transforms on every call, avoiding $O(\text{depth})$ cost per update. When [body] finishes (or throws), the transaction is automatically committed.  Nested calls to [transaction] are rejected with a [StateError]. |
-| `getInstance` | `TransformInstance getInstance(int entity)` | Resolves an entity ID to its cached [TransformInstance] handle.  Returns an invalid instance ([TransformInstance.isValid] == false) if the entity has no transform component. |
+| `getInstance` | `TransformInstance getInstance(int entity)` | Resolves an entity ID to its [TransformInstance] handle, valid until the end of the current frame (and until the next [create], [destroy] or [setParent]): since Filament 1.78 the TransformManager reorders its components in `endFrame`, so keep the entity, not the handle. Returns an invalid instance ([TransformInstance.isValid] == false) if the entity has no transform component. |
 | `hasComponent` | `bool hasComponent(int entity)` | Whether [entity] has a transform component. |
 | `setTransform` | `void setTransform(int entity, List<double> matrix16)` | Sets the local transform matrix of [entity] using a 16-element column-major matrix array. |
-| `setTransformAt` | `void setTransformAt(TransformInstance instance, List<double> matrix16)` | Sets the local transform matrix directly via a fast cached [TransformInstance] handle. |
-| `getTransformAt` | `List<double> getTransformAt(TransformInstance instance)` | Gets the local transform matrix directly via a fast cached [TransformInstance] handle. |
+| `setTransformAt` | `void setTransformAt(TransformInstance instance, List<double> matrix16)` | Sets the local transform matrix through a [TransformInstance] handle of this frame. |
+| `getTransformAt` | `List<double> getTransformAt(TransformInstance instance)` | Gets the local transform matrix through a [TransformInstance] handle of this frame. |
 | `getTransform` | `List<double> getTransform(int entity)` | Gets the local transform matrix of [entity] as a 16-element column-major matrix array. |
 | `getWorldTransform` | `List<double> getWorldTransform(int entity)` | Gets the world transform matrix of [entity] as a 16-element column-major matrix array. |
-| `worldTransformAt` | `List<double> worldTransformAt(TransformInstance instance)` | Gets the world transform matrix directly via a fast cached [TransformInstance] handle. |
+| `worldTransformAt` | `List<double> worldTransformAt(TransformInstance instance)` | Gets the world transform matrix through a [TransformInstance] handle of this frame. |
 | `destroy` | `void destroy(int entity)` | Destroys the transform component for [entity]. |
 | `setParent` | `void setParent(int entity, int parentEntity)` | Sets the parent entity of [entity]'s transform component. Pass [parentEntity] as 0 to unparent (make a root). |
 | `getParent` | `int getParent(int entity)` | Gets the parent entity ID of [entity]'s transform, or 0 if it has no parent. |

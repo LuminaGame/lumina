@@ -32,7 +32,7 @@ Plugins extend the editor through `lumina_editor_api`, a small contract package 
 
 | Package | Repository | Role |
 |---|---|---|
-| `flutter_filament` | lumina | Dart FFI bindings to Google Filament v1.77.2 |
+| `flutter_filament` | lumina | Dart FFI bindings to Google Filament v1.78.0 |
 | `lumina_core` | lumina | Pure-Dart foundation: math, file formats, paths, logger, pure tooling services |
 | `lumina` | lumina | The engine: runtime and its Filament binding; no widget |
 | `lumina_widgets` | lumina | The game's Flutter side: game widget and host, input, HUD, UMG, media, web loading |

@@ -14,10 +14,10 @@ Skinned/morphed renderables now emit sentinel commands in the SSR pass
 only; they are still drawn normally everywhere else.
 
 diff --git a/filament/src/RenderPass.cpp b/filament/src/RenderPass.cpp
-index af198953..31c6ff8a 100644
+index ff5c98aa..a0e0aacd 100644
 --- a/filament/src/RenderPass.cpp
 +++ b/filament/src/RenderPass.cpp
-@@ -621,6 +621,16 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
+@@ -631,6 +631,16 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
  
          Variant renderableVariant{ variant };
  
@@ -34,7 +34,7 @@ index af198953..31c6ff8a 100644
          // We can't have SSR and shadowing together by construction.
          assert_invariant(!Variant::isSSRVariant(variant) || !hasShadowing);
          renderableVariant.setShadowReceiver(soaVisibility[i].receiveShadows && hasShadowing);
-@@ -673,9 +683,10 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
+@@ -683,9 +693,10 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
           */
          for (auto const& primitive: primitives) {
              FMaterialInstance const* const mi = primitive.getMaterialInstance();

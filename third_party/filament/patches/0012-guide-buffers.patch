@@ -1,5 +1,5 @@
 diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
-index 1860f6e1..1435ab01 100644
+index e624a8db..1367c774 100644
 --- a/filament/CMakeLists.txt
 +++ b/filament/CMakeLists.txt
 @@ -345,6 +345,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
@@ -107,7 +107,7 @@ index 1111bbfd..5fd295d3 100644
       * Enables or disable screen-space guard band. Disabled by default.
       *
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index 50620c5d..aa3bbafa 100644
+index ad847644..5615e145 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
 @@ -4373,6 +4373,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
@@ -435,10 +435,10 @@ index 1076465f..ea2ee7f4 100644
      downcast(this)->setGuardBandOptions(options);
  }
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index 4cd90e83..d36d015b 100644
+index aa19d14a..9be116f0 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -926,6 +926,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -940,6 +940,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
               // an external post pass works on the HDR frame, before colour grading
               !view.getExternalPostPass();
  
@@ -451,7 +451,7 @@ index 4cd90e83..d36d015b 100644
      // whether we're scaled at all
      bool scaled = any(notEqual(scale, float2(1.0f)));
  
-@@ -1270,6 +1276,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1283,6 +1289,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
              .featureLevel = mFeatureLevel,
              .isAutoDepthResolveSupported = mIsAutoDepthResolveSupported,
              .fogAsPostProcess = view.hasFog() && engine.features.material.enable_fog_as_postprocess,
@@ -459,7 +459,7 @@ index 4cd90e83..d36d015b 100644
      };
  
      /*
-@@ -1517,7 +1524,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1530,7 +1537,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      // if MSAA is enabled, we end-up rendering in an intermediate buffer. This is the only case where
      // "!hasPostProcess" doesn't guarantee rendering into the swapchain.
      const bool useIntermediateBuffer = hasPostProcess || msaaOptions.enabled ||
@@ -468,7 +468,7 @@ index 4cd90e83..d36d015b 100644
              (isRenderingMultiview && engine.debug.stereo.
              combine_multiview_images);
  
-@@ -1527,6 +1534,15 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1540,6 +1547,15 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
  
      const_cast<RenderPass&>(pass).finalize(engine, driver);
  
@@ -484,7 +484,7 @@ index 4cd90e83..d36d015b 100644
      // the color pass itself + color-grading as subpass if needed
      auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view, {
                  .shadows = blackboard.get<FrameGraphTexture>("shadows"),
-@@ -1534,7 +1550,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1547,7 +1563,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                  .ssr = ssrConfig.ssr,
                  .structure = structure,
                  .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow"),
@@ -494,7 +494,7 @@ index 4cd90e83..d36d015b 100644
              },
              colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
  
-@@ -1547,11 +1564,31 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1560,11 +1577,31 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                          .ssr = ssrConfig.ssr,
                  .structure = structure,
                  .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow"),
@@ -527,7 +527,7 @@ index 4cd90e83..d36d015b 100644
      if (colorGradingConfig.customResolve) {
          assert_invariant(fg.getDescriptor(colorPassOutput.linearColor).samples <= 1);
          // TODO: we have to "uncompress" (i.e. detonemap) the color buffer here because it's used
-@@ -1633,6 +1670,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1646,6 +1683,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
          externalUpscale.viewFromWorld = cameraInfo.view;
          externalUpscale.clipFromView = cameraInfo.projection;
          externalUpscale.flags = velocity ? ExternalPassFrame::FLAG_VELOCITY_BUFFER : 0u;

@@ -1,8 +1,8 @@
 diff --git a/filament/src/details/Engine.cpp b/filament/src/details/Engine.cpp
-index 82d3886c..8b6fb400 100644
+index b0bc8287..9e682b2b 100644
 --- a/filament/src/details/Engine.cpp
 +++ b/filament/src/details/Engine.cpp
-@@ -620,12 +620,9 @@ void FEngine::shutdown() {
+@@ -630,12 +630,9 @@ void FEngine::shutdown() {
       */
  
      mPostProcessManager.terminate(driver);  // free-up post-process manager resources
@@ -15,7 +15,7 @@ index 82d3886c..8b6fb400 100644
  
      mPerViewDescriptorSetLayoutDepthVariant.terminate(mHwDescriptorSetLayoutFactory, driver);
      mPerViewDescriptorSetLayoutSsrVariant.terminate(mHwDescriptorSetLayoutFactory, driver);
-@@ -666,6 +663,12 @@ void FEngine::shutdown() {
+@@ -678,6 +675,12 @@ void FEngine::shutdown() {
      // try to destroy objects in the inverse dependency
      cleanupResourceList(std::move(mRenderers));
      cleanupResourceList(std::move(mViews));

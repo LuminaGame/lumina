@@ -1,5 +1,5 @@
 diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
-index 32479e06..2659ccb7 100644
+index b3fac7b7..9caa9fb5 100644
 --- a/filament/CMakeLists.txt
 +++ b/filament/CMakeLists.txt
 @@ -64,6 +64,7 @@ set(SRCS
@@ -29,7 +29,7 @@ index 32479e06..2659ccb7 100644
  set(MATERIAL_MULTIVIEW_SRCS
          src/materials/clearDepth.mat
          src/materials/defaultMaterial.mat
-@@ -463,6 +476,16 @@ foreach(mat_dir ${MATERIAL_DIRS})
+@@ -464,6 +477,16 @@ foreach(mat_dir ${MATERIAL_DIRS})
              set(COMMENT_STR "Compiling material ${fullname} (Vulkan/Metal)")
          endif()
  
@@ -47,7 +47,7 @@ index 32479e06..2659ccb7 100644
  
          # --- Multiview variant ---
 diff --git a/filament/backend/CMakeLists.txt b/filament/backend/CMakeLists.txt
-index 2cf4db8d..bf9c4a46 100644
+index b706896c..6c3877e0 100644
 --- a/filament/backend/CMakeLists.txt
 +++ b/filament/backend/CMakeLists.txt
 @@ -207,6 +207,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
@@ -170,10 +170,10 @@ index 3e9e1253..d90ea8ba 100644
  #include <backend/ExternalPass.h>
  #include <backend/Handle.h>
 diff --git a/filament/backend/include/private/backend/DriverAPI.inc b/filament/backend/include/private/backend/DriverAPI.inc
-index e58e257f..c6f26dff 100644
+index 1e94751c..62c9bce2 100644
 --- a/filament/backend/include/private/backend/DriverAPI.inc
 +++ b/filament/backend/include/private/backend/DriverAPI.inc
-@@ -214,6 +214,15 @@ DECL_DRIVER_API_TAGGED_R_N(backend::BufferObjectHandle, createBufferObject,
+@@ -216,6 +216,15 @@ DECL_DRIVER_API_TAGGED_R_N(backend::BufferObjectHandle, createBufferObject,
          backend::BufferObjectBinding, bindingType,
          backend::BufferUsage, usage)
  
@@ -189,7 +189,7 @@ index e58e257f..c6f26dff 100644
  DECL_DRIVER_API_TAGGED_R_N(backend::BufferObjectHandle, createBufferObjectAsync,
          uint32_t, byteCount,
          backend::BufferObjectBinding, bindingType,
-@@ -372,6 +381,7 @@ DECL_DRIVER_API_N(destroyVertexBuffer,          backend::VertexBufferHandle, vbh
+@@ -374,6 +383,7 @@ DECL_DRIVER_API_N(destroyVertexBuffer,          backend::VertexBufferHandle, vbh
  DECL_DRIVER_API_N(destroyVertexBufferInfo,      backend::VertexBufferInfoHandle, vbih)
  DECL_DRIVER_API_N(destroyIndexBuffer,           backend::IndexBufferHandle, ibh)
  DECL_DRIVER_API_N(destroyBufferObject,          backend::BufferObjectHandle, boh)
@@ -197,7 +197,7 @@ index e58e257f..c6f26dff 100644
  DECL_DRIVER_API_N(destroyRenderPrimitive,       backend::RenderPrimitiveHandle, rph)
  DECL_DRIVER_API_N(destroyProgram,               backend::ProgramHandle, ph)
  DECL_DRIVER_API_N(destroyTexture,               backend::TextureHandle, th)
-@@ -417,6 +427,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedContentSupported)
+@@ -419,6 +429,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedContentSupported)
  DECL_DRIVER_API_SYNCHRONOUS_0(bool, isStereoSupported)
  DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)
  DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthStencilResolveSupported)
@@ -205,7 +205,7 @@ index e58e257f..c6f26dff 100644
  DECL_DRIVER_API_SYNCHRONOUS_N(bool, isDepthStencilBlitSupported, backend::TextureFormat, format)
  DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedTexturesSupported)
  DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthClampSupported)
-@@ -681,6 +692,23 @@ DECL_DRIVER_API_N(blit,
+@@ -686,6 +697,23 @@ DECL_DRIVER_API_N(blit,
  DECL_DRIVER_API_N(externalPass,
          backend::ExternalPassDescriptor, descriptor)
  
@@ -230,7 +230,7 @@ index e58e257f..c6f26dff 100644
          uint32_t, indexOffset,
          uint32_t, indexCount,
 diff --git a/filament/backend/src/DriverBase.h b/filament/backend/src/DriverBase.h
-index c8d37b84..070eb3cb 100644
+index be5ffbf0..2710fd67 100644
 --- a/filament/backend/src/DriverBase.h
 +++ b/filament/backend/src/DriverBase.h
 @@ -122,6 +122,10 @@ struct HwDescriptorSet : public HwBase {
@@ -245,10 +245,10 @@ index c8d37b84..070eb3cb 100644
      uint32_t width{};
      uint32_t height{};
 diff --git a/filament/backend/src/metal/MetalDriver.mm b/filament/backend/src/metal/MetalDriver.mm
-index 90c4e5e3..9cfea122 100644
+index 33587b31..235c8c2c 100644
 --- a/filament/backend/src/metal/MetalDriver.mm
 +++ b/filament/backend/src/metal/MetalDriver.mm
-@@ -2790,5 +2790,41 @@ bool MetalDriver::cancelAsyncJob(AsyncCallId jobId) {
+@@ -2825,5 +2825,41 @@ bool MetalDriver::cancelAsyncJob(AsyncCallId jobId) {
  // explicit instantiation of the Dispatcher
  template class ConcreteDispatcher<MetalDriver>;
  
@@ -291,10 +291,10 @@ index 90c4e5e3..9cfea122 100644
  } // namespace backend
  } // namespace filament
 diff --git a/filament/backend/src/metal/MetalHandles.mm b/filament/backend/src/metal/MetalHandles.mm
-index 3e7621be..7b01abfd 100644
+index 71274c40..83331610 100644
 --- a/filament/backend/src/metal/MetalHandles.mm
 +++ b/filament/backend/src/metal/MetalHandles.mm
-@@ -1569,6 +1569,7 @@ id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDe
+@@ -1568,6 +1568,7 @@ id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDe
                  break;
              }
              case DescriptorType::INPUT_ATTACHMENT:
@@ -302,7 +302,7 @@ index 3e7621be..7b01abfd 100644
                  // TODO: support INPUT_ATTACHMENT
                  assert_invariant(false);
                  break;
-@@ -1719,6 +1720,7 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
+@@ -1718,6 +1719,7 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
                  break;
              }
              case DescriptorType::INPUT_ATTACHMENT:
@@ -311,10 +311,10 @@ index 3e7621be..7b01abfd 100644
                  break;
          }
 diff --git a/filament/backend/src/noop/NoopDriver.cpp b/filament/backend/src/noop/NoopDriver.cpp
-index 4bed9be7..0371b396 100644
+index 131da71c..3b52d96e 100644
 --- a/filament/backend/src/noop/NoopDriver.cpp
 +++ b/filament/backend/src/noop/NoopDriver.cpp
-@@ -498,4 +498,24 @@ bool NoopDriver::cancelAsyncJob(AsyncCallId jobId) {
+@@ -502,4 +502,24 @@ bool NoopDriver::cancelAsyncJob(AsyncCallId jobId) {
      return false;
  }
  
@@ -352,10 +352,10 @@ index 2b7011af..a6f78bf8 100644
          }
      }
 diff --git a/filament/backend/src/opengl/OpenGLDriver.cpp b/filament/backend/src/opengl/OpenGLDriver.cpp
-index e8f6db72..f860d0c4 100644
+index 7b3c90c1..2249c274 100644
 --- a/filament/backend/src/opengl/OpenGLDriver.cpp
 +++ b/filament/backend/src/opengl/OpenGLDriver.cpp
-@@ -5224,6 +5224,42 @@ bool OpenGLDriver::cancelAsyncJob(AsyncCallId jobId) {
+@@ -5269,6 +5269,42 @@ bool OpenGLDriver::cancelAsyncJob(AsyncCallId jobId) {
  // explicit instantiation of the Dispatcher
  template class ConcreteDispatcher<OpenGLDriver>;
  
@@ -906,7 +906,7 @@ index df789e2b..f0578919 100644
  
      VmaAllocationCreateFlags vmaFlags = 0;
 diff --git a/filament/backend/src/vulkan/VulkanContext.h b/filament/backend/src/vulkan/VulkanContext.h
-index 3cccebea..63ffbf50 100644
+index 85a04811..06d0c128 100644
 --- a/filament/backend/src/vulkan/VulkanContext.h
 +++ b/filament/backend/src/vulkan/VulkanContext.h
 @@ -195,6 +195,15 @@ public:
@@ -925,8 +925,8 @@ index 3cccebea..63ffbf50 100644
      inline bool isLazilyAllocatedMemorySupported() const noexcept {
          return mLazilyAllocatedMemorySupported;
      }
-@@ -294,6 +303,19 @@ private:
-         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT,
+@@ -301,6 +310,19 @@ private:
+         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COLOR_WRITE_ENABLE_FEATURES_EXT,
      };
      VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
 +    VkPhysicalDeviceAccelerationStructureFeaturesKHR mAccelerationStructureFeatures = {
@@ -1069,7 +1069,7 @@ index 482087f6..30d9628c 100644
      using LayoutKeyHashFn = utils::hash::MurmurHashFn<LayoutKey>;
      struct LayoutKeyEqual {
 diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
-index 060e1860..3050c9ac 100644
+index 67bc2b84..25526087 100644
 --- a/filament/backend/src/vulkan/VulkanDriver.cpp
 +++ b/filament/backend/src/vulkan/VulkanDriver.cpp
 @@ -18,6 +18,7 @@
@@ -1108,7 +1108,7 @@ index 060e1860..3050c9ac 100644
            mContext(context),
            mSemaphoreManager(mPlatform->getDevice(), &mResourceManager),
            mCommands(mPlatform->getDevice(), mPlatform->getGraphicsQueue(),
-@@ -787,6 +789,84 @@ void VulkanDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t
+@@ -804,6 +806,84 @@ void VulkanDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t
      scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
  }
  
@@ -1193,7 +1193,7 @@ index 060e1860..3050c9ac 100644
  void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
      if (!boh) {
          return;
-@@ -1320,6 +1400,14 @@ Handle<HwBufferObject> VulkanDriver::createBufferObjectS() noexcept {
+@@ -1337,6 +1417,14 @@ Handle<HwBufferObject> VulkanDriver::createBufferObjectS() noexcept {
      return mResourceManager.allocHandle<VulkanBufferObject>();
  }
  
@@ -1208,7 +1208,7 @@ index 060e1860..3050c9ac 100644
  Handle<HwBufferObject> VulkanDriver::createBufferObjectAsyncS() noexcept {
      return mResourceManager.allocHandle<VulkanBufferObject>();
  }
-@@ -1840,6 +1928,10 @@ bool VulkanDriver::isDepthStencilResolveSupported() {
+@@ -1857,6 +1945,10 @@ bool VulkanDriver::isDepthStencilResolveSupported() {
      return false;
  }
  
@@ -1349,11 +1349,11 @@ index 6bb72f70..741dbcc0 100644
  
  template<typename D>
 diff --git a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
-index 4d87876d..88826688 100644
+index 5c9e93d2..365402ed 100644
 --- a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
 +++ b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
-@@ -1135,6 +1135,19 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
-         chainStruct(&context.mPhysicalDeviceFeatures, &context.mExtendedDynamicState2Features);
+@@ -1152,6 +1152,19 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
+         chainStruct(&context.mPhysicalDeviceFeatures, &context.mColorWriteEnableFeatures);
      }
  
 +    // Ray queries need the three extensions together; their features and the acceleration
@@ -1372,7 +1372,7 @@ index 4d87876d..88826688 100644
      if (vkGetPhysicalDeviceProperties2) {
          chainStruct(&context.mPhysicalDeviceProperties, &context.mDriverProperties);
          context.mDriverPropertiesSupported = true;
-@@ -1158,6 +1171,11 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
+@@ -1175,6 +1188,11 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
  
      vkGetPhysicalDeviceMemoryProperties(mImpl->mPhysicalDevice, &context.mMemoryProperties);
  
@@ -1384,7 +1384,7 @@ index 4d87876d..88826688 100644
      // Store the extension support in the context
      if (sharedContext) {
          VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
-@@ -1349,10 +1367,19 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
+@@ -1366,10 +1384,19 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
      }
  
      // Features that go with the client's extra extensions: an external upscaler's compute
@@ -1405,7 +1405,7 @@ index 4d87876d..88826688 100644
      if (setContains(deviceExtensions, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)) {
          VkPhysicalDeviceBufferDeviceAddressFeatures supported = {
              .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
-@@ -1367,6 +1394,10 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
+@@ -1384,6 +1411,10 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
              chainStruct(&deviceCreateInfo, &bufferDeviceAddress);
          }
      }
@@ -1432,10 +1432,10 @@ index 5a67cb41..3dd49ff7 100644
                  PANIC_POSTCONDITION("Shader storage is not supported");
                  break;
 diff --git a/filament/backend/src/webgpu/WebGPUDriver.cpp b/filament/backend/src/webgpu/WebGPUDriver.cpp
-index 2f7cc8e1..d636fa0b 100644
+index 17ca793d..4cbb0bf5 100644
 --- a/filament/backend/src/webgpu/WebGPUDriver.cpp
 +++ b/filament/backend/src/webgpu/WebGPUDriver.cpp
-@@ -2427,4 +2427,40 @@ bool WebGPUDriver::cancelAsyncJob(AsyncCallId jobId) {
+@@ -2448,4 +2448,40 @@ bool WebGPUDriver::cancelAsyncJob(AsyncCallId jobId) {
      return false;
  }
  
@@ -1489,7 +1489,7 @@ index 59448652..e5187715 100644
  }
  
 diff --git a/filament/include/filament/Engine.h b/filament/include/filament/Engine.h
-index 44d283b7..32a42a09 100644
+index 5be585ba..d8bb3045 100644
 --- a/filament/include/filament/Engine.h
 +++ b/filament/include/filament/Engine.h
 @@ -825,6 +825,15 @@ public:
@@ -1509,10 +1509,10 @@ index 44d283b7..32a42a09 100644
       * Checks if the engine is set up for asynchronous operation. If it returns true, the
       * asynchronous versions of the APIs are available for use.
 diff --git a/filament/include/filament/LightManager.h b/filament/include/filament/LightManager.h
-index ce25d597..797890e8 100644
+index e0629578..23d37f3c 100644
 --- a/filament/include/filament/LightManager.h
 +++ b/filament/include/filament/LightManager.h
-@@ -319,6 +319,14 @@ public:
+@@ -337,6 +337,14 @@ public:
           */
          bool lispsm = true;
  
@@ -1528,10 +1528,10 @@ index ce25d597..797890e8 100644
           * Constant bias in depth-resolution units by which shadows are moved away from the
           * light. The default value of 0.5 is used to round depth values up.
 diff --git a/filament/include/filament/RenderableManager.h b/filament/include/filament/RenderableManager.h
-index 3c2dd712..b2e0c946 100644
+index dbd5f3c7..7f2d1491 100644
 --- a/filament/include/filament/RenderableManager.h
 +++ b/filament/include/filament/RenderableManager.h
-@@ -782,6 +782,20 @@ public:
+@@ -798,6 +798,20 @@ public:
       */
      void setCastShadows(Instance instance, bool enable) noexcept;
  
@@ -1657,10 +1657,10 @@ index 6a4183fe..650da732 100644
       * Set the value of material global variables. There are up-to four such variable each of
       * type float4. These variables can be read in a user Material with
 diff --git a/filament/src/Engine.cpp b/filament/src/Engine.cpp
-index fb01c28f..067e50c8 100644
+index 42affe23..e61d42c0 100644
 --- a/filament/src/Engine.cpp
 +++ b/filament/src/Engine.cpp
-@@ -475,6 +475,10 @@ bool Engine::isStereoSupported(StereoscopicType) const noexcept {
+@@ -495,6 +495,10 @@ bool Engine::isStereoSupported(StereoscopicType) const noexcept {
      return downcast(this)->isStereoSupported();
  }
  
@@ -1672,10 +1672,10 @@ index fb01c28f..067e50c8 100644
      return downcast(this)->isAsynchronousModeEnabled();
  }
 diff --git a/filament/src/MaterialDefinition.cpp b/filament/src/MaterialDefinition.cpp
-index f163d3a7..7dfd65b0 100644
+index 8a535849..fb12d464 100644
 --- a/filament/src/MaterialDefinition.cpp
 +++ b/filament/src/MaterialDefinition.cpp
-@@ -441,6 +441,7 @@ void MaterialDefinition::processMain() {
+@@ -442,6 +442,7 @@ void MaterialDefinition::processMain() {
      }
  
      mMaterialParser->hasCustomDepthShader(&hasCustomDepthShader);
@@ -1683,7 +1683,7 @@ index f163d3a7..7dfd65b0 100644
  
      bool const isLit = isVariantLit || hasShadowMultiplier;
      bool const isSSR = reflectionMode == ReflectionMode::SCREEN_SPACE ||
-@@ -708,11 +709,17 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
+@@ -709,11 +710,17 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
              refractionMode == RefractionMode::SCREEN_SPACE;
      bool const hasFog = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
  
@@ -1706,19 +1706,19 @@ index f163d3a7..7dfd65b0 100644
      // set the labels
      this->descriptorSetLayoutDescription.label = CString{ name }.append("_perMat");
 diff --git a/filament/src/MaterialDefinition.h b/filament/src/MaterialDefinition.h
-index 21040edc..01fae919 100644
+index d4e8c755..bea30fbd 100644
 --- a/filament/src/MaterialDefinition.h
 +++ b/filament/src/MaterialDefinition.h
-@@ -141,6 +141,7 @@ struct MaterialDefinition {
+@@ -200,6 +200,7 @@ struct MaterialDefinition {
      bool doubleSidedCapability = false;
      bool hasShadowMultiplier = false;
      bool hasCustomDepthShader = false;
 +    bool hasRayQuery = false;
      bool specularAntiAliasing = false;
+     bool instanced = false;
  
-     SamplerInterfaceBlock samplerInterfaceBlock;
 diff --git a/filament/src/MaterialParser.cpp b/filament/src/MaterialParser.cpp
-index 5c26349b..034ffc21 100644
+index 8a817974..5ac1653c 100644
 --- a/filament/src/MaterialParser.cpp
 +++ b/filament/src/MaterialParser.cpp
 @@ -440,6 +440,10 @@ bool MaterialParser::hasShadowMultiplier(bool* value) const noexcept {
@@ -1732,7 +1732,7 @@ index 5c26349b..034ffc21 100644
  bool MaterialParser::getShading(Shading* value) const noexcept {
      static_assert(sizeof(Shading) == sizeof(uint8_t),
              "Shading expected size is wrong");
-@@ -774,6 +778,7 @@ constexpr bool isValidDescriptorType(uint8_t const value) noexcept {
+@@ -591,6 +595,7 @@ constexpr bool isValidDescriptorType(uint8_t const value) noexcept {
          case DescriptorType::UNIFORM_BUFFER:
          case DescriptorType::SHADER_STORAGE_BUFFER:
          case DescriptorType::INPUT_ATTACHMENT:
@@ -1753,7 +1753,7 @@ index d4af3dd9..9b5c0d05 100644
      bool getSpecularAntiAliasingVariance(float* value) const noexcept;
      bool getSpecularAntiAliasingThreshold(float* value) const noexcept;
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index 5204df99..ffe76604 100644
+index 76669fa4..8dec7f2d 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
 @@ -37,6 +37,10 @@
@@ -2020,7 +2020,7 @@ index 2cc1c822..4f32add0 100644
      // End PrimitiveInfo fields.
  
 diff --git a/filament/src/RenderableManager.cpp b/filament/src/RenderableManager.cpp
-index abc46a26..660fe6db 100644
+index d60b9d87..7cb660fa 100644
 --- a/filament/src/RenderableManager.cpp
 +++ b/filament/src/RenderableManager.cpp
 @@ -99,6 +99,14 @@ void RenderableManager::setCastShadows(Instance const instance, bool const enabl
@@ -2130,10 +2130,10 @@ index 5645dcf8..ccdc982e 100644
      downcast(this)->setMaterialGlobal(index, value);
  }
 diff --git a/filament/src/components/RenderableManager.cpp b/filament/src/components/RenderableManager.cpp
-index fe13c907..39f0e0d0 100644
+index 2bdbeab9..b054b7d7 100644
 --- a/filament/src/components/RenderableManager.cpp
 +++ b/filament/src/components/RenderableManager.cpp
-@@ -658,6 +658,8 @@ void FRenderableManager::create(
+@@ -668,6 +668,8 @@ void FRenderableManager::create(
          setPriority(ci, builder->mPriority);
          setChannel(ci, builder->mCommandChannel);
          setCastShadows(ci, builder->mCastShadows);
@@ -2143,7 +2143,7 @@ index fe13c907..39f0e0d0 100644
          setScreenSpaceContactShadows(ci, builder->mScreenSpaceContactShadows);
          setCulling(ci, builder->mCulling);
 diff --git a/filament/src/components/RenderableManager.h b/filament/src/components/RenderableManager.h
-index de64f841..5f4c45da 100644
+index 87a76a75..440a8106 100644
 --- a/filament/src/components/RenderableManager.h
 +++ b/filament/src/components/RenderableManager.h
 @@ -78,6 +78,7 @@ public:
@@ -2170,7 +2170,7 @@ index de64f841..5f4c45da 100644
      inline bool isShadowReceiver(Instance instance) const noexcept;
      inline bool isCullingEnabled(Instance instance) const noexcept;
      inline bool isScreenSpaceContactShadowsEnabled(Instance instance) const noexcept;
-@@ -544,6 +547,20 @@ bool FRenderableManager::isShadowCaster(Instance const instance) const noexcept
+@@ -545,6 +548,20 @@ bool FRenderableManager::isShadowCaster(Instance const instance) const noexcept
      return getVisibility(instance).castShadows;
  }
  
@@ -2192,10 +2192,10 @@ index de64f841..5f4c45da 100644
      return getVisibility(instance).receiveShadows;
  }
 diff --git a/filament/src/details/Engine.h b/filament/src/details/Engine.h
-index 2ce2da0d..5fe8a77f 100644
+index df810a0a..eadfb7c7 100644
 --- a/filament/src/details/Engine.h
 +++ b/filament/src/details/Engine.h
-@@ -242,6 +242,10 @@ public:
+@@ -249,6 +249,10 @@ public:
          return getDriver().isStereoSupported();
      }
  
@@ -2207,10 +2207,10 @@ index 2ce2da0d..5fe8a77f 100644
  
      static size_t getMaxStereoscopicEyes() noexcept {
 diff --git a/filament/src/details/IndexBuffer.h b/filament/src/details/IndexBuffer.h
-index e68ceff1..c086ac6d 100644
+index 0a0efcdf..ce999794 100644
 --- a/filament/src/details/IndexBuffer.h
 +++ b/filament/src/details/IndexBuffer.h
-@@ -56,6 +56,7 @@ public:
+@@ -54,6 +54,7 @@ public:
      // Total capacity of the underlying buffer, in bytes. This is the upper bound that
      // setBuffer()/setBufferAsync() validate their write range against.
      size_t getByteCount() const noexcept { return size_t(mIndexCount) * mElementSize; }
@@ -2219,10 +2219,10 @@ index e68ceff1..c086ac6d 100644
      void setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
  
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index 6c830802..5314c784 100644
+index e728b89e..a0e5b0ec 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -980,6 +980,20 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -994,6 +994,20 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      view.prepareSSAO(aoOptions);
      view.prepareSSR(engine, cameraInfo, ssrConfig.lodOffset, ssReflectionsOptions);
      view.prepareShadowMapping();
@@ -2243,7 +2243,7 @@ index 6c830802..5314c784 100644
      // There might be a bug here with svp's origin; normally the origin could offset when the
      // target is the swapchain (width/height are the same though). This would mean that we'd have
      // to wait for the color pass to execute to set the viewport. For now, I wasn't able to
-@@ -1002,7 +1016,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1016,7 +1030,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      bool const motionVectors = taaOptions.motionVectors
              && engine.getSupportedFeatureLevel() != FeatureLevel::FEATURE_LEVEL_0
              && driver.isRenderTargetFormatSupported(TextureFormat::RG16F);
@@ -2253,7 +2253,7 @@ index 6c830802..5314c784 100644
  
      { // the scope helps to guarantee that we're not modifying the descriptor-set later
          StructureDescriptorSet& ds = ppm.getStructureDescriptorSet();
-@@ -1219,6 +1234,17 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1232,6 +1247,17 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
          blackboard["ssao"] = ssao;
      }
  
@@ -2271,7 +2271,7 @@ index 6c830802..5314c784 100644
      // --------------------------------------------------------------------------------------------
      // screen-space reflections pass
  
-@@ -1395,7 +1421,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1408,7 +1434,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                  .shadows = blackboard.get<FrameGraphTexture>("shadows"),
                  .ssao = blackboard.get<FrameGraphTexture>("ssao"),
                  .ssr = ssrConfig.ssr,
@@ -2281,7 +2281,7 @@ index 6c830802..5314c784 100644
              },
              colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
  
-@@ -1406,7 +1433,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1419,7 +1446,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                          .shadows = blackboard.get<FrameGraphTexture>("shadows"),
                          .ssao = blackboard.get<FrameGraphTexture>("ssao"),
                          .ssr = ssrConfig.ssr,
@@ -2292,7 +2292,7 @@ index 6c830802..5314c784 100644
               pass, firstRefractionCommand);
      }
 diff --git a/filament/src/details/Scene.cpp b/filament/src/details/Scene.cpp
-index 09907945..3585a3ff 100644
+index 10d80c21..8f74de8c 100644
 --- a/filament/src/details/Scene.cpp
 +++ b/filament/src/details/Scene.cpp
 @@ -26,6 +26,9 @@
@@ -2322,7 +2322,7 @@ index 09907945..3585a3ff 100644
  #include <cstddef>
  #include <cstdint>
  #include <functional>
-@@ -498,11 +504,177 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, Scene
+@@ -500,11 +506,177 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, Scene
      }
  }
  
@@ -2550,11 +2550,11 @@ index e2e3eca0..70ecc86f 100644
       * The data below is valid only during a view pass. i.e. if a scene is used in multiple
       * views, the data below is updated for each view.
 diff --git a/filament/src/details/VertexBuffer.h b/filament/src/details/VertexBuffer.h
-index 0b986d0f..35cfa2ad 100644
+index 6f7d45cd..859edbd9 100644
 --- a/filament/src/details/VertexBuffer.h
 +++ b/filament/src/details/VertexBuffer.h
-@@ -101,6 +101,21 @@ public:
-         return mCreationStatus.load(std::memory_order_relaxed) == CreationStatus::CREATED;
+@@ -100,6 +100,21 @@ public:
+         return mCreationState.isSuccessful();
      }
  
 +    // The buffer object, byte offset, stride and element type of the position attribute,
@@ -3173,10 +3173,10 @@ index 442cebde..8df407fe 100644
  
  enum class PerRenderableBindingPoints : uint8_t  {
 diff --git a/libs/filabridge/src/DescriptorSets.cpp b/libs/filabridge/src/DescriptorSets.cpp
-index bf6d43cc..f962a8ec 100644
+index e9ad50cc..97d63bb1 100644
 --- a/libs/filabridge/src/DescriptorSets.cpp
 +++ b/libs/filabridge/src/DescriptorSets.cpp
-@@ -85,6 +85,14 @@ static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perViewDes
+@@ -84,6 +84,14 @@ static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perViewDes
      { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,                    ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSAO           },
      { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,                    ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
      { DescriptorType::SAMPLER_CUBE_FLOAT,                        ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
@@ -3191,7 +3191,7 @@ index bf6d43cc..f962a8ec 100644
  };
  
  static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perRenderableDescriptorSetLayoutList = {
-@@ -147,6 +155,9 @@ static DescriptorSetLayout const depthVariantDescriptorSetLayout{
+@@ -146,6 +154,9 @@ static DescriptorSetLayout const depthVariantDescriptorSetLayout{
  static DescriptorSetLayout const ssrVariantDescriptorSetLayout{ utils::StaticString("ssrVariant"),
      ssrVariantDescriptorSetLayoutList };
  
@@ -3201,7 +3201,7 @@ index bf6d43cc..f962a8ec 100644
  // Used for generating the color pass (i.e. the main pass). This is in fact a template that gets
  // declined into 8 different layouts, based on variants.
  static DescriptorSetLayout perViewDescriptorSetLayout = { utils::StaticString("perView"),
-@@ -164,6 +175,10 @@ DescriptorSetLayout const& getSsrVariantLayout() noexcept {
+@@ -163,6 +174,10 @@ DescriptorSetLayout const& getSsrVariantLayout() noexcept {
      return ssrVariantDescriptorSetLayout;
  }
  
@@ -3212,7 +3212,7 @@ index bf6d43cc..f962a8ec 100644
  DescriptorSetLayout const& getPerRenderableLayout() noexcept {
      return perRenderableDescriptorSetLayout;
  }
-@@ -185,6 +200,8 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
+@@ -184,6 +199,8 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
          { +PerViewBindingPoints::SSAO,           "sampler0_ssao"sv },
          { +PerViewBindingPoints::SSR,            "sampler0_ssr"sv },
          { +PerViewBindingPoints::FOG,            "sampler0_fog"sv },
@@ -3221,7 +3221,7 @@ index bf6d43cc..f962a8ec 100644
      }};
  
      static std::unordered_map<descriptor_binding_t, std::string_view> const set1{{
-@@ -234,7 +251,8 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
+@@ -233,7 +250,8 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
                          std::remove_if(layout.descriptors.begin(), layout.descriptors.end(),
                                  [](auto const& entry) {
                                      return  entry.binding == PerViewBindingPoints::IBL_DFG_LUT ||
@@ -3258,7 +3258,7 @@ index 77aba595..7d1b1eb3 100644
      bool mColoredPenumbra = false;
  
 diff --git a/libs/filamat/src/GLSLPostProcessor.cpp b/libs/filamat/src/GLSLPostProcessor.cpp
-index 556a9fbe..e4c00cde 100644
+index 1257c2a3..7cf772b0 100644
 --- a/libs/filamat/src/GLSLPostProcessor.cpp
 +++ b/libs/filamat/src/GLSLPostProcessor.cpp
 @@ -488,6 +488,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
@@ -3289,7 +3289,7 @@ index 556a9fbe..e4c00cde 100644
          ok = spirvShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
          program.addShader(&spirvShader);
          // Even though we only have a single shader stage, linking is still necessary to finalize
-@@ -981,8 +984,8 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
+@@ -984,8 +987,8 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
      return true;
  }
  
@@ -3300,7 +3300,7 @@ index 556a9fbe..e4c00cde 100644
      optimizer->SetMessageConsumer([](spv_message_level_t level,
              const char* source, const spv_position_t& position, const char* message) {
          if (!filterSpvOptimizerMessage(level)) {
-@@ -996,7 +999,7 @@ std::shared_ptr<Optimizer> GLSLPostProcessor::createEmptyOptimizer() {
+@@ -999,7 +1002,7 @@ std::shared_ptr<Optimizer> GLSLPostProcessor::createEmptyOptimizer() {
  
  std::shared_ptr<Optimizer> GLSLPostProcessor::createOptimizer(
          MaterialBuilder::Optimization optimization, Config const& config) {
@@ -3323,7 +3323,7 @@ index 625717be..2827b0de 100644
      static void registerSizePasses(spvtools::Optimizer& optimizer, Config const& config);
  
 diff --git a/libs/filamat/src/MaterialBuilder.cpp b/libs/filamat/src/MaterialBuilder.cpp
-index b1b74c54..46512d31 100644
+index bddafc28..d0f89b50 100644
 --- a/libs/filamat/src/MaterialBuilder.cpp
 +++ b/libs/filamat/src/MaterialBuilder.cpp
 @@ -500,6 +500,11 @@ MaterialBuilder& MaterialBuilder::alphaToCoverage(bool const enable) noexcept {
@@ -3346,7 +3346,7 @@ index b1b74c54..46512d31 100644
      info.hasTransparentShadow = mTransparentShadow;
      info.hasColoredPenumbra = mColoredPenumbra;
      info.multiBounceAO = mMultiBounceAO;
-@@ -1373,9 +1379,11 @@ error:
+@@ -1371,9 +1377,11 @@ error:
  
      // For finding properties and running semantic analysis, we always use the same code gen
      // permutation. This is the first permutation generated with default arguments passed to matc.
@@ -3360,7 +3360,7 @@ index b1b74c54..46512d31 100644
              .targetLanguage = TargetLanguage::SPIRV,
              .featureLevel = info.featureLevel,
      };
-@@ -1630,6 +1638,8 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
+@@ -1628,6 +1636,8 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
              mCompilationParameters.c_str_safe());
      container.emplace<uint32_t>(MaterialShaderModels, mShaderModels.getValue());
      container.emplace<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
@@ -3487,7 +3487,7 @@ index da8642a6..77393866 100644
              .build() };
  
 diff --git a/libs/filament-matp/src/ParametersProcessor.cpp b/libs/filament-matp/src/ParametersProcessor.cpp
-index d2c836cd..e0e42201 100644
+index d9921829..83182e0d 100644
 --- a/libs/filament-matp/src/ParametersProcessor.cpp
 +++ b/libs/filament-matp/src/ParametersProcessor.cpp
 @@ -1151,6 +1151,11 @@ static Status processShadowMultiplier(MaterialBuilder& builder, const JsonishVal
@@ -3502,7 +3502,7 @@ index d2c836cd..e0e42201 100644
  static Status processTransparentShadow(MaterialBuilder& builder, const JsonishValue& value) {
      builder.transparentShadow(value.toJsonBool()->getBool());
      return Status::ok();;
-@@ -1399,6 +1404,7 @@ ParametersProcessor::ParametersProcessor() {
+@@ -1398,6 +1403,7 @@ ParametersProcessor::ParametersProcessor() {
      mParameters["maskThreshold"]                 = { &processMaskThreshold, Type::NUMBER };
      mParameters["alphaToCoverage"]               = { &processAlphaToCoverage, Type::BOOL };
      mParameters["shadowMultiplier"]              = { &processShadowMultiplier, Type::BOOL };

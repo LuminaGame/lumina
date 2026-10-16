@@ -14,7 +14,7 @@ The Lumina repositories are meant to be checked out side by side:
   tools/         https://github.com/LuminaGame/tools
   plugins/       https://github.com/LuminaGame/plugins
   marketplace/   https://github.com/LuminaGame/marketplace
-  filament/      patched Filament v1.77.2 with its prebuilt out/ folders
+  filament/      patched Filament v1.78.0 with its prebuilt out/ folders
   test-assets/   https://github.com/LuminaGame/test-assets (optional, Git LFS)
 ```
 
@@ -67,7 +67,7 @@ A package resolved from git lives in the pub cache and has no Filament next to i
 
 ## Build Filament
 
-The hooks expect the static libraries in `filament/out/cmake-release/` (Linux and macOS) or `filament/out/cmake-release-windows/` (Windows). Lumina uses upstream Filament v1.77.2 with ten local patches, kept in `third_party/filament/patches/` and explained in `third_party/filament/README.md`:
+The hooks expect the static libraries in `filament/out/cmake-release/` (Linux and macOS) or `filament/out/cmake-release-windows/` (Windows). Lumina uses upstream Filament v1.78.0 with twenty local patches, kept in `third_party/filament/patches/` and explained in `third_party/filament/README.md`:
 
 - a bounds fix in the bundled `libassimp`;
 - a `RenderPass.cpp` change that keeps skinned and morphed renderables out of the screen-space reflections pass (without it the Vulkan backend loses the device);
@@ -78,7 +78,17 @@ The hooks expect the static libraries in `filament/out/cmake-release/` (Linux an
 - Vulkan ray query: acceleration structures, ray-traced sun shadows (`ShadowOptions::rayTraced`) and `View::traceRay`;
 - ReSTIR direct lighting (`RestirOptions`) on top of ray query;
 - the FSR3 upscaler and frame generation as fragment passes, and `SwapChain::CONFIG_DISABLE_VSYNC`;
-- lit shaders sample the ray query textures (the ray-traced shadow mask, the ReSTIR reservoir and light textures) only when compiled for Vulkan, so OpenGL and WebGL shaders spend no fragment sampler on them (a lit material with eight samplers and fog stays at 15; Chrome's Direct3D 11 backend crashes on 16).
+- lit shaders sample the ray query textures (the ray-traced shadow mask, the ReSTIR reservoir and light textures) only when compiled for Vulkan, so OpenGL and WebGL shaders spend no fragment sampler on them (a lit material with eight samplers and fog stays at 15; Chrome's Direct3D 11 backend crashes on 16);
+- an external post pass in linear HDR after the TAA/FSR3 resolve (`View::setExternalPostPass`) and client Vulkan device feature structures;
+- guide buffers for neural denoisers (`View::setGuideBufferOptions`: normal + roughness, diffuse and specular albedo);
+- an external frame generator (`View::setExternalFrameGenerator`), which drives DLSS Frame Generation and Multi Frame Generation;
+- ray query origin offsets in texels, so ray-traced shadows work at any scene unit (centimetres);
+- skinned and morphed renderables traced in their current pose (a Vulkan compute deform pass refits their acceleration structures);
+- a present thread per vsync-less Vulkan SwapChain that paces generated frames evenly (`VulkanPresentPacer`);
+- Vulkan blit rectangles clamped inside their images (window resizes with frame generation lost the device);
+- client feature requests OR-merged into the structures Filament already chains, plus an opt-in `Customization::apiVersion` (Vulkan 1.3 for OpenDLSS-NR);
+- ray-traced passes trace in the true world under an IBL rotation, so ray-traced and ReSTIR shadows match the shadow map;
+- an Android build without the ray query materials (the Quest/Android prebuilt).
 
 ### Prebuilt archive
 

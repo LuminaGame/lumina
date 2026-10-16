@@ -73,7 +73,7 @@ index c47b4e34..749b6e56 100644
  
  /*
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index b654755d..0aa7fb55 100644
+index 80e616b8..6c9d8805 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
 @@ -346,6 +346,14 @@ void PostProcessManager::init() noexcept {
@@ -354,10 +354,10 @@ index 1fc21785..771f7698 100644
      downcast(this)->setGuardBandOptions(options);
  }
 diff --git a/filament/src/components/RenderableManager.cpp b/filament/src/components/RenderableManager.cpp
-index cf66ecfe..fe13c907 100644
+index 91164809..2bdbeab9 100644
 --- a/filament/src/components/RenderableManager.cpp
 +++ b/filament/src/components/RenderableManager.cpp
-@@ -711,19 +711,40 @@ void FRenderableManager::create(
+@@ -721,19 +721,40 @@ void FRenderableManager::create(
                          .skinningBufferMode = false };
  
                  if (boneCount) {
@@ -398,7 +398,7 @@ index cf66ecfe..fe13c907 100644
                  }
                  else {
                      // When boneCount is 0, do an initialization for the bones uniform array to
-@@ -769,6 +790,17 @@ void FRenderableManager::create(
+@@ -779,6 +800,17 @@ void FRenderableManager::create(
                          BufferObjectBinding::UNIFORM,
                          BufferUsage::DYNAMIC),
                  .count = targetCount };
@@ -416,7 +416,7 @@ index cf66ecfe..fe13c907 100644
  
              Slice<FRenderPrimitive> const primitives = mManager[ci].primitives;
              mManager[ci].morphTargetBuffer = morphTargetBuffer;
-@@ -843,12 +875,20 @@ void FRenderableManager::destroyComponent(Instance const ci, DriverApi& driver)
+@@ -853,12 +885,20 @@ void FRenderableManager::destroyComponent(Instance const ci, DriverApi& driver)
          // when not in skinningBufferMode, we now the handle, so we destroy it
          driver.destroyBufferObject(bones.handle);
      }
@@ -437,7 +437,7 @@ index cf66ecfe..fe13c907 100644
      if (morphWeights.handle) {
          driver.destroyBufferObject(morphWeights.handle);
      }
-@@ -999,10 +1039,49 @@ void FRenderableManager::setPrimitives(Instance const instance, Slice<FRenderPri
+@@ -1009,10 +1049,49 @@ void FRenderableManager::setPrimitives(Instance const instance, Slice<FRenderPri
      }
  }
  
@@ -488,7 +488,7 @@ index cf66ecfe..fe13c907 100644
  
          FILAMENT_CHECK_PRECONDITION(!bones.skinningBufferMode)
                  << "Disable skinning buffer mode to use this API";
-@@ -1020,6 +1099,14 @@ void FRenderableManager::setBones(Instance const ci,
+@@ -1030,6 +1109,14 @@ void FRenderableManager::setBones(Instance const ci,
          assert_invariant(bones.handle && offset + boneCount <= bones.count);
          if (bones.handle) {
              boneCount = std::min(boneCount, bones.count - offset);
@@ -503,7 +503,7 @@ index cf66ecfe..fe13c907 100644
              FSkinningBuffer::setBones(mEngine, bones.handle, transforms, boneCount, offset);
          }
      }
-@@ -1028,7 +1115,7 @@ void FRenderableManager::setBones(Instance const ci,
+@@ -1038,7 +1125,7 @@ void FRenderableManager::setBones(Instance const ci,
  void FRenderableManager::setBones(Instance const ci,
          mat4f const* UTILS_RESTRICT transforms, size_t boneCount, size_t const offset) {
      if (ci) {
@@ -512,7 +512,7 @@ index cf66ecfe..fe13c907 100644
  
          FILAMENT_CHECK_PRECONDITION(!bones.skinningBufferMode)
                  << "Disable skinning buffer mode to use this API";
-@@ -1046,6 +1133,12 @@ void FRenderableManager::setBones(Instance const ci,
+@@ -1056,6 +1143,12 @@ void FRenderableManager::setBones(Instance const ci,
          assert_invariant(bones.handle && offset + boneCount <= bones.count);
          if (bones.handle) {
              boneCount = std::min(boneCount, bones.count - offset);
@@ -525,7 +525,7 @@ index cf66ecfe..fe13c907 100644
              FSkinningBuffer::setBones(mEngine, bones.handle, transforms, boneCount, offset);
          }
      }
-@@ -1105,8 +1198,23 @@ void FRenderableManager::setMorphWeights(Instance const instance, float const* w
+@@ -1115,8 +1208,23 @@ void FRenderableManager::setMorphWeights(Instance const instance, float const* w
              return;
          }
  
@@ -551,7 +551,7 @@ index cf66ecfe..fe13c907 100644
          }
      }
 diff --git a/filament/src/components/RenderableManager.h b/filament/src/components/RenderableManager.h
-index 71935af6..de64f841 100644
+index 0ff230a2..87a76a75 100644
 --- a/filament/src/components/RenderableManager.h
 +++ b/filament/src/components/RenderableManager.h
 @@ -28,6 +28,8 @@
@@ -601,7 +601,7 @@ index 71935af6..de64f841 100644
      };
      inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
  
-@@ -278,14 +297,23 @@ private:
+@@ -279,14 +298,23 @@ private:
          uint16_t count = 0;
          uint16_t offset = 0;
          bool skinningBufferMode = false; // whether we own (false) handle or not (true)
@@ -627,7 +627,7 @@ index 71935af6..de64f841 100644
  
      enum {
          AABB,                   // user data
-@@ -350,9 +378,12 @@ private:
+@@ -351,9 +379,12 @@ private:
          }
      };
  
@@ -640,7 +640,7 @@ index 71935af6..de64f841 100644
  };
  
  FILAMENT_DOWNCAST(RenderableManager)
-@@ -548,7 +579,13 @@ Box const& FRenderableManager::getAABB(Instance const instance) const noexcept {
+@@ -549,7 +580,13 @@ Box const& FRenderableManager::getAABB(Instance const instance) const noexcept {
  FRenderableManager::SkinningBindingInfo
  FRenderableManager::getSkinningBufferInfo(Instance const instance) const noexcept {
      Bones const& bones = mManager[instance].bones;
@@ -655,7 +655,7 @@ index 71935af6..de64f841 100644
  }
  
  inline uint32_t FRenderableManager::getBoneCount(Instance const instance) const noexcept {
-@@ -560,7 +597,8 @@ FRenderableManager::MorphingBindingInfo
+@@ -561,7 +598,8 @@ FRenderableManager::MorphingBindingInfo
  FRenderableManager::getMorphingBufferInfo(Instance const instance) const noexcept {
      MorphWeights const& morphWeights = mManager[instance].morphWeights;
      FMorphTargetBuffer const* const buffer = mManager[instance].morphTargetBuffer;
@@ -666,10 +666,10 @@ index 71935af6..de64f841 100644
  
  FRenderableManager::InstancesInfo
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index 53d556a0..9ffdb8f0 100644
+index 5887d7d1..e874cde9 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -556,6 +556,9 @@ void FRenderer::endFrame() {
+@@ -570,6 +570,9 @@ void FRenderer::endFrame() {
      mFrameInfoManager.endFrame(driver);
      mFrameSkipper.submitFrame(driver);
  
@@ -679,7 +679,7 @@ index 53d556a0..9ffdb8f0 100644
      engine.submitFrame();
  
      driver.endFrame(mFrameId);
-@@ -971,7 +974,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -985,7 +988,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
       */
  
      auto [bias, derivativeScale] = prepareUpscaler(scale, taaOptions, dsrOptions);
@@ -689,7 +689,7 @@ index 53d556a0..9ffdb8f0 100644
      view.prepareLodBias(bias, derivativeScale);
      view.prepareSSAO(aoOptions);
      view.prepareSSR(engine, cameraInfo, ssrConfig.lodOffset, ssReflectionsOptions);
-@@ -992,17 +996,35 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1006,17 +1010,35 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      // at the same resolution. We set only the values that are relevant to both user-materials
      // and the concerned passes. The PER_VIEW UBO contains data that is needed by the user
      // materials public APIs.
@@ -729,7 +729,7 @@ index 53d556a0..9ffdb8f0 100644
      }
  
      /*
-@@ -1146,10 +1168,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1159,10 +1181,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      // Also, picking is handled here if transparent picking is disabled.
  
      // TODO: the scaling should depends on all passes that need the structure pass
@@ -745,7 +745,7 @@ index 53d556a0..9ffdb8f0 100644
      });
      auto picking = picking_;
  
-@@ -1182,7 +1206,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1195,7 +1219,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                  },
                  [=, &view](FrameGraphResources const& resources, auto&, DriverApi& driver) mutable {
                      auto [target, params] = resources.getRenderPassInfo();
@@ -754,7 +754,7 @@ index 53d556a0..9ffdb8f0 100644
                  });
      }
  
-@@ -1449,7 +1473,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1462,7 +1486,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
  
      // TAA for color pass
      if (taaOptions.enabled) {
@@ -764,10 +764,10 @@ index 53d556a0..9ffdb8f0 100644
                  taaOptions, colorGradingConfig);
          if (taaOptions.upscaling > 1.0f) {
 diff --git a/filament/src/details/Scene.cpp b/filament/src/details/Scene.cpp
-index fd58a8d9..09907945 100644
+index f8116e02..10d80c21 100644
 --- a/filament/src/details/Scene.cpp
 +++ b/filament/src/details/Scene.cpp
-@@ -418,10 +418,21 @@ void FScene::prepare(JobSystem& js,
+@@ -420,10 +420,21 @@ void FScene::prepare(JobSystem& js,
      FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
  }
  
@@ -791,7 +791,7 @@ index fd58a8d9..09907945 100644
      cache.hasContactShadows = false;
      for (uint32_t const i : visibleRenderables) {
          PerRenderableData& uboData = sceneData.elementAt<UBO>(i);
-@@ -456,6 +467,19 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, Scene
+@@ -458,6 +469,19 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, Scene
  
          uboData.worldFromModelNormalMatrix = m;
  
@@ -1032,10 +1032,10 @@ index 51b51443..442cebde 100644
  
  enum class PerMaterialBindingPoints : uint8_t  {
 diff --git a/libs/filabridge/include/private/filament/UibStructs.h b/libs/filabridge/include/private/filament/UibStructs.h
-index 2507ee79..cb25ca20 100644
+index 085324d2..2c7d1031 100644
 --- a/libs/filabridge/include/private/filament/UibStructs.h
 +++ b/libs/filabridge/include/private/filament/UibStructs.h
-@@ -230,8 +230,14 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
+@@ -231,8 +231,14 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
      int32_t extraDirReserved1;
      int32_t extraDirReserved2;
  
@@ -1051,7 +1051,7 @@ index 2507ee79..cb25ca20 100644
  };
  
  // 2 KiB == 128 float4s
-@@ -250,7 +256,10 @@ struct PerRenderableData {
+@@ -251,7 +257,10 @@ struct PerRenderableData {
      // TODO: We need a better solution, this currently holds the average local scale for the renderable
      float userData;
  
@@ -1064,10 +1064,10 @@ index 2507ee79..cb25ca20 100644
      static uint32_t packFlagsChannels(
              bool skinning, uint8_t morphing, bool contactShadows, bool hasInstanceBuffer,
 diff --git a/libs/filabridge/src/DescriptorSets.cpp b/libs/filabridge/src/DescriptorSets.cpp
-index 86043b4f..bf6d43cc 100644
+index 0c4aefe6..e9ad50cc 100644
 --- a/libs/filabridge/src/DescriptorSets.cpp
 +++ b/libs/filabridge/src/DescriptorSets.cpp
-@@ -94,6 +94,8 @@ static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perRendera
+@@ -93,6 +93,8 @@ static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perRendera
      { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,   ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS, DescriptorFlags::UNFILTERABLE },
      { DescriptorType::SAMPLER_2D_ARRAY_INT,     ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS     },
      { DescriptorType::SAMPLER_2D_FLOAT,   ShaderStageFlags::VERTEX                                   ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS, DescriptorFlags::UNFILTERABLE },
@@ -1076,7 +1076,7 @@ index 86043b4f..bf6d43cc 100644
  };
  
  struct PairSamplerTypeFormatHasher {
-@@ -192,6 +194,8 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
+@@ -191,6 +193,8 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
          { +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,      "sampler1_positions"sv },
          { +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,       "sampler1_tangents"sv },
          { +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,   "sampler1_indicesAndWeights"sv },
@@ -1106,7 +1106,7 @@ index fbe2b1d4..2c39ebbc 100644
                  SibGenerator::getPerRenderableSib(variant));
      }
 diff --git a/libs/filamat/src/shaders/UibGenerator.cpp b/libs/filamat/src/shaders/UibGenerator.cpp
-index f68aa003..2659f8c1 100644
+index 59bacb8c..355b83a3 100644
 --- a/libs/filamat/src/shaders/UibGenerator.cpp
 +++ b/libs/filamat/src/shaders/UibGenerator.cpp
 @@ -241,6 +241,10 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {

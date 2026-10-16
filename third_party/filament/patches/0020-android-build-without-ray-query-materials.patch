@@ -23,10 +23,10 @@ Two things kept the patched tree from building for Android:
   (build/windows/combine-static-libs.cmake).
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index a95a7476..865eccca 100644
+index 9f1ffac3..c9e5af14 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -775,6 +775,7 @@ function(list_licenses OUTPUT MODULES)
+@@ -779,6 +779,7 @@ function(list_licenses OUTPUT MODULES)
  endfunction()
  
  set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/linux/combine-static-libs.sh")
@@ -34,7 +34,7 @@ index a95a7476..865eccca 100644
  
  # Add a custom command to TARGET that combines the static libraries in DEPS into a single archive.
  function(combine_static_libs TARGET OUTPUT DEPS)
-@@ -797,6 +798,15 @@ function(combine_static_libs TARGET OUTPUT DEPS)
+@@ -801,6 +802,15 @@ function(combine_static_libs TARGET OUTPUT DEPS)
              COMMENT "Combining ${target} dependencies into single shared library"
              VERBATIM
          )
@@ -88,7 +88,7 @@ index 00000000..b89ea9b5
 +    message(FATAL_ERROR "combining ${archives} into ${OUTPUT} failed (${rc})")
 +endif()
 diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
-index 1435ab01..83b4ff2a 100644
+index 1367c774..72c8b3b6 100644
 --- a/filament/CMakeLists.txt
 +++ b/filament/CMakeLists.txt
 @@ -335,20 +335,26 @@ if (NOT FILAMENT_DISABLE_GTAO)
@@ -130,10 +130,10 @@ index 1435ab01..83b4ff2a 100644
  
  set(MATERIAL_MULTIVIEW_SRCS
 diff --git a/filament/src/details/Engine.h b/filament/src/details/Engine.h
-index 5fe8a77f..671f0878 100644
+index eadfb7c7..38833b93 100644
 --- a/filament/src/details/Engine.h
 +++ b/filament/src/details/Engine.h
-@@ -27,6 +27,7 @@
+@@ -26,6 +26,7 @@
  #include "MaterialDefinition.h"
  #include "PostProcessManager.h"
  #include "ResourceList.h"
@@ -141,7 +141,7 @@ index 5fe8a77f..671f0878 100644
  #include "UboManager.h"
  
  #include "components/CameraManager.h"
-@@ -242,8 +243,10 @@ public:
+@@ -249,8 +250,10 @@ public:
          return getDriver().isStereoSupported();
      }
  

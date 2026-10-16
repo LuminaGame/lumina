@@ -16,7 +16,7 @@ for TARGET_VULKAN_ENVIRONMENT only; the per-view declarations stay, so
 the descriptor layouts are unchanged.
 
 diff --git a/shaders/src/surface_light_directional.fs b/shaders/src/surface_light_directional.fs
-index 9dc81c7..76b8907 100644
+index 9dc81c74..76b89072 100644
 --- a/shaders/src/surface_light_directional.fs
 +++ b/shaders/src/surface_light_directional.fs
 @@ -70,10 +70,14 @@ void evaluateDirectionalLight(const MaterialInputs material,
@@ -36,7 +36,7 @@ index 9dc81c7..76b8907 100644
          if ((frameUniforms.directionalShadows & 0x2) != 0 && visibility > 0.0) {
              if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0) {
 diff --git a/shaders/src/surface_light_punctual.fs b/shaders/src/surface_light_punctual.fs
-index 14a434a..dd9c65c 100644
+index 14a434a1..dd9c65c1 100644
 --- a/shaders/src/surface_light_punctual.fs
 +++ b/shaders/src/surface_light_punctual.fs
 @@ -172,6 +172,7 @@ Light getLight(const uint lightIndex) {
@@ -67,5 +67,3 @@ index 14a434a..dd9c65c 100644
      if (frameUniforms.restirMode > 0.5) {
          evaluateRestirLight(material, pixel, color);
          return;
--- 
-2.43.0

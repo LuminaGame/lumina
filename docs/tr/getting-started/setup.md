@@ -14,7 +14,7 @@ Lumina repository'leri yan yana checkout edilmek üzere tasarlanmıştır:
   tools/         https://github.com/LuminaGame/tools
   plugins/       https://github.com/LuminaGame/plugins
   marketplace/   https://github.com/LuminaGame/marketplace
-  filament/      prebuilt out/ klasörleriyle yamalı Filament v1.77.2
+  filament/      prebuilt out/ klasörleriyle yamalı Filament v1.78.0
   test-assets/   https://github.com/LuminaGame/test-assets (isteğe bağlı, Git LFS)
 ```
 
@@ -67,7 +67,7 @@ Git'ten çözülen bir paket pub cache'te durur ve yanında Filament yoktur; use
 
 ## Filament'i build etmek
 
-Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) ya da `filament/out/cmake-release-windows/` (Windows) altında bekler. Lumina, upstream Filament v1.77.2'ı on yerel yamayla kullanır; yamalar `third_party/filament/patches/` altındadır ve `third_party/filament/README.md` içinde açıklanır:
+Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) ya da `filament/out/cmake-release-windows/` (Windows) altında bekler. Lumina, upstream Filament v1.78.0'ı yirmi yerel yamayla kullanır; yamalar `third_party/filament/patches/` altındadır ve `third_party/filament/README.md` içinde açıklanır:
 
 - gömülü `libassimp` içinde bir sınır (bounds) düzeltmesi;
 - skinned ve morph'lu renderable'ları screen-space reflections pass'inin dışında tutan bir `RenderPass.cpp` değişikliği (bu olmadan Vulkan backend'i device'ı kaybeder);
@@ -78,7 +78,17 @@ Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) y
 - Vulkan ray query: hızlandırma yapıları, ışın izlemeli güneş gölgeleri (`ShadowOptions::rayTraced`) ve `View::traceRay`;
 - ray query üzerinde ReSTIR doğrudan aydınlatma (`RestirOptions`);
 - fragment pass'leri olarak FSR3 upscaler ve kare üretimi, ayrıca `SwapChain::CONFIG_DISABLE_VSYNC`;
-- lit shader'lar ray query texture'larını (ışın izlemeli gölge maskesi, ReSTIR reservoir ve ışık texture'ları) yalnızca Vulkan için derlendiklerinde örnekler; böylece OpenGL ve WebGL shader'ları bunlara fragment sampler'ı harcamaz (sekiz sampler'lı ve sisli bir lit materyal 15'te kalır; Chrome'un Direct3D 11 arka ucu 16'da çöker).
+- lit shader'lar ray query texture'larını (ışın izlemeli gölge maskesi, ReSTIR reservoir ve ışık texture'ları) yalnızca Vulkan için derlendiklerinde örnekler; böylece OpenGL ve WebGL shader'ları bunlara fragment sampler'ı harcamaz (sekiz sampler'lı ve sisli bir lit materyal 15'te kalır; Chrome'un Direct3D 11 arka ucu 16'da çöker);
+- TAA/FSR3 resolve'undan sonra lineer HDR'de harici bir post pass (`View::setExternalPostPass`) ve istemcinin Vulkan device özellik yapıları;
+- nöral gürültü gidericiler için kılavuz buffer'lar (`View::setGuideBufferOptions`: normal + pürüzlülük, diffuse ve specular albedo);
+- DLSS Frame Generation ve Multi Frame Generation'ı süren harici bir kare üreticisi (`View::setExternalFrameGenerator`);
+- texel cinsinden ray query başlangıç ofsetleri; böylece ışın izlemeli gölgeler her sahne biriminde (santimetre) çalışır;
+- skinned ve morph'lu renderable'lar güncel pozlarında izlenir (bir Vulkan compute deform pass'i hızlandırma yapılarını yeniden uydurur);
+- vsync'siz her Vulkan SwapChain için üretilen kareleri eşit aralıklarla sunan bir present thread'i (`VulkanPresentPacer`);
+- görüntülerinin içine kırpılan Vulkan blit dikdörtgenleri (kare üretimiyle pencere yeniden boyutlandırması device'ı kaybettiriyordu);
+- istemcinin özellik istekleri Filament'in zaten zincirlediği yapılarla OR'lanarak birleştirilir, ayrıca isteğe bağlı bir `Customization::apiVersion` (OpenDLSS-NR için Vulkan 1.3);
+- IBL döndürmesi altında ışın izlemeli pass'ler gerçek dünyada iz sürer; böylece ışın izlemeli ve ReSTIR gölgeleri shadow map ile örtüşür;
+- ray query materyalleri olmadan bir Android build'i (Quest/Android prebuilt).
 
 ### Hazır arşiv
 

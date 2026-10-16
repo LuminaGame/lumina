@@ -87,7 +87,7 @@ static inline Entity toEntity(uint32_t e) {
 #error "FLUTTER_FILAMENT_FILAMENT_VERSION is not defined: the build must stamp the Filament version"
 #endif
 
-// The define is the bare version (1.77.0): quoting it on the command line
+// The define is the bare version (1.78.0): quoting it on the command line
 // breaks cl under cmd on Windows, so the string is made here.
 #define FLUTTER_FILAMENT_STR2(x) #x
 #define FLUTTER_FILAMENT_STR(x) FLUTTER_FILAMENT_STR2(x)

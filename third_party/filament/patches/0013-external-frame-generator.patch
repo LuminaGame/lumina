@@ -1,5 +1,5 @@
 diff --git a/filament/include/filament/Renderer.h b/filament/include/filament/Renderer.h
-index 5e1ba11d..bc13f84b 100644
+index e608ad86..6ba025a7 100644
 --- a/filament/include/filament/Renderer.h
 +++ b/filament/include/filament/Renderer.h
 @@ -130,6 +130,13 @@ public:
@@ -121,7 +121,7 @@ index efbc66aa..cf2f5bcd 100644
  };
  
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index aa3bbafa..c3d3c4d2 100644
+index 5615e145..52d554a6 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
 @@ -4543,6 +4543,176 @@ void PostProcessManager::exportGuideBuffer(FrameGraph& fg,
@@ -363,10 +363,10 @@ index ea2ee7f4..4a750ca0 100644
      downcast(this)->setGuideBufferOptions(options);
  }
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index d36d015b..8f548446 100644
+index 9be116f0..c17f758f 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -557,14 +557,9 @@ void FRenderer::endFrame() {
+@@ -571,14 +571,9 @@ void FRenderer::endFrame() {
      // mSwapChain cannot be null by construction
      // With frame generation, this presents the interpolated frame.
      mSwapChain->commit(driver);
@@ -382,7 +382,7 @@ index d36d015b..8f548446 100644
          presentRenderedFrame(driver);
      }
  
-@@ -743,27 +738,48 @@ void FRenderer::render(FView const* view) {
+@@ -757,27 +752,48 @@ void FRenderer::render(FView const* view) {
      }
  }
  
@@ -444,7 +444,7 @@ index d36d015b..8f548446 100644
      // sleep() is coarse on some platforms, so we sleep most of the wait and yield the rest
      constexpr auto sleepMargin = std::chrono::milliseconds(2);
      if (deadline - std::chrono::steady_clock::now() > sleepMargin) {
-@@ -784,36 +800,58 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
+@@ -798,36 +814,58 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
      auto const& rendered = view.getFrameHistory().getPrevious().frameGeneration;
      assert_invariant(rendered.color.handle);
  
@@ -529,7 +529,7 @@ index d36d015b..8f548446 100644
  }
  
  void FRenderer::renderInternal(DriverApi& driver, FView const* view, bool const flush) {
-@@ -1919,6 +1957,33 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1932,6 +1970,33 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
          mFrameGenerationView = &view;
      }
  
@@ -564,7 +564,7 @@ index d36d015b..8f548446 100644
  //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
  
 diff --git a/filament/src/details/Renderer.h b/filament/src/details/Renderer.h
-index 26bcaa46..5c4e6d5d 100644
+index 12f251ba..11f0f721 100644
 --- a/filament/src/details/Renderer.h
 +++ b/filament/src/details/Renderer.h
 @@ -180,6 +180,8 @@ public:
@@ -576,7 +576,7 @@ index 26bcaa46..5c4e6d5d 100644
      utils::FixedCapacityVector<FrameInfo> getFrameInfoHistory(size_t const historySize) const noexcept {
          return mFrameInfoManager.getFrameInfoHistory(historySize);
      }
-@@ -266,16 +268,22 @@ private:
+@@ -267,16 +269,22 @@ private:
      // Frame generation: presents the rendered frame after the interpolated one, see endFrame()
      void presentRenderedFrame(backend::DriverApi& driver);
  

@@ -430,7 +430,7 @@ List<String> _dlssSdkMarkers(BuildInput input, OS targetOS) {
 /// `tool/dlss/fetch_sdk.dart` puts the NGX SDK.
 String _dlssSdkRoot(BuildInput input) => input.packageRoot.resolveUri(Uri.file('build/dlss-sdk')).toFilePath();
 
-/// Filament's checkout (patched v1.77.2 with its prebuilt `out/` folders), in
+/// Filament's checkout (patched v1.78.0 with its prebuilt `out/` folders), in
 /// order:
 /// 1. `LUMINA_FILAMENT_DIR` — reaches the hook only when it runs directly: the
 ///    hooks runner forwards an allow-list of variables, never `LUMINA_*`;

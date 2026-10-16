@@ -27,7 +27,7 @@ unbounded viewport is invalid on a real swap chain). The other backends
 keep pacing on the render thread.
 ---
 diff --git a/filament/backend/CMakeLists.txt b/filament/backend/CMakeLists.txt
-index 44baa804..e1ba3e9d 100644
+index 9b223960..8ff83ded 100644
 --- a/filament/backend/CMakeLists.txt
 +++ b/filament/backend/CMakeLists.txt
 @@ -212,6 +212,9 @@ if (FILAMENT_SUPPORTS_VULKAN)
@@ -41,20 +41,20 @@ index 44baa804..e1ba3e9d 100644
              src/vulkan/VulkanBufferProxy.h
              src/vulkan/VulkanBufferProxy.cpp
 diff --git a/filament/backend/include/private/backend/DriverAPI.inc b/filament/backend/include/private/backend/DriverAPI.inc
-index 3fcd45eb..13c60a88 100644
+index c90ee378..fa4f045b 100644
 --- a/filament/backend/include/private/backend/DriverAPI.inc
 +++ b/filament/backend/include/private/backend/DriverAPI.inc
-@@ -444,6 +444,9 @@ DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, wor
- DECL_DRIVER_API_SYNCHRONOUS_0(backend::FeatureLevel, getFeatureLevel)
- DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getUniformBufferOffsetAlignment)
- DECL_DRIVER_API_SYNCHRONOUS_0(bool, isCompositorTimingSupported)
+@@ -449,6 +449,9 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isCompositorTimingSupported)
+ // Whether setPresentationTime() is honored by this backend and platform. When this returns
+ // false, setPresentationTime() is a no-op and must not be called.
+ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isPresentationTimeSupported)
 +DECL_DRIVER_API_SYNCHRONOUS_0(bool, isPresentPacingSupported)
 +// the steady-clock times (ns) of the SwapChain's most recent presents, oldest first
 +DECL_DRIVER_API_SYNCHRONOUS_N(size_t, getPresentTimes, backend::SwapChainHandle, sch, uint64_t*, times, size_t, capacity)
  DECL_DRIVER_API_SYNCHRONOUS_N(bool, queryFrameTimestamps, backend::SwapChainHandle, swapChain, uint64_t, frameId, backend::FrameTimestamps*, outFrameTimestamps)
  DECL_DRIVER_API_SYNCHRONOUS_N(bool, queryCompositorTiming, backend::SwapChainHandle, swapChain, backend::CompositorTiming*, outCompositorTiming)
  
-@@ -703,6 +706,14 @@ DECL_DRIVER_API_N(buildAccelerationStructure,
+@@ -708,6 +711,14 @@ DECL_DRIVER_API_N(buildAccelerationStructure,
          backend::AccelerationStructureHandle, ash,
          backend::AccelerationStructureBuildMode, mode)
  
@@ -70,10 +70,10 @@ index 3fcd45eb..13c60a88 100644
  // backend::AccelerationStructureDeformation) and builds or refits it from them; must run outside a
  // render pass.
 diff --git a/filament/backend/src/metal/MetalDriver.mm b/filament/backend/src/metal/MetalDriver.mm
-index a95437de..f579257a 100644
+index a4dd616a..57b726d4 100644
 --- a/filament/backend/src/metal/MetalDriver.mm
 +++ b/filament/backend/src/metal/MetalDriver.mm
-@@ -2822,6 +2822,17 @@ void MetalDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
+@@ -2857,6 +2857,17 @@ void MetalDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
          AccelerationStructureDeformation) {
  }
  
@@ -92,10 +92,10 @@ index a95437de..f579257a 100644
          descriptor_binding_t, Handle<HwAccelerationStructure>) {
  }
 diff --git a/filament/backend/src/noop/NoopDriver.cpp b/filament/backend/src/noop/NoopDriver.cpp
-index fb95cfbd..b040d9a0 100644
+index ae1836be..e99ee038 100644
 --- a/filament/backend/src/noop/NoopDriver.cpp
 +++ b/filament/backend/src/noop/NoopDriver.cpp
-@@ -514,6 +514,17 @@ void NoopDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
+@@ -518,6 +518,17 @@ void NoopDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
          AccelerationStructureDeformation) {
  }
  
@@ -114,10 +114,10 @@ index fb95cfbd..b040d9a0 100644
          descriptor_binding_t, Handle<HwAccelerationStructure>) {
  }
 diff --git a/filament/backend/src/opengl/OpenGLDriver.cpp b/filament/backend/src/opengl/OpenGLDriver.cpp
-index 7568a3d0..bcb81d5a 100644
+index e50e4e67..1c576a45 100644
 --- a/filament/backend/src/opengl/OpenGLDriver.cpp
 +++ b/filament/backend/src/opengl/OpenGLDriver.cpp
-@@ -5256,6 +5256,17 @@ void OpenGLDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
+@@ -5301,6 +5301,17 @@ void OpenGLDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
          AccelerationStructureDeformation) {
  }
  
@@ -164,7 +164,7 @@ index 482c0141..a2965922 100644
  
  #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
 diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
-index e8523132..a5610d33 100644
+index 1c62f34a..9fbe0b1b 100644
 --- a/filament/backend/src/vulkan/VulkanDriver.cpp
 +++ b/filament/backend/src/vulkan/VulkanDriver.cpp
 @@ -16,6 +16,8 @@
@@ -176,7 +176,7 @@ index e8523132..a5610d33 100644
  #include "CommandStreamDispatcher.h"
  #include "SystraceProfile.h"
  #include "VulkanAccelerationStructure.h"
-@@ -609,15 +611,23 @@ void VulkanDriver::finish(int dummy) {
+@@ -626,15 +628,23 @@ void VulkanDriver::finish(int dummy) {
  
      // It's not enough to wait on the fences of the buffers submitted.  Present calls are
      // submitted to this same queue, so the more correct option is to call vkQueueWaitIdle.
@@ -204,7 +204,7 @@ index e8523132..a5610d33 100644
      mReadPixels.runUntilComplete();
  }
  
-@@ -857,6 +867,32 @@ void VulkanDriver::buildAccelerationStructure(Handle<HwAccelerationStructure> as
+@@ -874,6 +884,32 @@ void VulkanDriver::buildAccelerationStructure(Handle<HwAccelerationStructure> as
      as->build(commands, mode);
  }
  
@@ -237,7 +237,7 @@ index e8523132..a5610d33 100644
  void VulkanDriver::deformAccelerationStructure(Handle<HwAccelerationStructure> ash,
          AccelerationStructureDeformation deformation) {
      FVK_SYSTRACE_SCOPE();
-@@ -1355,6 +1391,7 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
+@@ -1372,6 +1408,7 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
  
      utils::LockGuard const lock(mTiming.lock);
      mTiming.nativeSwapchains.emplace(sch.getId(), swapChain->swapChain);
@@ -245,7 +245,7 @@ index e8523132..a5610d33 100644
  }
  
  void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
-@@ -1369,6 +1406,9 @@ void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
+@@ -1386,6 +1423,9 @@ void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
              VkExtent2D{width, height});
      swapChain.inc();
      mResourceManager.associateHandle(sch.getId(), std::move(tag));
@@ -255,7 +255,7 @@ index e8523132..a5610d33 100644
  }
  
  void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, utils::ImmutableCString&& tag) {
-@@ -1589,6 +1629,7 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
+@@ -1606,6 +1646,7 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
  
      utils::LockGuard const lock(mTiming.lock);
      mTiming.nativeSwapchains.erase(sch.getId());
@@ -485,7 +485,7 @@ index 00000000..a7e63eba
 +} // namespace filament::backend
 diff --git a/filament/backend/src/vulkan/VulkanPresentPacer.h b/filament/backend/src/vulkan/VulkanPresentPacer.h
 new file mode 100644
-index 00000000..bb23bdd1
+index 00000000..324384a8
 --- /dev/null
 +++ b/filament/backend/src/vulkan/VulkanPresentPacer.h
 @@ -0,0 +1,126 @@
@@ -911,10 +911,10 @@ index 00000000..70b03dc4
 +
 +#endif // TNT_FILAMENT_BACKEND_VULKAN_UTILS_QUEUELOCK_H
 diff --git a/filament/backend/src/webgpu/WebGPUDriver.cpp b/filament/backend/src/webgpu/WebGPUDriver.cpp
-index 5b2e566f..0dbae77e 100644
+index 03267b90..85cdc1f7 100644
 --- a/filament/backend/src/webgpu/WebGPUDriver.cpp
 +++ b/filament/backend/src/webgpu/WebGPUDriver.cpp
-@@ -2459,6 +2459,17 @@ void WebGPUDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
+@@ -2480,6 +2480,17 @@ void WebGPUDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
          AccelerationStructureDeformation) {
  }
  
@@ -933,7 +933,7 @@ index 5b2e566f..0dbae77e 100644
          descriptor_binding_t, Handle<HwAccelerationStructure>) {
  }
 diff --git a/filament/include/filament/Renderer.h b/filament/include/filament/Renderer.h
-index bc13f84b..17c8b666 100644
+index 6ba025a7..5cf212db 100644
 --- a/filament/include/filament/Renderer.h
 +++ b/filament/include/filament/Renderer.h
 @@ -131,9 +131,12 @@ public:
@@ -953,10 +953,10 @@ index bc13f84b..17c8b666 100644
      utils::FixedCapacityVector<uint64_t> getPresentTimes() const noexcept;
  
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index 8f548446..e505bc9b 100644
+index c17f758f..97e8b96c 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -115,6 +115,8 @@ FRenderer::FRenderer(FEngine& engine) :
+@@ -116,6 +116,8 @@ FRenderer::FRenderer(FEngine& engine) :
                  engine.getConfig(),
                  engine.getDriverApi()))
  {
@@ -965,7 +965,7 @@ index 8f548446..e505bc9b 100644
      FDebugRegistry& debugRegistry = engine.getDebugRegistry();
      debugRegistry.registerProperty("d.renderer.doFrameCapture",
              &engine.debug.renderer.doFrameCapture);
-@@ -556,6 +558,11 @@ void FRenderer::endFrame() {
+@@ -570,6 +572,11 @@ void FRenderer::endFrame() {
  
      // mSwapChain cannot be null by construction
      // With frame generation, this presents the interpolated frame.
@@ -977,7 +977,7 @@ index 8f548446..e505bc9b 100644
      mSwapChain->commit(driver);
      recordPresent();
  
-@@ -741,19 +748,45 @@ void FRenderer::render(FView const* view) {
+@@ -755,19 +762,45 @@ void FRenderer::render(FView const* view) {
  void FRenderer::recordPresent() noexcept {
      uint64_t const now = uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(
              std::chrono::steady_clock::now().time_since_epoch()).count());
@@ -1026,7 +1026,7 @@ index 8f548446..e505bc9b 100644
  void FRenderer::paceRenderedFrame(uint32_t const presentsPerFrame, bool const first) noexcept {
      auto const now = std::chrono::steady_clock::now();
      if (first) {
-@@ -817,7 +850,7 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
+@@ -831,7 +864,7 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
      FEngine& engine = mEngine;
      filament::Viewport const& viewport = view.getViewport();
      for (uint32_t f = 0; f < frameCount; f++) {
@@ -1035,7 +1035,7 @@ index 8f548446..e505bc9b 100644
              // without vsync, nothing spaces the presents out: submit what is recorded and wait
              engine.flush();
              paceRenderedFrame(presentsPerFrame, f == 0);
-@@ -831,8 +864,9 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
+@@ -845,8 +878,9 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
          params.flags.clear = TargetBufferFlags::COLOR;
          params.flags.discardStart = TargetBufferFlags::ALL;
          params.flags.discardEnd = TargetBufferFlags::NONE;
@@ -1047,7 +1047,7 @@ index 8f548446..e505bc9b 100644
          driver.beginRenderPass(mRenderTargetHandle, params);
          driver.endRenderPass();
  
-@@ -849,6 +883,10 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
+@@ -863,6 +897,10 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
              renderInternal(driver, v, false);
          }
  
@@ -1059,10 +1059,10 @@ index 8f548446..e505bc9b 100644
          recordPresent();
      }
 diff --git a/filament/src/details/Renderer.h b/filament/src/details/Renderer.h
-index 5c4e6d5d..9eb8789c 100644
+index 11f0f721..ef90f92b 100644
 --- a/filament/src/details/Renderer.h
 +++ b/filament/src/details/Renderer.h
-@@ -274,6 +274,8 @@ private:
+@@ -275,6 +275,8 @@ private:
      void paceRenderedFrame(uint32_t presentsPerFrame, bool first) noexcept;
      // the steady-clock times of the most recent SwapChain presents (commits)
      void recordPresent() noexcept;
@@ -1071,7 +1071,7 @@ index 5c4e6d5d..9eb8789c 100644
      // Frame generation: the View whose interpolated frame is in the SwapChain this frame, and
      // the Views rendered on top of it (e.g. UI), which must be rendered again on the rendered
      // frame.
-@@ -282,8 +284,13 @@ private:
+@@ -283,8 +285,13 @@ private:
      std::chrono::steady_clock::time_point mLastInterpolatedFramePresent{};
      double mFrameGenerationInterval = 0.0;  // smoothed interval between frames, in seconds
      std::chrono::steady_clock::time_point mLastPresent{};

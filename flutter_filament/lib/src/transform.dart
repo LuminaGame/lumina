@@ -80,7 +80,8 @@ class FilamentTransformManager {
     }
   }
 
-  /// Resolves an entity ID to its cached [TransformInstance] handle.
+  /// Resolves an entity ID to its [TransformInstance] handle, valid until the end of the
+  /// current frame (and until the next [create], [destroy] or [setParent]).
   ///
   /// Returns an invalid instance ([TransformInstance.isValid] == false) if the entity
   /// has no transform component.
@@ -161,7 +162,7 @@ class FilamentTransformManager {
     calloc.free(ptr);
   }
 
-  /// Sets the local transform matrix directly via a fast cached [TransformInstance] handle.
+  /// Sets the local transform matrix through a [TransformInstance] handle of this frame.
   void setTransformAt(TransformInstance instance, List<double> matrix16) {
     if (!instance.isValid) {
       throw ArgumentError.value(instance, 'instance', 'Cannot set transform on invalid handle');
@@ -181,7 +182,7 @@ class FilamentTransformManager {
     calloc.free(ptr);
   }
 
-  /// Gets the local transform matrix directly via a fast cached [TransformInstance] handle.
+  /// Gets the local transform matrix through a [TransformInstance] handle of this frame.
   List<double> getTransformAt(TransformInstance instance) {
     if (!instance.isValid) {
       throw ArgumentError.value(instance, 'instance', 'Cannot get local transform on invalid handle');
@@ -217,7 +218,7 @@ class FilamentTransformManager {
     return result;
   }
 
-  /// Gets the world transform matrix directly via a fast cached [TransformInstance] handle.
+  /// Gets the world transform matrix through a [TransformInstance] handle of this frame.
   List<double> worldTransformAt(TransformInstance instance) {
     if (!instance.isValid) {
       throw ArgumentError.value(instance, 'instance', 'Cannot get world transform on invalid handle');

@@ -113,7 +113,7 @@ index 00000000..6d2fa037
 +
 +#endif // TNT_FILAMENT_BACKEND_EXTERNALPASS_H
 diff --git a/filament/backend/include/backend/platforms/VulkanPlatform.h b/filament/backend/include/backend/platforms/VulkanPlatform.h
-index cf1d04ba..4b88a54d 100644
+index 2f558019..c618b273 100644
 --- a/filament/backend/include/backend/platforms/VulkanPlatform.h
 +++ b/filament/backend/include/backend/platforms/VulkanPlatform.h
 @@ -172,6 +172,20 @@ public:
@@ -150,10 +150,10 @@ index db3d32ae..3e9e1253 100644
  #include <backend/PipelineState.h>
  #include <backend/Platform.h>
 diff --git a/filament/backend/include/private/backend/DriverAPI.inc b/filament/backend/include/private/backend/DriverAPI.inc
-index 8f1199f2..e58e257f 100644
+index 4aa4bc08..1e94751c 100644
 --- a/filament/backend/include/private/backend/DriverAPI.inc
 +++ b/filament/backend/include/private/backend/DriverAPI.inc
-@@ -675,6 +675,12 @@ DECL_DRIVER_API_N(blit,
+@@ -680,6 +680,12 @@ DECL_DRIVER_API_N(blit,
          math::uint2, srcOrigin,
          math::uint2, size)
  
@@ -167,10 +167,10 @@ index 8f1199f2..e58e257f 100644
          uint32_t, indexOffset,
          uint32_t, indexCount,
 diff --git a/filament/backend/src/metal/MetalDriver.mm b/filament/backend/src/metal/MetalDriver.mm
-index 20af7acb..90c4e5e3 100644
+index 241af3c1..33587b31 100644
 --- a/filament/backend/src/metal/MetalDriver.mm
 +++ b/filament/backend/src/metal/MetalDriver.mm
-@@ -2116,6 +2116,16 @@ void MetalDriver::resolve(
+@@ -2151,6 +2151,16 @@ void MetalDriver::resolve(
              { dstTexture->width, dstTexture->height });
  }
  
@@ -188,10 +188,10 @@ index 20af7acb..90c4e5e3 100644
          Handle<HwTexture> dst, uint8_t srcLevel, uint8_t srcLayer, math::uint2 dstOrigin,
          Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer, math::uint2 srcOrigin,
 diff --git a/filament/backend/src/noop/NoopDriver.cpp b/filament/backend/src/noop/NoopDriver.cpp
-index fd8230bc..4bed9be7 100644
+index 17e281d1..131da71c 100644
 --- a/filament/backend/src/noop/NoopDriver.cpp
 +++ b/filament/backend/src/noop/NoopDriver.cpp
-@@ -416,6 +416,9 @@ void NoopDriver::blit(
+@@ -420,6 +420,9 @@ void NoopDriver::blit(
          math::uint2 size) {
  }
  
@@ -202,10 +202,10 @@ index fd8230bc..4bed9be7 100644
  }
  
 diff --git a/filament/backend/src/opengl/OpenGLDriver.cpp b/filament/backend/src/opengl/OpenGLDriver.cpp
-index 8d2f64fa..e8f6db72 100644
+index 8bb724e2..7b3c90c1 100644
 --- a/filament/backend/src/opengl/OpenGLDriver.cpp
 +++ b/filament/backend/src/opengl/OpenGLDriver.cpp
-@@ -4740,6 +4740,16 @@ void OpenGLDriver::resolve(
+@@ -4785,6 +4785,16 @@ void OpenGLDriver::resolve(
              { d->width, d->height });
  }
  
@@ -223,10 +223,10 @@ index 8d2f64fa..e8f6db72 100644
          Handle<HwTexture> dst, uint8_t const srcLevel, uint8_t const srcLayer, uint2 const dstOrigin,
          Handle<HwTexture> src, uint8_t const dstLevel, uint8_t const dstLayer, uint2 const srcOrigin,
 diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
-index d804bfce..060e1860 100644
+index cafee5c8..67bc2b84 100644
 --- a/filament/backend/src/vulkan/VulkanDriver.cpp
 +++ b/filament/backend/src/vulkan/VulkanDriver.cpp
-@@ -2658,6 +2658,65 @@ void VulkanDriver::blit(
+@@ -2675,6 +2675,65 @@ void VulkanDriver::blit(
              { .texture = srcTexture, .level = srcLevel, .layer = srcLayer }, srcOffsets);
  }
  
@@ -293,7 +293,7 @@ index d804bfce..060e1860 100644
          Handle<HwRenderTarget> dst, Viewport dstRect,
          Handle<HwRenderTarget> src, Viewport srcRect,
 diff --git a/filament/backend/src/vulkan/VulkanTexture.cpp b/filament/backend/src/vulkan/VulkanTexture.cpp
-index e30e0ae2..12591ade 100644
+index e8b712cf..8445c4dc 100644
 --- a/filament/backend/src/vulkan/VulkanTexture.cpp
 +++ b/filament/backend/src/vulkan/VulkanTexture.cpp
 @@ -171,6 +171,9 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
@@ -307,10 +307,10 @@ index e30e0ae2..12591ade 100644
      constexpr TextureUsage DEPTH_STENCIL_USAGE =
              TextureUsage::DEPTH_ATTACHMENT | TextureUsage::STENCIL_ATTACHMENT;
 diff --git a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
-index 6534e1c1..4d87876d 100644
+index 508297c8..5c9e93d2 100644
 --- a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
 +++ b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
-@@ -677,6 +677,26 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
+@@ -679,6 +679,26 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
          for (auto const& ext: getRequiredInstanceExtensions()) {
              setInsert(instExts, ext);
          }
@@ -337,7 +337,7 @@ index 6534e1c1..4d87876d 100644
      }
      if (mImpl->mInstance == VK_NULL_HANDLE) {
          createInstance(instExts, enableRenderDocCapture);
-@@ -706,6 +726,26 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
+@@ -708,6 +728,26 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
                  pruneExtensions(mImpl->mPhysicalDevice, driverConfig, instExts, deviceExts);
          instExts = prunedInstExts;
          deviceExts = prunedDeviceExts;
@@ -364,7 +364,7 @@ index 6534e1c1..4d87876d 100644
      }
  
      // Query all the supported physical device features and enable/disable any feature as needed
-@@ -1308,6 +1348,26 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
+@@ -1325,6 +1365,26 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
          chainStruct(&deviceCreateInfo, &protectedMemory);
      }
  
@@ -392,10 +392,10 @@ index 6534e1c1..4d87876d 100644
          .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GLOBAL_PRIORITY_QUERY_FEATURES_KHR,
          .globalPriorityQuery = VK_TRUE,
 diff --git a/filament/backend/src/webgpu/WebGPUDriver.cpp b/filament/backend/src/webgpu/WebGPUDriver.cpp
-index ad409d39..2f7cc8e1 100644
+index d2a4f3f2..17ca793d 100644
 --- a/filament/backend/src/webgpu/WebGPUDriver.cpp
 +++ b/filament/backend/src/webgpu/WebGPUDriver.cpp
-@@ -1963,6 +1963,16 @@ void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uin
+@@ -1984,6 +1984,16 @@ void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uin
      mMsaaTextureResolver.resolve(request);
  }
  
@@ -538,7 +538,7 @@ index 01ad5800..6a4183fe 100644
       * Enables or disable screen-space guard band. Disabled by default.
       *
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index 0aa7fb55..5204df99 100644
+index 6c9d8805..76669fa4 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
 @@ -67,6 +67,7 @@
@@ -682,10 +682,10 @@ index 771f7698..5645dcf8 100644
      downcast(this)->setGuardBandOptions(options);
  }
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index 9ffdb8f0..6c830802 100644
+index e874cde9..e728b89e 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -1471,8 +1471,27 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1484,8 +1484,27 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      //       dedicated TAA pass for the DoF, as explained in
      //       "Life of a Bokeh" by Guillaume Abadie, SIGGRAPH 2018
  
@@ -714,7 +714,7 @@ index 9ffdb8f0..6c830802 100644
          input = ppm.taa(fg, input, depth, velocity, xvp, vp,
                  view.getFrameHistory(), &FrameHistoryEntry::taa,
                  taaOptions, colorGradingConfig);
-@@ -1552,16 +1571,29 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1565,16 +1584,29 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
              svp = xvp;
          }
  

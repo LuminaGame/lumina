@@ -1,5 +1,5 @@
 diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
-index 2659ccb7..a8ca1e52 100644
+index 9caa9fb5..3994f508 100644
 --- a/filament/CMakeLists.txt
 +++ b/filament/CMakeLists.txt
 @@ -330,6 +330,9 @@ if (FILAMENT_SUPPORTS_VULKAN)
@@ -13,10 +13,10 @@ index 2659ccb7..a8ca1e52 100644
      list(APPEND MATERIAL_SRCS ${MATERIAL_VULKAN_SRCS})
      set_source_files_properties(src/materials/rt/rt.cpp PROPERTIES COMPILE_DEFINITIONS FILAMENT_RAY_QUERY_MATERIALS)
 diff --git a/filament/include/filament/LightManager.h b/filament/include/filament/LightManager.h
-index 797890e8..b39b014e 100644
+index 23d37f3c..a6b574f0 100644
 --- a/filament/include/filament/LightManager.h
 +++ b/filament/include/filament/LightManager.h
-@@ -963,6 +963,18 @@ public:
+@@ -981,6 +981,18 @@ public:
       */
      float getFalloff(Instance i) const noexcept;
  
@@ -161,7 +161,7 @@ index 62ba46f5..dd0d0b95 100644
      downcast(this)->setSpotLightCone(i, inner, outer);
  }
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index ffe76604..67da90ef 100644
+index 8dec7f2d..ceb00737 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
 @@ -304,6 +304,190 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rayTracedShadows(FrameGraph&
@@ -453,10 +453,10 @@ index ccdc982e..d2861d6f 100644
      return downcast(this)->getTemporalAntiAliasingOptions();
  }
 diff --git a/filament/src/components/LightManager.cpp b/filament/src/components/LightManager.cpp
-index b01a80b9..e165d244 100644
+index a342b8c2..26b68d21 100644
 --- a/filament/src/components/LightManager.cpp
 +++ b/filament/src/components/LightManager.cpp
-@@ -202,6 +202,7 @@ void FLightManager::create(const Builder& builder, Entity const entity) {
+@@ -203,6 +203,7 @@ void FLightManager::create(const Builder& builder, Entity const entity) {
          lightType.lightCaster = builder->mCastLight;
  
          mManager[i].channels = builder->mChannels;
@@ -464,7 +464,7 @@ index b01a80b9..e165d244 100644
  
          // set default values by calling the setters
          setShadowOptions(i, builder->mShadowOptions);
-@@ -414,6 +415,12 @@ void FLightManager::setIntensity(Instance const i, float const intensity, Intens
+@@ -415,6 +416,12 @@ void FLightManager::setIntensity(Instance const i, float const intensity, Intens
      }
  }
  
@@ -521,10 +521,10 @@ index a5f2d79a..8a300c7f 100644
          };
  
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index 5314c784..a730fed1 100644
+index a0e5b0ec..c52a0092 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -994,6 +994,11 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1008,6 +1008,11 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
          view.failRayQueries();
      }
      bool const rayTracedShadows = rayTracing && view.hasRayTracedDirectionalShadows();
@@ -536,7 +536,7 @@ index 5314c784..a730fed1 100644
      // There might be a bug here with svp's origin; normally the origin could offset when the
      // target is the swapchain (width/height are the same though). This would mean that we'd have
      // to wait for the color pass to execute to set the viewport. For now, I wasn't able to
-@@ -1017,7 +1022,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1031,7 +1036,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
              && engine.getSupportedFeatureLevel() != FeatureLevel::FEATURE_LEVEL_0
              && driver.isRenderTargetFormatSupported(TextureFormat::RG16F);
      // the ray-traced shadow mask is traced from the structure depth, at the colour pass's resolution
@@ -545,7 +545,7 @@ index 5314c784..a730fed1 100644
  
      { // the scope helps to guarantee that we're not modifying the descriptor-set later
          StructureDescriptorSet& ds = ppm.getStructureDescriptorSet();
-@@ -1244,6 +1249,9 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1257,6 +1262,9 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      if (rayTracing && view.hasRayQueries()) {
          ppm.rayQueries(fg, view);
      }
@@ -555,7 +555,7 @@ index 5314c784..a730fed1 100644
  
      // --------------------------------------------------------------------------------------------
      // screen-space reflections pass
-@@ -1422,7 +1430,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1435,7 +1443,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                  .ssao = blackboard.get<FrameGraphTexture>("ssao"),
                  .ssr = ssrConfig.ssr,
                  .structure = structure,
@@ -565,7 +565,7 @@ index 5314c784..a730fed1 100644
              },
              colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
  
-@@ -1434,7 +1443,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1447,7 +1456,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                          .ssao = blackboard.get<FrameGraphTexture>("ssao"),
                          .ssr = ssrConfig.ssr,
                  .structure = structure,
@@ -1295,7 +1295,7 @@ index 8df407fe..344dfd22 100644
  
  enum class PerRenderableBindingPoints : uint8_t  {
 diff --git a/libs/filabridge/include/private/filament/UibStructs.h b/libs/filabridge/include/private/filament/UibStructs.h
-index cb25ca20..4edf77bb 100644
+index 2c7d1031..76b6a3f6 100644
 --- a/libs/filabridge/include/private/filament/UibStructs.h
 +++ b/libs/filabridge/include/private/filament/UibStructs.h
 @@ -164,7 +164,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -1308,10 +1308,10 @@ index cb25ca20..4edf77bb 100644
  
      // --------------------------------------------------------------------------------------------
 diff --git a/libs/filabridge/src/DescriptorSets.cpp b/libs/filabridge/src/DescriptorSets.cpp
-index f962a8ec..13f9b4e2 100644
+index 97d63bb1..5b7a6cc7 100644
 --- a/libs/filabridge/src/DescriptorSets.cpp
 +++ b/libs/filabridge/src/DescriptorSets.cpp
-@@ -86,6 +86,8 @@ static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perViewDes
+@@ -85,6 +85,8 @@ static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perViewDes
      { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,                    ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
      { DescriptorType::SAMPLER_CUBE_FLOAT,                        ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
      { DescriptorType::SAMPLER_2D_FLOAT,                          ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::RT_SHADOW, DescriptorFlags::UNFILTERABLE },
@@ -1320,7 +1320,7 @@ index f962a8ec..13f9b4e2 100644
  };
  
  // Post-process materials that trace rays (rayQuery: true): the frame uniforms plus the
-@@ -201,6 +203,8 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
+@@ -200,6 +202,8 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
          { +PerViewBindingPoints::SSR,            "sampler0_ssr"sv },
          { +PerViewBindingPoints::FOG,            "sampler0_fog"sv },
          { +PerViewBindingPoints::RT_SHADOW,     "sampler0_rtShadow"sv },
@@ -1329,7 +1329,7 @@ index f962a8ec..13f9b4e2 100644
          { +PerViewBindingPoints::TLAS,          "sceneTlas"sv },
      }};
  
-@@ -252,7 +256,9 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
+@@ -251,7 +255,9 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
                                  [](auto const& entry) {
                                      return  entry.binding == PerViewBindingPoints::IBL_DFG_LUT ||
                                              entry.binding == PerViewBindingPoints::IBL_SPECULAR ||
@@ -1367,7 +1367,7 @@ index 77393866..5d8495c9 100644
              .build() };
  
 diff --git a/libs/filamat/src/shaders/UibGenerator.cpp b/libs/filamat/src/shaders/UibGenerator.cpp
-index 2659f8c1..f48c4086 100644
+index 355b83a3..163ce17f 100644
 --- a/libs/filamat/src/shaders/UibGenerator.cpp
 +++ b/libs/filamat/src/shaders/UibGenerator.cpp
 @@ -176,7 +176,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {

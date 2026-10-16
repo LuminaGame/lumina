@@ -20,7 +20,7 @@ transform, and restirShade takes the whole inverse world transform
 (trueWorldFromShaderWorld) instead of the translation.
 ---
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index 9fffe5b4..c1ccd7e7 100644
+index c37fea2d..3c67a198 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
 @@ -308,7 +308,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rayTracedShadows(FrameGraph&

@@ -1,5 +1,5 @@
 diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
-index a8ca1e52..a6c9ab44 100644
+index 3994f508..00895622 100644
 --- a/filament/CMakeLists.txt
 +++ b/filament/CMakeLists.txt
 @@ -62,6 +62,7 @@ set(SRCS
@@ -34,7 +34,7 @@ index a8ca1e52..a6c9ab44 100644
          src/materials/sgsr/sgsr1.mat
          src/materials/resolveDepth.mat
          src/materials/separableGaussianBlur.mat
-@@ -603,6 +614,18 @@ add_custom_command(
+@@ -604,6 +615,18 @@ add_custom_command(
          APPEND
  )
  
@@ -268,7 +268,7 @@ index 8413d8fe..beb22e21 100644
  
  /**
 diff --git a/filament/include/filament/SwapChain.h b/filament/include/filament/SwapChain.h
-index d1bf8389..e4dbb057 100644
+index 653e0030..71791249 100644
 --- a/filament/include/filament/SwapChain.h
 +++ b/filament/include/filament/SwapChain.h
 @@ -252,6 +252,13 @@ public:
@@ -317,7 +317,7 @@ index 6b9a38a3..96f75c29 100644
  
  /*
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index 67da90ef..84a847e1 100644
+index ceb00737..8da36387 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
 @@ -64,6 +64,9 @@
@@ -1039,10 +1039,10 @@ index 7b640824..94468276 100644
      // Returns the (light index, W, visibility) texture the colour pass shades with and keeps the
      // reservoirs in the frame history for the next frame.
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index a730fed1..0fb111ac 100644
+index c52a0092..26c64007 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -439,6 +439,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
+@@ -448,6 +448,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
  
      mBeginFrameInternal = {};
  
@@ -1052,7 +1052,7 @@ index a730fed1..0fb111ac 100644
      mSwapChain = swapChain;
      swapChain->makeCurrent(driver);
  
-@@ -550,7 +553,19 @@ void FRenderer::endFrame() {
+@@ -564,7 +567,19 @@ void FRenderer::endFrame() {
              << "SwapChain must remain valid until endFrame is called.";
  
      // mSwapChain cannot be null by construction
@@ -1072,7 +1072,7 @@ index a730fed1..0fb111ac 100644
      mSwapChain = nullptr;
  
      mFrameInfoManager.endFrame(driver);
-@@ -716,10 +731,89 @@ void FRenderer::render(FView const* view) {
+@@ -730,10 +745,89 @@ void FRenderer::render(FView const* view) {
      assert_invariant(mSwapChain);
  
      if (UTILS_LIKELY(view && view->getScene() && view->hasCamera())) {
@@ -1162,7 +1162,7 @@ index a730fed1..0fb111ac 100644
  void FRenderer::renderInternal(DriverApi& driver, FView const* view, bool const flush) {
      FEngine& engine = mEngine;
  
-@@ -1018,9 +1112,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1032,9 +1126,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      // Motion vectors (TemporalAntiAliasingOptions::motionVectors) are rendered by the structure
      // pass, at full resolution so they can drive TAA and upscalers; they need a second color
      // attachment, which feature level 0 cannot provide.
@@ -1178,7 +1178,7 @@ index a730fed1..0fb111ac 100644
      // the ray-traced shadow mask is traced from the structure depth, at the colour pass's resolution
      float const structureScale = (motionVectors || rayTracedShadows || restir) ? 1.0f : aoOptions.resolution;
  
-@@ -1530,9 +1629,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1543,9 +1642,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
  
      // TAA for color pass
      if (taaOptions.enabled && !useExternalUpscaler) {
@@ -1196,7 +1196,7 @@ index a730fed1..0fb111ac 100644
          if (taaOptions.upscaling > 1.0f) {
              scale = 1.0f;
              scaled = false;
-@@ -1717,6 +1821,15 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1730,6 +1834,15 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                  engine.debug.shadowmap.display_shadow_texture_power);
      }
  
@@ -1213,7 +1213,7 @@ index a730fed1..0fb111ac 100644
  //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
  
 diff --git a/filament/src/details/Renderer.h b/filament/src/details/Renderer.h
-index 3032e359..26bcaa46 100644
+index 86b0c1c2..12f251ba 100644
 --- a/filament/src/details/Renderer.h
 +++ b/filament/src/details/Renderer.h
 @@ -48,6 +48,7 @@
@@ -1224,7 +1224,7 @@ index 3032e359..26bcaa46 100644
  
  #include <stddef.h>
  #include <stdint.h>
-@@ -261,6 +262,20 @@ private:
+@@ -262,6 +263,20 @@ private:
      backend::TargetBufferFlags mDiscardStartFlags{};
      backend::TargetBufferFlags mClearFlags{};
      tsl::robin_set<FRenderTarget*> mPreviousRenderTargets;
@@ -1246,10 +1246,10 @@ index 3032e359..26bcaa46 100644
      uint64_t mVsyncSteadyClockTimeNano = 0;
      std::chrono::steady_clock::time_point mRenderingDeadline{};
 diff --git a/filament/src/details/SwapChain.h b/filament/src/details/SwapChain.h
-index 7294f94d..8d1b5a4f 100644
+index 333e4626..3502d856 100644
 --- a/filament/src/details/SwapChain.h
 +++ b/filament/src/details/SwapChain.h
-@@ -65,6 +65,10 @@ public:
+@@ -67,6 +67,10 @@ public:
          return (mConfigFlags & CONFIG_HAS_STENCIL_BUFFER) != 0;
      }
  
@@ -3191,7 +3191,7 @@ index 00000000..a0fe6d56
 +
 +}
 diff --git a/libs/matdbg/src/CommonWriter.h b/libs/matdbg/src/CommonWriter.h
-index 40aba754..491eaab9 100644
+index 410a9698..5f4b0bc9 100644
 --- a/libs/matdbg/src/CommonWriter.h
 +++ b/libs/matdbg/src/CommonWriter.h
 @@ -308,6 +308,8 @@ const char* toString(backend::DescriptorType type) noexcept {
