@@ -196,10 +196,17 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
     });
   }
 
+  /// Whether scene component [childId] may be attached to [targetParentId]
+  /// (null: the root). The root itself, an inherited or a non-scene component
+  /// cannot move, and a component cannot go under itself or a descendant.
   bool canReparent(String childId, String? targetParentId) {
     if (isInheritedComponent(childId)) return false;
+    final child = getComponent(childId);
+    final root = rootComponent;
+    if (child == null || !child.isSceneComponent || child.id == root?.id) return false;
+    targetParentId ??= root?.id;
+    if (targetParentId == null) return false;
     if (childId == targetParentId) return false;
-    if (targetParentId == null) return true;
     if (!isSceneComponent(targetParentId)) return false;
     String? current = targetParentId;
     while (current != null) {
@@ -209,12 +216,17 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
     return true;
   }
 
+  /// Attaches [childId] to [newParentId] (null: the root) as one undo step.
+  /// Its relative transform is kept: it sits at the same offset from its new
+  /// parent as it did from the old one.
   bool reparent(String childId, String? newParentId) {
     if (!canReparent(childId, newParentId)) return false;
     final node = getComponent(childId);
     if (node == null || !node.isSceneComponent) return false;
+    final parentId = newParentId ?? rootComponent!.id;
+    if (node.parentId == parentId) return true;
     return mutate('Attach ${node.name}', () {
-      getComponent(childId)!.parentId = newParentId;
+      _ensureComponentInDocument(childId).parentId = parentId;
       return true;
     });
   }

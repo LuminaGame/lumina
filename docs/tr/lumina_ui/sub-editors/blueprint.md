@@ -16,24 +16,24 @@ Actor sınıfları için Blueprint editörü: alt editör view'i ve view model'i
 
 ### `class BlueprintComponentTree`
 
-Real Component Hierarchy Tree for Blueprint Editor.
+Blueprint editörünün bileşen hiyerarşisi; iki panel aynı görünüp aynı davransın diye Level Editor'ün World Outliner'ı gibi kurulur: aynı başlık (`EditorColors.cardHeader` üzerinde `EditorTypography.panelHeading` ile `COMPONENTS`, `EditorDensity.panelHeaderHeight` yüksekliğinde, Expand All / Collapse All ve Add Component iletişim kutusunu açan birincil `+ Add` çipi), aynı arama alanı (`Search components...`; içinde metin varken düz, süzülmüş bir liste), editör arka planı ve derinlik başına `EditorDensity.indentStep` girintili 24 px satırlar (`EditorDensity.rowHeight`): ok, göz ve kilit düğmeleri, tip simgesi, ad, küçük `Inherited` / `Overridden` / `ROOT` çipleri ve sağda kısa tip. Seçim Outliner'ınkidir (`EditorColors.selectionBg` ve birincil renkte sol çubuk). Aktör (sahne dışı) bileşenleri `ACTOR COMPONENTS` altında gelir.
+
+- **Sürükle-bırak ile bağlama.** Kök olmayan ve miras alınmamış bir sahne bileşeni, başka bir sahne bileşeninin üstüne sürüklenince ona bağlanır (hedef satır Outliner'daki bırakma hedefi gibi vurgulanır; hedef açılır), satırların altındaki boş alana bırakılınca köke bağlanır. Döngü oluşturacak, sahne bileşeni olmayan bir hedefe ya da mevcut ebeveyne yapılan bırakma reddedilir. Her bağlama tek bir geri alma adımıdır ve bileşenin göreli dönüşümünü korur.
+- **Sağ tık menüsü.** Rename, Duplicate, Attach To (bağlanabileceği her sahne bileşeni; kök etiketlenir), Delete; miras alınmış bir bileşende yeniden adlandırma ve silme kapalıdır.
+- **Satır içi yeniden adlandırma.** Bir ada çift tıklayınca (ya da Rename ile) yerinde düzenlenir; Enter veya alandan çıkmak uygular, Escape vazgeçer; geçerli bir tanımlayıcı olmayan ya da kullanılan bir ad kırmızıya döner ve alan açık kalır.
+
+Satır anahtarları: `component_row_<id>`, `component_chevron_<id>`, `component_rename_field`, `components_search`, `components_empty_area`, `components_expand_all`, `components_collapse_all`, `add_component_button`. Satırlar `component_tree/rows.dart`, Add Component iletişim kutusu `component_tree/add_component_dialog.dart` içindedir. Testler: `test/ui/blueprint_component_tree_outliner_test.dart`; smoke: `integration_test/smoke/blueprint_component_tree_smoke_test.dart`.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
-| `viewModel` | `BlueprintEditorViewModel viewModel` | `viewModel` alanını (field/property) ve ilişkili veriyi saklar. |
-| `createState` | `State<BlueprintComponentTree> createState() => _BlueprintComponentTreeSt...` | Yeni bir `State` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
+| `viewModel` | `BlueprintEditorViewModel viewModel` | Ağacın gösterip düzenlediği bileşenlerin Blueprint editörü. |
+| `createState` | `State<BlueprintComponentTree> createState() => _BlueprintComponentTreeSt...` | Ağacın durumunu (kapalı satırlar, arama metni, satır içi yeniden adlandırma) oluşturur. |
 
 ### `class _BlueprintComponentTreeState`
 
-`_BlueprintComponentTreeState`: Aktörlere bağlanarak 3B uzaysal konum, görsel mesh, aydınlatma veya hareket kabiliyeti kazandıran bileşendir.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `build` | `Widget build(BuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
+Ağacın durumu: hangi satırların kapalı olduğu, arama metni ve satır içi yeniden adlandırma; view model her değiştiğinde yeniden çizilir.
 
 ### `class _AddComponentDialog`
 
@@ -201,8 +201,8 @@ Real Component Hierarchy Tree for Blueprint Editor.
 | `load` | `Future<void> load()` | Veriyi diskten veya bellekten okuyarak motora yükler ve kullanılabilir hale getirir. |
 | `removeComponent` | `bool removeComponent(String id)` | Belirtilen `Component` nesnesini/bileşenini serbest bırakır ve güvenle temizler. |
 | `renameComponent` | `bool renameComponent(String id, String newName)` | `renameComponent` işlemini gerçekleştirir. |
-| `canReparent` | `bool canReparent(String childId, String? targetParentId)` | `canReparent` işlemini gerçekleştirir. |
-| `reparent` | `bool reparent(String childId, String? newParentId)` | `reparent` işlemini gerçekleştirir. |
+| `canReparent` | `bool canReparent(String childId, String? targetParentId)` | Sahne bileşeni [childId] [targetParentId]'e (null: kök) bağlanabilir mi. Kökün kendisi, miras alınmış ya da sahne dışı bir bileşen taşınamaz; bir bileşen kendisinin ya da bir torununun altına giremez. |
+| `reparent` | `bool reparent(String childId, String? newParentId)` | [childId]'i [newParentId]'e (null: kök, asla ikinci bir kök değil) tek bir geri alma adımıyla bağlar; göreli dönüşümünü korur. |
 | `duplicateComponent` | `BlueprintComponentNode? duplicateComponent(String id)` | `duplicateComponent` işlemini gerçekleştirir. |
 | `setProperty` | `void setProperty(String componentId, String propName, dynamic value)` | `Property` parametresini günceller ve sisteme uygular. |
 | `addVariable` | `void addVariable(String name, String type, String defaultValue)` | Koleksiyona veya sahneye yeni bir öğe ekler. |

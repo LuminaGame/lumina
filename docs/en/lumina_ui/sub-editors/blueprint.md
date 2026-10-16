@@ -16,24 +16,24 @@ The Blueprint editor for actor classes: the sub-editor view and view model, the 
 
 ### `class BlueprintComponentTree`
 
-Real Component Hierarchy Tree for Blueprint Editor.
+The Blueprint editor's component hierarchy, built like the Level Editor's World Outliner so the two panels look and behave alike: the same header (`COMPONENTS` in `EditorTypography.panelHeading` on `EditorColors.cardHeader`, `EditorDensity.panelHeaderHeight` tall, Expand All / Collapse All and a primary `+ Add` chip that opens the Add Component dialog), the same search field (`Search components...`, a flat filtered list while it has text), the editor background, and 24 px rows (`EditorDensity.rowHeight`) indented by `EditorDensity.indentStep` per depth with the chevron, eye and lock toggles, the type icon, the name, small `Inherited` / `Overridden` / `ROOT` chips and the short type on the right. Selection is the outliner's (`EditorColors.selectionBg` and a primary left bar). Actor (non-scene) components follow under `ACTOR COMPONENTS`.
+
+- **Attach by drag and drop.** A scene component that is not the root and not inherited is dragged onto another scene component to attach to it (the target row is highlighted as an outliner drop target; the target expands), or onto the empty area below the rows to attach to the root. A drop that would make a cycle, onto a non-scene component or onto the current parent is refused. Each attach is one undo step and keeps the component's relative transform.
+- **Right-click menu.** Rename, Duplicate, Attach To (every scene component it may attach to; the root is labelled), Delete; rename and delete are disabled for an inherited component.
+- **Inline rename.** Double-click a name (or Rename) to edit it in place; Enter or leaving the field applies it, Escape cancels; a name that is not a valid identifier or is taken turns red and the field stays open.
+
+Row keys: `component_row_<id>`, `component_chevron_<id>`, `component_rename_field`, `components_search`, `components_empty_area`, `components_expand_all`, `components_collapse_all`, `add_component_button`. Rows live in `component_tree/rows.dart`, the Add Component dialog in `component_tree/add_component_dialog.dart`. Tests: `test/ui/blueprint_component_tree_outliner_test.dart`; smoke: `integration_test/smoke/blueprint_component_tree_smoke_test.dart`.
 
 **Functions, Methods & Accessors:**
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
-| `viewModel` | `BlueprintEditorViewModel viewModel` | Holds the `viewModel` property or configuration state. |
-| `createState` | `State<BlueprintComponentTree> createState() => _BlueprintComponentTreeSt...` | Creates, configures, and returns a new `State` instance or associated GPU resource. |
+| `viewModel` | `BlueprintEditorViewModel viewModel` | The Blueprint editor whose components the tree shows and edits. |
+| `createState` | `State<BlueprintComponentTree> createState() => _BlueprintComponentTreeSt...` | Creates the tree's state (collapsed rows, search text, inline rename). |
 
 ### `class _BlueprintComponentTreeState`
 
-`_BlueprintComponentTreeState`: Actor component providing spatial 3D transform, visual mesh, lighting, or movement capability.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `build` | `Widget build(BuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
+The tree's state: which rows are collapsed, the search text and the inline rename; it rebuilds whenever the view model changes.
 
 ### `class _AddComponentDialog`
 
@@ -201,8 +201,8 @@ Real Component Hierarchy Tree for Blueprint Editor.
 | `load` | `Future<void> load()` | Loads data from disk or memory buffer into the engine. |
 | `removeComponent` | `bool removeComponent(String id)` | Releases and safely disposes the specified `Component` resource. |
 | `renameComponent` | `bool renameComponent(String id, String newName)` | Executes `renameComponent` operation. |
-| `canReparent` | `bool canReparent(String childId, String? targetParentId)` | Executes `canReparent` operation. |
-| `reparent` | `bool reparent(String childId, String? newParentId)` | Executes `reparent` operation. |
+| `canReparent` | `bool canReparent(String childId, String? targetParentId)` | Whether scene component [childId] may be attached to [targetParentId] (null: the root). The root itself, an inherited or a non-scene component cannot move, and a component cannot go under itself or a descendant. |
+| `reparent` | `bool reparent(String childId, String? newParentId)` | Attaches [childId] to [newParentId] (null: the root, never a second root) as one undo step, keeping its relative transform. |
 | `duplicateComponent` | `BlueprintComponentNode? duplicateComponent(String id)` | Executes `duplicateComponent` operation. |
 | `setProperty` | `void setProperty(String componentId, String propName, dynamic value)` | Updates the `Property` parameter and applies changes to the system. |
 | `addVariable` | `void addVariable(String name, String type, String defaultValue)` | Appends a new item to the collection or scene. |

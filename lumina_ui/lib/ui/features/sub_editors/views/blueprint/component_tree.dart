@@ -1,463 +1,324 @@
-import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
+import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
+import 'package:flutter/services.dart';
 import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintComponent;
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-/// Real Component Hierarchy Tree for Blueprint Editor.
+part 'component_tree/add_component_dialog.dart';
+part 'component_tree/rows.dart';
+
+/// What a component row carries while it is dragged.
+class _ComponentDrag {
+  final String id;
+  const _ComponentDrag(this.id);
+}
+
+/// One visible row of the component tree.
+class _ComponentRow {
+  final LuminaBlueprintComponent node;
+  final int depth;
+  final bool expandable;
+  const _ComponentRow(this.node, this.depth, this.expandable);
+}
+
+/// The Blueprint editor's component hierarchy, built like the Level Editor's
+/// World Outliner: the same header (title, Expand All / Collapse All, Add),
+/// search field, 24 px rows with chevron, eye, lock, type icon, name and
+/// type, the same selection and drop highlights, a right-click menu and
+/// inline rename (double-click). Scene components are dragged onto
+/// another scene component to attach to it, or onto the empty area below
+/// the rows to attach to the root.
 class BlueprintComponentTree extends StatefulWidget {
   final BlueprintEditorViewModel viewModel;
 
-  const BlueprintComponentTree({
-    super.key,
-    required this.viewModel,
-  });
+  const BlueprintComponentTree({super.key, required this.viewModel});
 
   @override
   State<BlueprintComponentTree> createState() => _BlueprintComponentTreeState();
 }
 
-class _BlueprintComponentTreeState extends State<BlueprintComponentTree> {
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.viewModel,
-      builder: (context, _) {
-        final vm = widget.viewModel;
-        final sceneNodes = vm.allComponents.where((c) => c.isSceneComponent).toList();
-        final nonSceneNodes = vm.allComponents.where((c) => !c.isSceneComponent).toList();
-
-        return Container(
-          color: EditorColors.card,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Toolbar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: EditorColors.border, width: 0.5)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(LucideIcons.cuboid, size: 14, color: EditorColors.primary),
-                    const SizedBox(width: 6),
-                    const Text('COMPONENTS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
-                    const Spacer(),
-
-                    // Add Component Button
-                    PrimaryButton(
-                      key: const ValueKey('add_component_button'),
-                      size: ButtonSize.small,
-                      onPressed: () => _showAddComponentModal(context, vm),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(LucideIcons.plus, size: 12),
-                          SizedBox(width: 4),
-                          Text('+ Add Comp', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Tree List
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  children: [
-                    // Scene Components (Hierarchical)
-                    ..._buildSceneComponentHierarchy(sceneNodes, vm),
-
-                    // Non-scene Actor Components Section
-                    if (nonSceneNodes.isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.only(left: 12, top: 10, bottom: 4),
-                        child: Text('ACTOR COMPONENTS', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: EditorColors.mutedForeground)),
-                      ),
-                      ...nonSceneNodes.map((node) => _buildNodeItem(node, 0, vm)),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
+abstract class _ComponentTreeStateBase extends State<BlueprintComponentTree> {
+  BlueprintEditorViewModel get _vm => widget.viewModel;
   final Set<String> _collapsedIds = {};
+  String _filterQuery = '';
 
-  void _toggleExpanded(String id) {
+  // Inline rename.
+  String? _editingId;
+  bool _renameInvalid = false;
+  final TextEditingController _renameController = TextEditingController();
+  final FocusNode _renameFocusNode = FocusNode();
+
+  // Double-click detection (see the outliner: onDoubleTap would delay every click).
+  String? _lastTapId;
+  DateTime? _lastTapAt;
+
+  void _toggleExpanded(String id) => setState(() {
+        if (!_collapsedIds.remove(id)) _collapsedIds.add(id);
+      });
+
+  void _startRename(LuminaBlueprintComponent node) {
+    if (_vm.isInheritedComponent(node.id)) return;
     setState(() {
-      if (_collapsedIds.contains(id)) {
-        _collapsedIds.remove(id);
-      } else {
-        _collapsedIds.add(id);
-      }
+      _editingId = node.id;
+      _renameInvalid = false;
+      _renameController.text = node.name;
+      _renameController.selection = TextSelection(baseOffset: 0, extentOffset: node.name.length);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _editingId == node.id) _renameFocusNode.requestFocus();
     });
   }
 
-  (IconData, Color) _getComponentIconAndColor(String type) {
-    final registered = BlueprintComponentRegistry.getDescriptor(type)?.icon;
-    if (type.contains('DirectionalLight')) {
-      return (LucideIcons.sun, EditorColors.warning);
+  /// Applies the typed name; an invalid or taken one keeps the field open.
+  void _commitRename() {
+    final id = _editingId;
+    if (id == null) return;
+    final name = _renameController.text.trim();
+    if (name == _vm.getComponent(id)?.name || _vm.renameComponent(id, name)) {
+      setState(() => _editingId = null);
+    } else {
+      setState(() => _renameInvalid = true);
+      _renameFocusNode.requestFocus();
     }
-    if (type.contains('PointLight')) {
-      return (LucideIcons.lightbulb, EditorColors.warning);
-    }
-    if (type.contains('SpotLight')) {
-      return (LucideIcons.flashlight, EditorColors.warning);
-    }
-    if (type.contains('Camera')) {
-      return (LucideIcons.camera, EditorColors.chart2);
-    }
-    if (type.contains('SpringArm')) {
-      return (LucideIcons.move3d, EditorColors.chart4);
-    }
-    if (type.contains('Capsule') || type.contains('Collision')) {
-      return (registered ?? LucideIcons.shieldAlert, EditorColors.destructive);
-    }
-    if (type.contains('Movement')) {
-      return (LucideIcons.footprints, EditorColors.chart5);
-    }
-    if (type.contains('Mesh')) {
-      return (LucideIcons.box, EditorColors.primary);
-    }
-    return (registered ?? LucideIcons.box, EditorColors.mutedForeground);
   }
 
-  List<Widget> _buildSceneComponentHierarchy(List<LuminaBlueprintComponent> nodes, BlueprintEditorViewModel vm) {
+  void _cancelRename() => setState(() => _editingId = null);
+}
+
+class _BlueprintComponentTreeState extends _ComponentTreeStateBase with _ComponentRows {
+  @override
+  void initState() {
+    super.initState();
+    _renameFocusNode.addListener(() {
+      if (!_renameFocusNode.hasFocus && _editingId != null && !_renameInvalid) _commitRename();
+    });
+  }
+
+  @override
+  void dispose() {
+    _renameController.dispose();
+    _renameFocusNode.dispose();
+    super.dispose();
+  }
+
+  /// The scene hierarchy from the root, depth first, skipping collapsed subtrees.
+  List<_ComponentRow> _sceneRows() {
+    final vm = _vm;
+    final scene = vm.allComponents.where((c) => c.isSceneComponent).toList();
     final root = vm.rootComponent;
-    if (root == null) {
-      return [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+    if (root == null) return const [];
+    final rows = <_ComponentRow>[];
+    void visit(LuminaBlueprintComponent node, int depth) {
+      final children = scene.where((c) => c.parentId == node.id).toList();
+      rows.add(_ComponentRow(node, depth, children.isNotEmpty));
+      if (_collapsedIds.contains(node.id)) return;
+      for (final child in children) {
+        visit(child, depth + 1);
+      }
+    }
+
+    visit(root, 0);
+    return rows;
+  }
+
+  void _setAllExpanded(bool expanded) => setState(() {
+        _collapsedIds.clear();
+        if (!expanded) {
+          _collapsedIds.addAll(_vm.allComponents.where((c) => c.isSceneComponent).map((c) => c.id));
+        }
+      });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(listenable: _vm, builder: (context, _) => _buildTree(context));
+  }
+
+  Widget _buildTree(BuildContext context) {
+    final vm = _vm;
+    final query = _filterQuery.toLowerCase();
+    final filtering = query.isNotEmpty;
+    final sceneRows = filtering
+        ? [
+            for (final c in vm.allComponents)
+              if (c.isSceneComponent && c.name.toLowerCase().contains(query)) _ComponentRow(c, 0, false),
+          ]
+        : _sceneRows();
+    final actorRows = [
+      for (final c in vm.allComponents)
+        if (!c.isSceneComponent && (!filtering || c.name.toLowerCase().contains(query))) _ComponentRow(c, 0, false),
+    ];
+
+    // No surface of its own, as the World Outliner: the editor background.
+    return Container(
+      color: EditorColors.background,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header, as the World Outliner's.
+          Container(
+            height: EditorDensity.panelHeaderHeight,
+            padding: const EdgeInsets.symmetric(horizontal: EditorDensity.gutter),
+            color: EditorColors.cardHeader,
+            child: Row(
               children: [
-                const Icon(LucideIcons.cuboid, size: 22, color: EditorColors.mutedForeground),
-                const SizedBox(height: 8),
-                const Text('No Scene Components attached', style: TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
-                const SizedBox(height: 12),
-                OutlineButton(
-                  size: ButtonSize.small,
-                  onPressed: () => vm.resetToDefaultComponents(),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(LucideIcons.sparkles, size: 12, color: EditorColors.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        vm.document.parentClass == 'LuminaCharacter'
-                            ? 'Add Character Components'
-                            : 'Add Default Components',
-                        style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                const Expanded(
+                  child: Text('COMPONENTS', style: EditorTypography.panelHeading, overflow: TextOverflow.ellipsis),
+                ),
+                _headerIcon(
+                  key: const ValueKey('components_expand_all'),
+                  icon: LucideIcons.chevronsUpDown,
+                  tooltip: 'Expand All',
+                  onPressed: () => _setAllExpanded(true),
+                ),
+                _headerIcon(
+                  key: const ValueKey('components_collapse_all'),
+                  icon: LucideIcons.chevronsDownUp,
+                  tooltip: 'Collapse All',
+                  onPressed: () => _setAllExpanded(false),
+                ),
+                SizedBox(
+                  height: EditorDensity.chipHeight,
+                  child: GhostButton(
+                    key: const ValueKey('add_component_button'),
+                    density: EditorDensity.chipButton,
+                    alignment: Alignment.center,
+                    onPressed: () => _showAddComponentModal(context, vm),
+                    child: const Row(
+                      children: [
+                        Icon(LucideIcons.plus, size: 12, color: EditorColors.primary),
+                        SizedBox(width: 4),
+                        Text(
+                          'Add',
+                          style: TextStyle(
+                            fontSize: EditorTypography.labelSize,
+                            color: EditorColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ];
-    }
 
-    final widgets = <Widget>[];
-
-    void addNodeRecursive(LuminaBlueprintComponent node, int depth) {
-      final children = nodes.where((c) => c.parentId == node.id).toList();
-      final isExpanded = !_collapsedIds.contains(node.id);
-      widgets.add(_buildNodeItem(
-        node,
-        depth,
-        vm,
-        hasChildren: children.isNotEmpty,
-        isExpanded: isExpanded,
-      ));
-      if (isExpanded) {
-        for (final child in children) {
-          addNodeRecursive(child, depth + 1);
-        }
-      }
-    }
-
-    addNodeRecursive(root, 0);
-    return widgets;
-  }
-
-  Widget _buildNodeItem(
-    LuminaBlueprintComponent node,
-    int depth,
-    BlueprintEditorViewModel vm, {
-    bool hasChildren = false,
-    bool isExpanded = true,
-  }) {
-    final isSelected = vm.selectedComponentId == node.id;
-    final isRoot = node.id == vm.rootComponent?.id;
-    final isVisible = node.properties['visible'] != false;
-    final isLocked = node.properties['isLocked'] == true;
-
-    final (icon, iconColor) = _getComponentIconAndColor(node.type);
-    final shortType = node.type.replaceAll('Lumina', '').replaceAll('Component', '');
-
-    return GestureDetector(
-      key: ValueKey('component_row_${node.id}'),
-      behavior: HitTestBehavior.opaque,
-      onTap: () => vm.selectComponent(node.id),
-      child: Container(
-        height: EditorDensity.rowHeight,
-        padding: EdgeInsets.only(
-          left: EditorDensity.gutter + (depth * EditorDensity.indentStep),
-          right: EditorDensity.gutter,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? EditorColors.selectionBg : Colors.transparent,
-          border: isSelected
-              ? const Border(left: BorderSide(color: EditorColors.primary, width: EditorDensity.selectionBarWidth))
-              : null,
-        ),
-        child: Row(
-          children: [
-            // Chevron
-            if (hasChildren)
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _toggleExpanded(node.id),
-                child: Icon(
-                  isExpanded ? LucideIcons.chevronDown : LucideIcons.chevronRight,
-                  size: 14,
-                  color: EditorColors.mutedForeground,
-                ),
-              )
-            else
-              const SizedBox(width: 14),
-            const SizedBox(width: 4),
-
-            // Eye visibility toggle
-            GhostButton(
-              density: ButtonDensity.compact,
-              onPressed: () {
-                vm.setProperty(node.id, 'visible', !isVisible);
-              },
-              child: Icon(
-                isVisible ? LucideIcons.eye : LucideIcons.eyeOff,
-                size: 11,
-                color: isVisible ? EditorColors.mutedForeground : EditorColors.destructive,
+          // Search field.
+          Container(
+            color: EditorColors.rail,
+            padding: const EdgeInsets.symmetric(horizontal: EditorDensity.gutter, vertical: 6),
+            child: Container(
+              height: EditorDensity.compactRowHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: EditorColors.background,
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(color: EditorColors.border),
+              ),
+              child: TextField(
+                key: const ValueKey('components_search'),
+                onChanged: (v) => setState(() => _filterQuery = v),
+                style: const TextStyle(fontSize: 10, color: EditorColors.foreground),
+                placeholder: const Text('Search components...', style: TextStyle(fontSize: 10)),
               ),
             ),
+          ),
 
-            // Lock toggle
-            GhostButton(
-              density: ButtonDensity.compact,
-              onPressed: () {
-                vm.setProperty(node.id, 'isLocked', !isLocked);
-              },
-              child: Icon(
-                isLocked ? LucideIcons.lock : LucideIcons.lockOpen,
-                size: 11,
-                color: isLocked ? EditorColors.warning : EditorColors.border,
-              ),
-            ),
-            const SizedBox(width: 4),
-
-            // Type icon
-            Icon(icon, size: 12, color: iconColor),
-            const SizedBox(width: 6),
-
-            // Component name
-            Expanded(
-              child: Text(
-                node.name,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected
-                      ? EditorColors.primary
-                      : (isVisible ? EditorColors.foreground : EditorColors.mutedForeground),
-                  decoration: isVisible ? TextDecoration.none : TextDecoration.lineThrough,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-
-            // Inherited Badge
-            if (vm.isInheritedComponent(node.id)) ...[
-              const SizedBox(width: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                decoration: BoxDecoration(
-                  color: (vm.isComponentOverridden(node.id) ? EditorColors.primary : EditorColors.muted).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-                child: Text(
-                  vm.isComponentOverridden(node.id) ? 'Overridden' : 'Inherited',
-                  style: TextStyle(
-                    fontSize: 7.5,
-                    color: vm.isComponentOverridden(node.id) ? EditorColors.primary : EditorColors.mutedForeground,
-                  ),
-                ),
-              ),
-            ],
-
-            // ROOT Badge
-            if (isRoot) ...[
-              const SizedBox(width: 4),
-              const PrimaryBadge(
-                child: Text('ROOT', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold)),
-              ),
-            ],
-
-            const SizedBox(width: 6),
-
-            // Right-aligned Type name (matching Image 2)
-            Text(
-              shortType.isEmpty ? 'Component' : shortType,
-              style: const TextStyle(fontSize: 8, color: EditorColors.mutedForeground),
-            ),
-
-            const SizedBox(width: 4),
-
-            // Action ellipsis menu
-            GhostButton(
-              density: ButtonDensity.compact,
-              size: ButtonSize.xSmall,
-              onPressed: () => _showComponentActions(context, node, vm),
-              child: const Icon(LucideIcons.ellipsisVertical, size: 11),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showComponentActions(BuildContext context, LuminaBlueprintComponent node, BlueprintEditorViewModel vm) {
-    final isInherited = vm.isInheritedComponent(node.id);
-    showOverlay(
-      context,
-      const DialogConfiguration(),
-      builder: (dialogContext) => AlertDialog(
-        title: Text('Component Actions: ${node.name}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (isInherited) ...[
-              Container(
-                padding: const EdgeInsets.all(8),
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(
-                  color: EditorColors.muted.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: EditorColors.border, width: 0.5),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(LucideIcons.info, size: 14, color: EditorColors.mutedForeground),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'This component is inherited from parent class "${vm.document.parentClass}". To edit its hierarchy or remove it, edit the parent Blueprint.',
-                        style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground),
+          Expanded(
+            child: vm.rootComponent == null && actorRows.isEmpty
+                ? _buildNoComponents(vm)
+                : CustomScrollView(
+                    slivers: [
+                      SliverList(
+                        delegate: SliverChildListDelegate([
+                          for (final r in sceneRows) _buildRow(r),
+                          if (actorRows.isNotEmpty) ...[
+                            Container(
+                              height: EditorDensity.rowHeight,
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.only(left: EditorDensity.gutter, top: 6),
+                              child: const Text('ACTOR COMPONENTS', style: EditorTypography.panelHeading),
+                            ),
+                            for (final r in actorRows) _buildRow(r),
+                          ],
+                        ]),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else ...[
-              OutlineButton(
-                onPressed: () {
-                  closeOverlay(dialogContext);
-                  _promptRename(node, vm);
-                },
-                child: const Row(
-                  children: [
-                    Icon(LucideIcons.pencil, size: 14),
-                    SizedBox(width: 8),
-                    Text('Rename Component'),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 6),
-            ],
-            OutlineButton(
-              onPressed: () {
-                closeOverlay(dialogContext);
-                vm.duplicateComponent(node.id);
-              },
-              child: const Row(
-                children: [
-                  Icon(LucideIcons.copy, size: 14),
-                  SizedBox(width: 8),
-                  Text('Duplicate Component'),
-                ],
-              ),
-            ),
-            if (!isInherited) ...[
-              const SizedBox(height: 6),
-              DestructiveButton(
-                onPressed: () {
-                  closeOverlay(dialogContext);
-                  vm.removeComponent(node.id);
-                },
-                child: const Row(
-                  children: [
-                    Icon(LucideIcons.trash2, size: 14),
-                    SizedBox(width: 8),
-                    Text('Delete Component'),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          GhostButton(
-            child: const Text('Close'),
-            onPressed: () => closeOverlay(dialogContext),
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 32),
+                          child: _buildEmptyArea(),
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
     );
   }
 
-  void _promptRename(LuminaBlueprintComponent node, BlueprintEditorViewModel vm) {
-    final controller = TextEditingController(text: node.name);
-    showOverlay(
-      context,
-      const DialogConfiguration(),
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Rename Component'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Enter new unique Dart identifier:').small().muted(),
-            const SizedBox(height: 8),
-            TextField(
-              controller: controller,
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          GhostButton(
-            child: const Text('Cancel'),
-            onPressed: () => closeOverlay(dialogContext),
+  Widget _headerIcon({required Key key, required IconData icon, required String tooltip, required VoidCallback onPressed}) {
+    return Tooltip(
+      tooltip: (context) => TooltipContainer(child: Text(tooltip)),
+      child: GhostButton(
+        key: key,
+        density: ButtonDensity.compact,
+        onPressed: onPressed,
+        child: Icon(icon, size: 11, color: EditorColors.mutedForeground),
+      ),
+    );
+  }
+
+  /// Below the rows: a scene component dropped here attaches to the root; a
+  /// click clears the selection.
+  Widget _buildEmptyArea() {
+    final vm = _vm;
+    final root = vm.rootComponent;
+    return DragTarget<_ComponentDrag>(
+      onWillAcceptWithDetails: (d) => root != null && _canAttach(d.data.id, root.id),
+      onAcceptWithDetails: (d) => vm.reparent(d.data.id, root!.id),
+      builder: (context, candidate, rejected) => GestureDetector(
+        key: const ValueKey('components_empty_area'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => vm.selectComponent(null),
+        child: Container(
+          decoration: BoxDecoration(
+            color: candidate.isNotEmpty ? EditorColors.primary.withValues(alpha: 0.08) : Colors.transparent,
+            border: candidate.isNotEmpty ? const Border(top: BorderSide(color: EditorColors.primary, width: 1)) : null,
           ),
-          PrimaryButton(
-            child: const Text('Rename'),
-            onPressed: () {
-              final success = vm.renameComponent(node.id, controller.text);
-              if (success) {
-                closeOverlay(dialogContext);
-              }
-            },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoComponents(BlueprintEditorViewModel vm) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(LucideIcons.cuboid, size: 22, color: EditorColors.mutedForeground),
+          const SizedBox(height: 8),
+          const Text('No Scene Components attached', style: TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
+          const SizedBox(height: 12),
+          OutlineButton(
+            size: ButtonSize.small,
+            onPressed: () => vm.resetToDefaultComponents(),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(LucideIcons.sparkles, size: 12, color: EditorColors.primary),
+                const SizedBox(width: 6),
+                Text(
+                  vm.document.parentClass == 'LuminaCharacter' ? 'Add Character Components' : 'Add Default Components',
+                  style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -468,124 +329,7 @@ class _BlueprintComponentTreeState extends State<BlueprintComponentTree> {
     showOverlay(
       context,
       const DialogConfiguration(),
-      builder: (dialogContext) {
-        return _AddComponentDialog(
-          viewModel: vm,
-          onClose: () => closeOverlay(dialogContext),
-        );
-      },
-    );
-  }
-}
-
-class _AddComponentDialog extends StatefulWidget {
-  final BlueprintEditorViewModel viewModel;
-  final VoidCallback onClose;
-
-  const _AddComponentDialog({required this.viewModel, required this.onClose});
-
-  @override
-  State<_AddComponentDialog> createState() => _AddComponentDialogState();
-}
-
-class _AddComponentDialogState extends State<_AddComponentDialog> {
-  final TextEditingController _searchController = TextEditingController();
-  String _filter = '';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final filtered = BlueprintComponentRegistry.registeredComponents
-        .where((d) => d.displayName.toLowerCase().contains(_filter.toLowerCase()) || d.typeName.toLowerCase().contains(_filter.toLowerCase()))
-        .toList();
-
-    return AlertDialog(
-      title: const Text('Add Component'),
-      content: SizedBox(
-        width: 320,
-        height: 360,
-        child: Column(
-          children: [
-            TextField(
-              key: const ValueKey('add_component_search'),
-              controller: _searchController,
-              placeholder: const Text('Search Components...').small(),
-              onChanged: (val) => setState(() => _filter = val),
-            ),
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ListView.builder(
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final comp = filtered[index];
-                  if (!comp.isAvailable) {
-                    return Tooltip(
-                      tooltip: (context) => TooltipContainer(child: Text(comp.gapReason ?? 'Not supported in engine yet').small()),
-                      child: Opacity(
-                        opacity: 0.45,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                          child: Row(
-                            children: [
-                              const Icon(LucideIcons.lock, size: 12, color: EditorColors.mutedForeground),
-                              const SizedBox(width: 8),
-                              Text(comp.displayName, style: const TextStyle(fontSize: 11, color: EditorColors.mutedForeground)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-
-                  return Clickable(
-                    key: ValueKey('add_component_${comp.typeName}'),
-                    onPressed: () {
-                      widget.viewModel.addComponent(comp.typeName);
-                      widget.onClose();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                      margin: const EdgeInsets.only(bottom: 2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            comp.icon ?? (comp.isSceneComponent ? LucideIcons.box : LucideIcons.cpu),
-                            size: 13,
-                            color: EditorColors.primary,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              comp.displayName,
-                              style: const TextStyle(fontSize: 11, color: EditorColors.foreground),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        GhostButton(
-          onPressed: widget.onClose,
-          child: const Text('Cancel'),
-        ),
-      ],
+      builder: (dialogContext) => _AddComponentDialog(viewModel: vm, onClose: () => closeOverlay(dialogContext)),
     );
   }
 }
