@@ -310,6 +310,11 @@ class BlueprintPreviewScene extends _BlueprintPreviewSceneState with _BlueprintP
     for (final c in actor.components) {
       if (c is LuminaCameraComponent) c.isActive = false;
     }
+    // Play stands the actor on the ground: its collision rests on the floor
+    // (a character's capsule bottom, not its centre, touches it). The preview
+    // lifts the actor the same way, so the floor at height 0 is that ground.
+    _groundLift = groundLiftOf(actor);
+    if (_groundLift != 0) actor.actorLocation = actor.actorLocation + Vector3(0, _groundLift, 0);
     _actor = actor;
 
     final w = _world;
@@ -337,6 +342,24 @@ class BlueprintPreviewScene extends _BlueprintPreviewSceneState with _BlueprintP
     _placeSpringArms();
     _lastState = null;
     _notify();
+  }
+
+  double _groundLift = 0;
+
+  /// How far (cm, up) the preview lifts the actor so its lowest collision
+  /// shape rests on the floor; 0 for an actor without collision.
+  double get groundLift => _groundLift;
+
+  /// The lift that puts the bottom of [actor]'s lowest collision shape at
+  /// height 0 (runtime frame, Y up), from where the actor stands now.
+  static double groundLiftOf(LuminaActor actor) {
+    double? bottom;
+    for (final c in actor.components.whereType<LuminaCollisionComponent>()) {
+      c.markCollisionDirty();
+      final y = c.getAABB().min.y;
+      if (bottom == null || y < bottom) bottom = y;
+    }
+    return bottom == null ? 0 : -bottom;
   }
 
   /// Puts every spring arm's children at its socket, as its tick does in

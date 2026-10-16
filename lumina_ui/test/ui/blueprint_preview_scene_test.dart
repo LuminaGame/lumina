@@ -38,9 +38,12 @@ void main() {
     expect(scene.actor, isA<LuminaCharacter>());
     final mesh = scene.componentFor('mesh') as LuminaAnimatedMeshComponent;
     expect(mesh.meshAssetPath, '$dir/${LuminaThirdPersonContent.projectMeshGlbPath}');
-    // Authoring (0, 0, -90) cm, Z up → runtime (0, -90, 0), Y up (LuminaAxes).
+    // Authoring (0, 0, -90) cm, Z up → runtime (0, -90, 0), Y up (LuminaAxes),
+    // and the preview stands the capsule on the floor as Play does (lifted
+    // by its 90 cm half height): the feet are on the floor.
+    expect(scene.groundLift, closeTo(halfHeight, 1e-9));
     expect(mesh.worldLocation.x, closeTo(0, 1e-9));
-    expect(mesh.worldLocation.y, closeTo(-halfHeight, 1e-9));
+    expect(mesh.worldLocation.y, closeTo(0, 1e-9));
     expect(mesh.worldLocation.z, closeTo(0, 1e-9));
 
     final anim = scene.animInstanceFor('mesh')!;
@@ -69,16 +72,17 @@ void main() {
       return [for (var i = 0; i < p.length; i += 3) Vector3(p[i], p[i + 1], p[i + 2])];
     }
 
-    // The capsule: 35 cm radius, 90 cm half height, centred on the actor.
+    // The capsule: 35 cm radius, 90 cm half height, centred on the actor,
+    // which stands on the floor: from 0 to 180 cm.
     final capsule = points('capsule');
-    expect(capsule.map((p) => p.y).reduce((a, b) => a > b ? a : b), closeTo(halfHeight, 1e-6));
-    expect(capsule.map((p) => p.y).reduce((a, b) => a < b ? a : b), closeTo(-halfHeight, 1e-6));
+    expect(capsule.map((p) => p.y).reduce((a, b) => a > b ? a : b), closeTo(2 * halfHeight, 1e-6));
+    expect(capsule.map((p) => p.y).reduce((a, b) => a < b ? a : b), closeTo(0, 1e-6));
     expect(capsule.map((p) => p.x.abs()).reduce((a, b) => a > b ? a : b), closeTo(radius, 1e-6));
 
     // The boom: from 60 cm above the actor origin to 350 cm behind it (+Z,
     // the actor faces −Z), where the camera sits.
     final boom = points('boom');
-    expect(boom[0].y, closeTo(LuminaTemplateCharacterTuning.boomHeight, 1e-6));
+    expect(boom[0].y, closeTo(halfHeight + LuminaTemplateCharacterTuning.boomHeight, 1e-6));
     expect(boom[1].z, closeTo(LuminaTemplateCharacterTuning.boomLength, 1e-6));
     final camera = scene.componentFor('camera') as LuminaCameraComponent;
     expect((camera.worldLocation - boom[1]).length, lessThan(1e-6), reason: 'the camera is at the boom socket');
@@ -88,7 +92,8 @@ void main() {
     // Framed on the body: centred on the capsule, which fills a good part
     // of the 45° view, from far enough to keep the camera in front of the eye.
     final framing = scene.framing;
-    expect(framing.target.length, lessThan(1e-6), reason: 'the capsule is centred on the actor');
+    expect((framing.target - Vector3(0, halfHeight, 0)).length, lessThan(1e-6),
+        reason: 'the capsule is centred on the actor');
     expect(framing.distance, inInclusiveRange(2 * halfHeight, 8 * halfHeight));
     expect((camera.worldLocation - framing.target).length, lessThan(framing.distance));
   });
@@ -308,5 +313,36 @@ void main() {
     scene.toggleRenderSceneLights();
     expect(scene.renderSceneLights, isFalse);
   });
-}
 
+  test('a root capsule at 0 stands on the floor, not half under it; an actor without collision stays', () {
+    // The MetaHuman Blueprint of the report: a scene root, the capsule under
+    // it at 0, the body under the capsule at 0.
+    final doc = LuminaBlueprintDocument(parentClass: 'LuminaCharacter', components: [
+      LuminaBlueprintComponent(id: 'root', name: 'Root', type: 'LuminaSceneComponent'),
+      LuminaBlueprintComponent(
+        id: 'capsule',
+        name: 'CapsuleComponent',
+        type: 'LuminaCapsuleComponent',
+        parentId: 'root',
+        properties: {'capsuleRadius': 34.0, 'capsuleHalfHeight': 88.0},
+      ),
+      LuminaBlueprintComponent(id: 'arm', name: 'SpringArm', type: 'LuminaSpringArmComponent', parentId: 'capsule'),
+    ]);
+    final scene = BlueprintPreviewScene()..setDocument(doc);
+    addTearDown(scene.dispose);
+    scene.attachHeadless();
+    expect(scene.groundLift, closeTo(88, 1e-9));
+    final capsule = scene.componentFor('capsule') as LuminaCollisionComponent;
+    expect(capsule.getAABB().min.y, closeTo(0, 1e-6), reason: 'the capsule bottom is on the floor');
+    expect(capsule.worldLocation.y, closeTo(88, 1e-6));
+
+    final prop = LuminaBlueprintDocument(parentClass: 'LuminaActor', components: [
+      LuminaBlueprintComponent(id: 'root', name: 'Root', type: 'LuminaSceneComponent'),
+      LuminaBlueprintComponent(id: 'arm', name: 'Arrow', type: 'LuminaArrowComponent', parentId: 'root'),
+    ]);
+    final plain = BlueprintPreviewScene()..setDocument(prop);
+    addTearDown(plain.dispose);
+    plain.attachHeadless();
+    expect(plain.groundLift, 0);
+  });
+}
