@@ -196,7 +196,7 @@ Reflection-driven inspector panel for the material's PBR parameters and texture 
 
 ### `class MaterialSettingsSection`
 
-The material header's settings, shown under the Material editor's 3D preview: Domain (shown as Surface), Blend Mode, Shading and Two Sided. Blend Mode, Shading and Two Sided rewrite the matching key of the source's `material { }` header through `MaterialEditorViewModel.updateHeaderSettings`.
+The material header's settings, shown under the Material editor's 3D preview: Domain (shown as Surface), Blend Mode, Shading, Post Lighting and Two Sided. Blend Mode, Shading, Post Lighting (`postLightingBlending`: the modes matc accepts, `MaterialEditorViewModel.postLightingBlendings` — opaque, transparent, add, multiply, screen; Filament's default transparent) and Two Sided rewrite the matching key of the source's `material { }` header through `MaterialEditorViewModel.updateHeaderSettings`.
 
 **Constructors:**
 
@@ -336,6 +336,7 @@ The editor's compiler: Filament's own `.mat` parser (the one `matc` uses) throug
 | `shading` | `FilamatShading get shading` | Getter accessor returning the current value of `shading`. |
 | `blending` | `BlendingMode get blending` | Getter accessor returning the current value of `blending`. |
 | `doubleSided` | `bool get doubleSided` | Getter accessor returning the current value of `doubleSided`. |
+| `postLightingBlending` | `String get postLightingBlending` | The header's `postLightingBlending` (how the Post Lighting Color blends), Filament's default `transparent` when unset; `postLightingBlendings` / `postLightingBlendingDefault` list the modes matc accepts. `updateHeaderSettings(postLightingBlending: …)` writes it (an unknown mode is an `ArgumentError`). |
 | `parameters` | `List<MaterialParamModel> get parameters` | Getter accessor returning the current value of `parameters`. |
 | `currentCode` | `currentCode(String value)` | Executes `currentCode` operation. |
 | `updateCodeFromEditor` | `void updateCodeFromEditor(String value)` | Updates code directly from the text editor without triggering continuous rebuild loops. |
@@ -453,7 +454,7 @@ The surface the Material output node shades: which of its pins are used.
 | `shading` | `final FilamatShading shading` |  |
 | `blending` | `final BlendingMode blending` |  |
 | `usesOpacity` | `bool get usesOpacity` |  |
-| `uses` | `bool uses(String pinId)` | Whether the output pin [pinId] feeds anything for this shading model and blend mode (Filament's `MaterialInputs` has no field for the rest). |
+| `uses` | `bool uses(String pinId)` | Whether the output pin [pinId] feeds anything for this shading model and blend mode (Filament's `MaterialInputs` has no field for the rest). Unlit uses Base Color, Emissive Color, Post Lighting Color and Post Lighting Mix. Declared in `models/material_surface.dart`, exported by `material_graph.dart`. |
 
 ### `abstract final class MaterialNodes`
 
@@ -506,6 +507,8 @@ The material expression catalog and the helpers that read a node's settings. A m
 | `emissive` | `static const String emissive` |  |
 | `opacity` | `static const String opacity` |  |
 | `ambientOcclusion` | `static const String ambientOcclusion` |  |
+| `postLightingColor` | `static const String postLightingColor` | Post Lighting Color (float3, writes `material.postLightingColor = vec4(x, 1.0)`): blended over the shaded colour as the header's `postLightingBlending` says. Used by every shading model, unlit too. |
+| `postLightingMix` | `static const String postLightingMix` | Post Lighting Mix (float, `material.postLightingMixFactor`, Filament's default 1): how much of the blend applies. Written only with a Post Lighting Color, since Filament declares the field only next to it. |
 | `outputFields` | `static const Map<String, String> outputFields` | Output pin → the Filament `MaterialInputs` field it writes. |
 | `rgbaSwizzles` | `static const Map<String, String> rgbaSwizzles` | The swizzle each RGBA output reads from its vec4. |
 | `all` | `static const List<MaterialNodeSpec> all` |  |

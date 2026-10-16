@@ -1,8 +1,10 @@
-import 'package:flutter_filament/flutter_filament.dart' show BlendingMode, FilamatShading;
 import 'package:lumina_editor_data/lumina_editor.dart'
     show LuminaBlueprintGraph, LuminaBlueprintNode, LuminaBlueprintWire;
 import 'package:lumina_ui/ui/features/sub_editors/models/material_fragment_pins.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_logic_nodes.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_surface.dart';
+
+export 'package:lumina_ui/ui/features/sub_editors/models/material_surface.dart';
 
 /// The value a material expression pin carries: a float vector of one to four
 /// components, a texture object, or a bool (a comparison's result, which only
@@ -109,30 +111,6 @@ class MaterialNodeSpec {
   });
 }
 
-/// The surface the Material output node shades: which of its pins are used.
-class MaterialSurface {
-  final FilamatShading shading;
-  final BlendingMode blending;
-  const MaterialSurface({this.shading = FilamatShading.lit, this.blending = BlendingMode.opaque});
-
-  bool get usesOpacity =>
-      blending == BlendingMode.transparent || blending == BlendingMode.masked || blending == BlendingMode.fade;
-
-  /// Whether the output pin [pinId] feeds anything for this shading model and
-  /// blend mode (Filament's `MaterialInputs` has no field for the rest).
-  bool uses(String pinId) {
-    if (pinId == MaterialNodes.opacity) return usesOpacity;
-    switch (shading) {
-      case FilamatShading.unlit:
-        return pinId == MaterialNodes.baseColor || pinId == MaterialNodes.emissive;
-      case FilamatShading.cloth:
-        return pinId != MaterialNodes.metallic && pinId != MaterialNodes.specular;
-      default:
-        return true;
-    }
-  }
-}
-
 // design-token-exempt: node header colours follow material node conventions
 // (green parameters, purple textures), not the editor chrome palette.
 const int _constantColor = 0xFF455A64;
@@ -203,6 +181,8 @@ abstract final class MaterialNodes {
   static const String emissive = 'emissive';
   static const String opacity = 'opacity';
   static const String ambientOcclusion = 'ambient_occlusion';
+  static const String postLightingColor = 'post_lighting_color';
+  static const String postLightingMix = 'post_lighting_mix';
 
   /// Output pin → the Filament `MaterialInputs` field it writes.
   static const Map<String, String> outputFields = {
@@ -213,6 +193,8 @@ abstract final class MaterialNodes {
     normal: 'normal',
     emissive: 'emissive',
     ambientOcclusion: 'ambientOcclusion',
+    postLightingColor: 'postLightingColor',
+    postLightingMix: 'postLightingMixFactor',
   };
 
   static const List<MaterialPinDef> _rgbaOutputs = [
@@ -242,6 +224,10 @@ abstract final class MaterialNodes {
         MaterialPinDef(emissive, 'Emissive Color', type: MaterialValueType.float3, optional: true),
         MaterialPinDef(opacity, 'Opacity', type: MaterialValueType.float1, optional: true),
         MaterialPinDef(ambientOcclusion, 'Ambient Occlusion', type: MaterialValueType.float1, optional: true),
+        // Blended over the lit (or unlit) colour as the header's postLightingBlending says;
+        // the mix (0..1, default 1) only applies with a colour.
+        MaterialPinDef(postLightingColor, 'Post Lighting Color', type: MaterialValueType.float3, optional: true),
+        MaterialPinDef(postLightingMix, 'Post Lighting Mix', type: MaterialValueType.float1, optional: true),
       ],
     ),
     MaterialNodeSpec(

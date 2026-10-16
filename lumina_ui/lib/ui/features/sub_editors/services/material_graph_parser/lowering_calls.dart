@@ -222,6 +222,8 @@ extension _LoweringCalls on _Lowering {
       'ambientOcclusion': MaterialNodes.ambientOcclusion,
       'normal': MaterialNodes.normal,
       'emissive': MaterialNodes.emissive,
+      'postLightingColor': MaterialNodes.postLightingColor,
+      'postLightingMixFactor': MaterialNodes.postLightingMix,
     };
     for (final e in pins.entries) {
       final v = _fields[e.key];

@@ -6,6 +6,8 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/mat_language/filament_material_api.g.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/mat_language/mat_api_types.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/mat_language/mat_migration.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_asset_upgrader.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
@@ -76,6 +78,16 @@ class MaterialEditorViewModel extends ChangeNotifier {
   FilamatShading get shading => _shading;
   BlendingMode get blending => _blending;
   bool get doubleSided => _doubleSided;
+
+  /// The header's `postLightingBlending`: how the Post Lighting Color is
+  /// blended over the shaded colour (Filament's default `transparent`).
+  String get postLightingBlending => _headerWord(_currentCode, 'postLightingBlending') ?? postLightingBlendingDefault;
+
+  /// The modes matc accepts for `postLightingBlending`, and its default.
+  static final MatHeaderKeyInfo _postLightingKey =
+      filamentHeaderKeys.firstWhere((k) => k.name == 'postLightingBlending');
+  static List<String> get postLightingBlendings => _postLightingKey.values;
+  static String get postLightingBlendingDefault => _postLightingKey.defaultValue ?? 'transparent';
   List<MaterialParamModel> get parameters => List.unmodifiable(_parameters);
 
   set currentCode(String value) {
@@ -435,7 +447,11 @@ class MaterialEditorViewModel extends ChangeNotifier {
     FilamatShading? shading,
     BlendingMode? blending,
     bool? doubleSided,
+    String? postLightingBlending,
   }) async {
+    if (postLightingBlending != null && !postLightingBlendings.contains(postLightingBlending)) {
+      throw ArgumentError.value(postLightingBlending, 'postLightingBlending', 'one of ${postLightingBlendings.join(', ')}');
+    }
     if (shading != null) _shading = shading;
     if (blending != null) _blending = blending;
     if (doubleSided != null) _doubleSided = doubleSided;
@@ -462,6 +478,15 @@ class MaterialEditorViewModel extends ChangeNotifier {
       updated = updated.replaceAll(RegExp(r'doubleSided\s*:\s*[a-zA-Z0-9_]+'), 'doubleSided : $_doubleSided');
     } else if (_doubleSided && updated.contains('material {')) {
       updated = updated.replaceFirst('material {', 'material {\n    doubleSided : true,');
+    }
+
+    if (postLightingBlending != null) {
+      final key = RegExp(r'postLightingBlending\s*:\s*[a-zA-Z0-9_]+');
+      if (key.hasMatch(updated)) {
+        updated = updated.replaceAll(key, 'postLightingBlending : $postLightingBlending');
+      } else if (updated.contains('material {')) {
+        updated = updated.replaceFirst('material {', 'material {\n    postLightingBlending : $postLightingBlending,');
+      }
     }
 
     _currentCode = updated;

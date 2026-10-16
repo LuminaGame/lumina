@@ -196,7 +196,7 @@ Materyalin PBR parametreleri ve doku yuvaları için yansıma (reflection) taban
 
 ### `class MaterialSettingsSection`
 
-Materyal başlığının ayarları; Materyal editörünün 3B önizlemesinin altında gösterilir: Domain (Surface olarak gösterilir), Blend Mode, Shading ve Two Sided. Blend Mode, Shading ve Two Sided, kaynağın `material { }` başlığındaki ilgili anahtarı `MaterialEditorViewModel.updateHeaderSettings` üzerinden yeniden yazar.
+Materyal başlığının ayarları; Materyal editörünün 3B önizlemesinin altında gösterilir: Domain (Surface olarak gösterilir), Blend Mode, Shading, Post Lighting ve Two Sided. Blend Mode, Shading, Post Lighting (`postLightingBlending`: matc'nin kabul ettiği modlar, `MaterialEditorViewModel.postLightingBlendings` — opaque, transparent, add, multiply, screen; Filament'in varsayılanı transparent) ve Two Sided, kaynağın `material { }` başlığındaki ilgili anahtarı `MaterialEditorViewModel.updateHeaderSettings` üzerinden yeniden yazar.
 
 **Yapıcı Metotlar (Constructors):**
 
@@ -336,6 +336,7 @@ Editörün derleyicisi: `FilamentMatc` üzerinden Filament'in kendi `.mat` ayrı
 | `shading` | `FilamatShading get shading` | `shading` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `blending` | `BlendingMode get blending` | `blending` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `doubleSided` | `bool get doubleSided` | `doubleSided` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `postLightingBlending` | `String get postLightingBlending` | Başlığın `postLightingBlending` değeri (Post Lighting Color'ın nasıl karıştığı); yoksa Filament'in varsayılanı `transparent`. `postLightingBlendings` / `postLightingBlendingDefault` matc'nin kabul ettiği modları verir. `updateHeaderSettings(postLightingBlending: …)` onu yazar (bilinmeyen bir mod `ArgumentError` verir). |
 | `parameters` | `List<MaterialParamModel> get parameters` | `parameters` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `currentCode` | `currentCode(String value)` | `currentCode` işlemini gerçekleştirir. |
 | `updateCodeFromEditor` | `void updateCodeFromEditor(String value)` | Updates code directly from the text editor without triggering continuous rebuild loops. |
@@ -453,7 +454,7 @@ The surface the Material output node shades: which of its pins are used.
 | `shading` | `final FilamatShading shading` |  |
 | `blending` | `final BlendingMode blending` |  |
 | `usesOpacity` | `bool get usesOpacity` |  |
-| `uses` | `bool uses(String pinId)` | Whether the output pin [pinId] feeds anything for this shading model and blend mode (Filament's `MaterialInputs` has no field for the rest). |
+| `uses` | `bool uses(String pinId)` | Çıkış pini [pinId] bu gölgelendirme modeli ve blend modu için bir şey besliyor mu (Filament'in `MaterialInputs`'unda diğerleri için alan yoktur). Unlit, Base Color, Emissive Color, Post Lighting Color ve Post Lighting Mix pinlerini kullanır. `models/material_surface.dart` içinde tanımlıdır, `material_graph.dart` tarafından dışa aktarılır. |
 
 ### `abstract final class MaterialNodes`
 
@@ -506,6 +507,8 @@ The material expression catalog and the helpers that read a node's settings. A m
 | `emissive` | `static const String emissive` |  |
 | `opacity` | `static const String opacity` |  |
 | `ambientOcclusion` | `static const String ambientOcclusion` |  |
+| `postLightingColor` | `static const String postLightingColor` | Post Lighting Color (float3, writes `material.postLightingColor = vec4(x, 1.0)`): blended over the shaded colour as the header's `postLightingBlending` says. Used by every shading model, unlit too. |
+| `postLightingMix` | `static const String postLightingMix` | Post Lighting Mix (float, `material.postLightingMixFactor`, Filament's default 1): how much of the blend applies. Written only with a Post Lighting Color, since Filament declares the field only next to it. |
 | `outputFields` | `static const Map<String, String> outputFields` | Output pin → the Filament `MaterialInputs` field it writes. |
 | `rgbaSwizzles` | `static const Map<String, String> rgbaSwizzles` | The swizzle each RGBA output reads from its vec4. |
 | `all` | `static const List<MaterialNodeSpec> all` |  |

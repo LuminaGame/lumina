@@ -72,6 +72,8 @@ const _fieldDefaults = <String, List<double>>{
   'ambientOcclusion': [1],
   'emissive': [0, 0, 0, 1],
   'normal': [0, 0, 1],
+  'postLightingColor': [0, 0, 0, 0],
+  'postLightingMixFactor': [1],
 };
 
 class _Lowering with _ControlFlow {
@@ -430,7 +432,10 @@ class _Lowering with _ControlFlow {
     if (op == '=') {
       // vec4(color, alpha) into baseColor / emissive: the colour is the pin's
       // value, the alpha is Opacity (1.0 is the default and needs no wire).
-      if ((field == 'baseColor' || field == 'emissive') && rhs is _Call && rhs.callee == 'vec4' && rhs.args.length == 2) {
+      if ((field == 'baseColor' || field == 'emissive' || field == 'postLightingColor') &&
+          rhs is _Call &&
+          rhs.callee == 'vec4' &&
+          rhs.args.length == 2) {
         final rgb = _lower(rhs.args[0]);
         final alpha = _lower(rhs.args[1]);
         if (rgb.argWidth == 3 && alpha.type == MaterialValueType.float1) {
@@ -445,10 +450,10 @@ class _Lowering with _ControlFlow {
             return;
           }
           if (opaque) {
-            _fields['emissive'] = rgb;
+            _fields[field] = rgb;
             return;
           }
-          _fields['emissive'] = _append(rgb, alpha);
+          _fields[field] = _append(rgb, alpha);
           return;
         }
       }

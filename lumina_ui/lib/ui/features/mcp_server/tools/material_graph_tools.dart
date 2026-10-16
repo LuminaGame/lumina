@@ -494,28 +494,36 @@ void registerMaterialGraphTools(McpToolRegistry registry, EditorViewModel vm, Mc
       idempotent: true,
       title: 'Set material settings',
       description: 'The Material editor\'s header settings: shading_model (${shadings.keys.join(', ')}), blending '
-          '(${blendings.keys.join(', ')}) and double_sided. Rewrites the .mat header and recompiles, as the '
+          '(${blendings.keys.join(', ')}), double_sided and post_lighting_blending (how the Post Lighting Color pin '
+          'blends: ${MaterialEditorViewModel.postLightingBlendings.join(', ')}). Rewrites the .mat header and recompiles, as the '
           'toolbar does; output pins the new shading model ignores are then marked unused in get_material_graph.',
       inputSchema: McpSchema.object({
         'asset': McpSchema.string(assetArg),
         'shading_model': McpSchema.string('The shading model.', enumValues: shadings.keys.toList()),
         'blending': McpSchema.string('The blend mode.', enumValues: blendings.keys.toList()),
         'double_sided': McpSchema.boolean('Render both faces.'),
+        'post_lighting_blending': McpSchema.string('How the Post Lighting Color blends over the shaded colour.',
+            enumValues: MaterialEditorViewModel.postLightingBlendings),
       }, required: ['asset']),
       handler: (args) async {
-        if (!args.has('shading_model') && !args.has('blending') && !args.has('double_sided')) {
-          return McpToolResult.error('Pass shading_model, blending and / or double_sided.');
+        if (!args.has('shading_model') &&
+            !args.has('blending') &&
+            !args.has('double_sided') &&
+            !args.has('post_lighting_blending')) {
+          return McpToolResult.error('Pass shading_model, blending, double_sided and / or post_lighting_blending.');
         }
         final editor = await editorFor(args);
         await editor.updateHeaderSettings(
           shading: shadings[args.optionalString('shading_model')],
           blending: blendings[args.optionalString('blending')],
           doubleSided: args.has('double_sided') ? args.boolean('double_sided') : null,
+          postLightingBlending: args.optionalString('post_lighting_blending'),
         );
         return McpToolResult.json(state(editor, {
           'shading_model': editor.shading.name,
           'blending': editor.blending.name,
           'double_sided': editor.doubleSided,
+          'post_lighting_blending': editor.postLightingBlending,
           'compile_status': editor.syntaxStatus,
           'issues': [for (final i in editor.issues) {'line': i.line, 'severity': i.severity.name, 'message': i.message}],
         }));

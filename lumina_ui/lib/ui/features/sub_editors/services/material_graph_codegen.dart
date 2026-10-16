@@ -544,6 +544,17 @@ class _Emitter {
         _ => 'material.emissive = vec4($emissive, 1.0);',
       });
     }
+    // postLightingMixFactor exists only next to postLightingColor (MATERIAL_HAS_POST_LIGHTING_COLOR).
+    final postColor = _pin(MaterialNodes.postLightingColor);
+    if (postColor != null) {
+      assignments.add(switch (_pinType(MaterialNodes.postLightingColor)) {
+        MaterialValueType.float4 => 'material.postLightingColor = $postColor;',
+        MaterialValueType.float1 => 'material.postLightingColor = vec4(vec3($postColor), 1.0);',
+        _ => 'material.postLightingColor = vec4($postColor, 1.0);',
+      });
+      final mix = _pin(MaterialNodes.postLightingMix);
+      if (mix != null) assignments.add('material.postLightingMixFactor = $mix;');
+    }
 
     final b = StringBuffer('fragment {\n');
     if (_fresnel) {

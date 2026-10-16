@@ -106,6 +106,27 @@ class MaterialSettingsSection extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
+              // Post Lighting Color blend mode (the Material node's Post Lighting pins)
+              _buildSettingRow(
+                label: 'Post Lighting',
+                child: Select<String>(
+                  value: vm.postLightingBlending,
+                  onChanged: (val) {
+                    if (val != null) vm.updateHeaderSettings(postLightingBlending: val);
+                  },
+                  itemBuilder: (context, item) => Text(item, style: const TextStyle(fontSize: 11)),
+                  popup: SelectPopup(
+                    items: SelectItemList(
+                      children: [
+                        for (final mode in MaterialEditorViewModel.postLightingBlendings)
+                          SelectItemButton(value: mode, child: Text(mode)),
+                      ],
+                    ),
+                  ).call,
+                ),
+              ),
+              const SizedBox(height: 8),
+
               // Two Sided Switch
               _buildSettingRow(
                 label: 'Two Sided',

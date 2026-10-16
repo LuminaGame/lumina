@@ -609,7 +609,7 @@ Logic (category Logic): `mat_compare` (inputs `a`, `b` floats; setting `op`: `>`
 | `arrange_material_graph` | mutating | Arrange material graph | The graph toolbar's Arrange: lays the nodes out again, right to left from the output. |
 | `set_material_parameter` | mutating | Set material parameter | Sets a declared parameter's value, as the Parameters panel does (the preview follows): a number for float, [2 / 3 / 4 numbers] for float2 / float3 / float4 and colours, a boolean for bool. |
 | `set_material_texture` | mutating | Set material texture | Binds a sampler parameter (a Texture Sample's or TextureParameter's sampler) to a texture asset (list_assets type "texture"), as the node's thumbnail picker does; no `texture` clears it. |
-| `set_material_settings` | mutating | Set material settings | The Material editor's header settings: shading_model (${shadings.keys.join( |
+| `set_material_settings` | mutating | Set material settings | The Material editor's header settings: shading_model, blending, double_sided and post_lighting_blending (how the Post Lighting Color pin blends: opaque, transparent, add, multiply, screen). Rewrites the .mat header and recompiles, as the settings panel does; output pins the new shading model ignores are then marked unused in get_material_graph. |
 
 ## `lib/ui/features/mcp_server/tools/material_tools.dart`
 

@@ -609,7 +609,7 @@ Mantık (Logic kategorisi): `mat_compare` (`a`, `b` float girişleri; `op` ayar�
 | `arrange_material_graph` | mutating | Arrange material graph | The graph toolbar's Arrange: lays the nodes out again, right to left from the output. |
 | `set_material_parameter` | mutating | Set material parameter | Sets a declared parameter's value, as the Parameters panel does (the preview follows): a number for float, [2 / 3 / 4 numbers] for float2 / float3 / float4 and colours, a boolean for bool. |
 | `set_material_texture` | mutating | Set material texture | Binds a sampler parameter (a Texture Sample's or TextureParameter's sampler) to a texture asset (list_assets type "texture"), as the node's thumbnail picker does; no `texture` clears it. |
-| `set_material_settings` | mutating | Set material settings | The Material editor's header settings: shading_model (${shadings.keys.join( |
+| `set_material_settings` | mutating | Set material settings | Materyal editörünün başlık ayarları: shading_model, blending, double_sided ve post_lighting_blending (Post Lighting Color pininin nasıl karıştığı: opaque, transparent, add, multiply, screen). Ayarlar panelinin yaptığı gibi .mat başlığını yeniden yazar ve derler; yeni gölgelendirme modelinin kullanmadığı çıkış pinleri get_material_graph'ta kullanılmıyor olarak işaretlenir. |
 
 ## `lib/ui/features/mcp_server/tools/material_tools.dart`
 
