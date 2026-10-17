@@ -203,6 +203,9 @@ Ağacın durumu: hangi satırların kapalı olduğu, arama metni ve satır içi 
 | `renameComponent` | `bool renameComponent(String id, String newName)` | `renameComponent` işlemini gerçekleştirir. |
 | `canReparent` | `bool canReparent(String childId, String? targetParentId)` | Sahne bileşeni [childId] [targetParentId]'e (null: kök) bağlanabilir mi. Kökün kendisi, miras alınmış ya da sahne dışı bir bileşen taşınamaz; bir bileşen kendisinin ya da bir torununun altına giremez. |
 | `reparent` | `bool reparent(String childId, String? newParentId)` | [childId]'i [newParentId]'e (null: kök, asla ikinci bir kök değil) tek bir geri alma adımıyla bağlar; göreli dönüşümünü korur. |
+| `canTransformComponent` | `bool canTransformComponent(String id)` | Gizmo [id]'yi taşıyabilir mi: kök olmayan ve bir Character'ın kapsülü olmayan bir sahne bileşeni. |
+| `isCharacterCapsule` | `bool isCharacterCapsule(String id)` | [id] bir Character Blueprint'inin kapsülü mü: Play onu karakterin kendi kapsülü olarak, aktörün merkezinde kurar; bu yüzden dönüşümü yazılmaz. Details paneli dönüşüm alanları yerine bir not gösterir (mesh'leri ona göre yerleştirin: orijini ayaklarda olan bir mesh Z = −yarı yükseklikte durur) ve gizmo kilitlidir. |
+| `transformLockReason` | `String? transformLockReason(String id)` | [id] taşınamadığında gizmonun ipucu: kökün ya da Character kapsülünün; taşınabiliyorsa null. |
 | `duplicateComponent` | `BlueprintComponentNode? duplicateComponent(String id)` | `duplicateComponent` işlemini gerçekleştirir. |
 | `setProperty` | `void setProperty(String componentId, String propName, dynamic value)` | `Property` parametresini günceller ve sisteme uygular. |
 | `addVariable` | `void addVariable(String name, String type, String defaultValue)` | Koleksiyona veya sahneye yeni bir öğe ekler. |

@@ -203,6 +203,9 @@ The tree's state: which rows are collapsed, the search text and the inline renam
 | `renameComponent` | `bool renameComponent(String id, String newName)` | Executes `renameComponent` operation. |
 | `canReparent` | `bool canReparent(String childId, String? targetParentId)` | Whether scene component [childId] may be attached to [targetParentId] (null: the root). The root itself, an inherited or a non-scene component cannot move, and a component cannot go under itself or a descendant. |
 | `reparent` | `bool reparent(String childId, String? newParentId)` | Attaches [childId] to [newParentId] (null: the root, never a second root) as one undo step, keeping its relative transform. |
+| `canTransformComponent` | `bool canTransformComponent(String id)` | Whether the gizmo may move [id]: a scene component that is not the root and not a Character's capsule. |
+| `isCharacterCapsule` | `bool isCharacterCapsule(String id)` | Whether [id] is a Character Blueprint's capsule: Play builds it as the character's own capsule, centred on the actor, so its transform is not authored; the Details panel shows a note (place the meshes relative to it: a mesh whose origin is at the feet goes at Z = −half height) instead of transform fields, and the gizmo is locked. |
+| `transformLockReason` | `String? transformLockReason(String id)` | The gizmo's hint when [id] cannot move: the root's, or the Character capsule's; null when it can. |
 | `duplicateComponent` | `BlueprintComponentNode? duplicateComponent(String id)` | Executes `duplicateComponent` operation. |
 | `setProperty` | `void setProperty(String componentId, String propName, dynamic value)` | Updates the `Property` parameter and applies changes to the system. |
 | `addVariable` | `void addVariable(String name, String type, String defaultValue)` | Appends a new item to the collection or scene. |

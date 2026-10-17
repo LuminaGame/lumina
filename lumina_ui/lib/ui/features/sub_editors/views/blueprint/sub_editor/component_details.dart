@@ -289,6 +289,33 @@ mixin _BlueprintSubEditorComponentDetails on _BlueprintSubEditorStateBase {
         return def;
       }
 
+      if (_viewModel.isCharacterCapsule(node.id)) {
+        final half = (node.properties['capsuleHalfHeight'] as num?)?.toDouble() ?? 88.0;
+        return Container(
+          key: const ValueKey('character_capsule_transform_note'),
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: EditorColors.card,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: EditorColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('TRANSFORM', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: EditorColors.mutedForeground)),
+              const SizedBox(height: 6),
+              Text(
+                "A Character's capsule is centred on the actor: it is the character's collision and its origin, "
+                'and its bottom rests on the floor in Play. Place the meshes relative to it: a mesh whose origin is at '
+                'the feet goes at Z = −${half.toStringAsFixed(half == half.roundToDouble() ? 0 : 1)} (minus the half height).',
+                style: const TextStyle(fontSize: 9, color: EditorColors.mutedForeground),
+              ),
+            ],
+          ),
+        );
+      }
+
       final loc = toVec(node.properties['location'], const [0.0, 0.0, 0.0]);
       final rot = toVec(node.properties['rotation'], const [0.0, 0.0, 0.0]);
       final scl = toVec(node.properties['scale'], const [1.0, 1.0, 1.0]);

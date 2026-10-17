@@ -70,7 +70,7 @@ mixin _BlueprintSubEditorViewportGizmo on _BlueprintSubEditorStateBase {
       pivot: Vector3(loc[0], loc[1], loc[2]),
       rotation: AuthoringRotation.quaternionToAuthoring(t.worldRotation),
       locked: !_viewModel.canTransformComponent(id),
-      lockedHint: 'Root component transform is fixed',
+      lockedHint: _viewModel.transformLockReason(id) ?? 'Root component transform is fixed',
     );
   }
 

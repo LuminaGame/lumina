@@ -106,6 +106,15 @@ void main() {
     await shot('blueprint_component_tree_mesh_on_boom');
     await dragOnto('mesh', row(meshParent!));
     expect(bp.getComponent('mesh')!.parentId, meshParent);
+
+    // The character's capsule: centred on the actor, so the Details panel
+    // explains where the meshes go instead of offering a transform, and the
+    // preview stands it (and the mannequin's feet) on the floor.
+    await tester.tap(row('capsule'));
+    await rec.hold(const Duration(milliseconds: 1200));
+    expect(find.byKey(const ValueKey('character_capsule_transform_note')), findsOneWidget);
+    expect(bp.preview.groundLift, greaterThan(0));
+    await shot('blueprint_component_tree_character_capsule');
     while (rec.recorded < const Duration(milliseconds: 10500)) {
       await rec.hold(const Duration(milliseconds: 250));
     }

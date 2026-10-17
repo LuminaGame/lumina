@@ -13,10 +13,25 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
   String? get transformDragComponentId => _transformDragId;
 
   /// Whether the gizmo may move [id]: a scene component that is not the root
-  /// (the root's gizmo is shown but the root does not move).
+  /// (the root's gizmo is shown but the root does not move) and not a
+  /// Character's capsule ([isCharacterCapsule]).
   bool canTransformComponent(String id) {
     final c = getComponent(id);
-    return c != null && c.isSceneComponent && rootComponent?.id != id;
+    return c != null && c.isSceneComponent && rootComponent?.id != id && !isCharacterCapsule(id);
+  }
+
+  /// Whether [id] is a Character Blueprint's capsule: Play builds it as the
+  /// character's own capsule, centred on the actor (its collision and its
+  /// origin), so its transform is not authored; the meshes are placed
+  /// relative to it (a mesh whose origin is at the feet goes at Z = −half height).
+  bool isCharacterCapsule(String id) =>
+      _document.parentClass == 'LuminaCharacter' && getComponent(id)?.type == 'LuminaCapsuleComponent';
+
+  /// Why the gizmo cannot move [id], for its hint; null when it can.
+  String? transformLockReason(String id) {
+    if (canTransformComponent(id)) return null;
+    if (rootComponent?.id != id && isCharacterCapsule(id)) return "A Character's capsule is centred on the actor";
+    return 'Root component transform is fixed';
   }
 
   /// Snapshots [id]'s relative transform; the drag's writes go through
