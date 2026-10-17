@@ -215,6 +215,12 @@ class CookAndPackageStep implements BuildStep {
     if (target == 'web') {
       final problem = _webPrecheck(ctx.projectDir);
       if (problem != null) return StepResult.failed(problem);
+      // A module that cannot run the game (another Filament release, or
+      // older than its bindings): the 4 MB scan runs off the UI isolate.
+      final module = webModule!;
+      final version = FilamentInfo.version;
+      final stale = await Isolate.run(() => module.staleReason(filamentVersion: version));
+      if (stale != null) return StepResult.failed('Cannot cook for the web: $stale');
     }
     final leak = derivedDataCacheLeak(ctx.projectDir);
     if (leak != null) return StepResult.failed(leak);

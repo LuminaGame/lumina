@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
+import 'package:flutter_filament/filament.dart' show FilamentInfo;
 import 'package:lumina_core/lumina_core.dart' show FlutterFilamentWebPrebuilt;
 
 /// A loopback HTTP server laid out like GitHub: release downloads under
@@ -52,7 +53,8 @@ class WebModuleReleaseServer {
     final folder = FlutterFilamentWebPrebuilt.baseName(tag);
     final archive = Archive()
       ..addFile(ArchiveFile.bytes('$folder/flutter_filament.js', utf8.encode('// flutter_filament web module $tag\n')))
-      ..addFile(ArchiveFile.bytes('$folder/flutter_filament.wasm', [0, 0x61, 0x73, 0x6d, 1, 0, 0, 0]))
+      // A real module carries the Filament release it was built from.
+      ..addFile(ArchiveFile.bytes('$folder/flutter_filament.wasm', [0, 0x61, 0x73, 0x6d, 1, 0, 0, 0, ...utf8.encode(FilamentInfo.version)]))
       ..addFile(ArchiveFile.bytes('$folder/README.md', utf8.encode('# flutter_filament web module $tag\n')));
     return ZipEncoder().encode(archive);
   }

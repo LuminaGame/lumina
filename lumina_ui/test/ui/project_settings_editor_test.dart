@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:flutter_filament/filament.dart' show FilamentInfo;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:lumina_editor_data/lumina_editor.dart';
@@ -568,6 +569,7 @@ void main() {
       }));
       final module = FlutterFilamentWebModule.locate();
       if (module == null) return markTestSkipped('flutter_filament web module not built');
+      if (module.staleReason(filamentVersion: FilamentInfo.version) case final stale?) return markTestSkipped(stale);
       final source = File('${tempDir.path}/my_icon.svg')..writeAsStringSync(svg);
       final recordDir = Directory('${tempDir.path}/record')..createSync();
       final vm = ProjectSettingsViewModel(projectDirPath: projDir.path, hostTargets: host, processStarter: flutterBuildStandIn(recordDir));

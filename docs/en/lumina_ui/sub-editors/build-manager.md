@@ -123,6 +123,8 @@ Build Manager state: step selection, target/config, one pipeline at a time, per-
 | `cancel` | `void cancel()` | Executes `cancel` operation. |
 | `dispose` | `void dispose()` | Releases native FFI pointers, event subscriptions, and allocated memory. |
 
+**Driving a web build.** `dart run tool/web_game_input_probe.dart <package web dir> <out dir>` serves a packaged web game, opens it in headless Chrome (puppeteer), clicks it, holds W and moves the mouse, and writes the browser console and before/after screenshots to the out folder with how much of the picture changed: for diagnosing a web game that does not react to input.
+
 ## `lib/ui/features/sub_editors/services/build_pipeline_service.dart`
 
 **Off the UI isolate.** The pipeline runs on the editor's UI isolate, so its heavy work runs on background isolates: reading and decoding every `.lmas` (`_scanLmasInBackground`, used by Precompile Materials and Validate Assets), refreshing the asset index for Regenerate Thumbnails, compiling materials from source with matc (`buildPackageFromSource`) and copying the built bundle into the package folder (`copyArtifact` through `Isolate.run`; a Windows bundle with a project's cooked assets can be gigabytes, and copying it on the UI isolate made the editor stop responding). The log and the progress keep updating while they run. `test/data/build_pipeline_responsiveness_test.dart` measures the longest stall of a timer on the test isolate while a step runs.

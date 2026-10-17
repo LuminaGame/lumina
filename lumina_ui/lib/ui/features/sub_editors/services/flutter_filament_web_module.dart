@@ -125,6 +125,53 @@ class FlutterFilamentWebModule {
     return null;
   }
 
+  /// Why this module cannot run a game built by this editor, or null. A
+  /// module built for another Filament release refuses the materials the
+  /// editor compiles (another material version); a module built before a
+  /// function was added to flutter_filament's web bindings throws every time
+  /// the game calls it (a MetaHuman's pose following stopped every tick, so
+  /// input never reached the player). [filamentVersion] is the Filament the
+  /// editor links (`FilamentInfo.version`): the module stamps its own into
+  /// the wasm. A package build is also checked against the package's web
+  /// bindings, function for function.
+  String? staleReason({required String filamentVersion}) {
+    final wasm = files.last.readAsBytesSync();
+    if (!_contains(wasm, utf8.encode(filamentVersion))) {
+      return "flutter_filament's WebAssembly module in ${directory.path} was built for another Filament release "
+          'than the editor\'s ($filamentVersion): rebuild it with '
+          'flutter_filament/tool/web/build_module.sh${source == FlutterFilamentWebModuleSource.download ? ', or download it again in Project Settings > Packaging' : ''}.';
+    }
+    final missing = missingExports();
+    if (missing.isNotEmpty) {
+      return "flutter_filament's WebAssembly module in ${directory.path} is older than its web bindings: it lacks "
+          '${missing.length} function${missing.length == 1 ? '' : 's'} the game calls (${missing.take(5).join(', ')}'
+          '${missing.length > 5 ? ', …' : ''}). Rebuild it with flutter_filament/tool/web/build_module.sh.';
+    }
+    return null;
+  }
+
+  /// The functions flutter_filament's web bindings call that this module does
+  /// not export (a package build only: the bindings sit beside its `web/`).
+  List<String> missingExports() {
+    if (source != FlutterFilamentWebModuleSource.packageBuild) return const [];
+    final bindings = File('${directory.parent.path}/lib/src/third_party/filament_c.web.g.dart');
+    if (!bindings.existsSync()) return const [];
+    final wanted = {for (final m in RegExp(r"@JS\('(_filament_\w+)'\)").allMatches(bindings.readAsStringSync())) m.group(1)!};
+    final exported = {for (final m in RegExp(r'_filament_\w+').allMatches(files.first.readAsStringSync())) m.group(0)!};
+    return (wanted.difference(exported).toList()..sort()).map((n) => n.substring(1)).toList();
+  }
+
+  static bool _contains(List<int> haystack, List<int> needle) {
+    outer:
+    for (var i = 0; i + needle.length <= haystack.length; i++) {
+      for (var j = 0; j < needle.length; j++) {
+        if (haystack[i + j] != needle[j]) continue outer;
+      }
+      return true;
+    }
+    return false;
+  }
+
   /// Copies both files into [webBuild] (a `flutter build web` output) and
   /// returns the copies.
   List<File> stageInto(Directory webBuild) =>

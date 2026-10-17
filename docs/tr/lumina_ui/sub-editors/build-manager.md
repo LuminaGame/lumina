@@ -123,6 +123,8 @@ Build Manager state: step selection, target/config, one pipeline at a time, per-
 | `cancel` | `void cancel()` | `cancel` işlemini gerçekleştirir. |
 | `dispose` | `void dispose()` | Yerel FFI göstericilerini, dinleyicileri ve bellek bloklarını serbest bırakır. |
 
+**Bir web derlemesini sürmek.** `dart run tool/web_game_input_probe.dart <paket web klasörü> <çıktı klasörü>` paketlenmiş bir web oyununu yayınlar, headless Chrome'da (puppeteer) açar, tıklar, W'yi basılı tutar ve fareyi hareket ettirir; tarayıcı konsolunu ve önce/sonra ekran görüntülerini, resmin ne kadar değiştiğiyle birlikte çıktı klasörüne yazar: girdiye tepki vermeyen bir web oyununu teşhis etmek için.
+
 ## `lib/ui/features/sub_editors/services/build_pipeline_service.dart`
 
 **UI isolate'inin dışında.** Boru hattı editörün UI isolate'inde çalışır; bu yüzden ağır işleri arka plan isolate'lerinde yapılır: her `.lmas` dosyasının okunup çözülmesi (`_scanLmasInBackground`; Precompile Materials ve Validate Assets kullanır), Regenerate Thumbnails için varlık indeksinin yenilenmesi, materyallerin kaynaktan matc ile derlenmesi (`buildPackageFromSource`) ve derlenen paketin paket klasörüne kopyalanması (`Isolate.run` ile `copyArtifact`; projenin pişirilmiş varlıklarını taşıyan bir Windows paketi gigabaytlarca olabilir ve UI isolate'inde kopyalanması editörün yanıt vermemesine yol açıyordu). Bunlar çalışırken günlük ve ilerleme güncellenmeye devam eder. `test/data/build_pipeline_responsiveness_test.dart`, bir adım çalışırken test isolate'indeki bir zamanlayıcının en uzun donmasını ölçer.
