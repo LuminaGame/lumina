@@ -125,9 +125,11 @@ Build Manager state: step selection, target/config, one pipeline at a time, per-
 
 ## `lib/ui/features/sub_editors/services/build_pipeline_service.dart`
 
+**UI isolate'inin dışında.** Boru hattı editörün UI isolate'inde çalışır; bu yüzden ağır işleri arka plan isolate'lerinde yapılır: her `.lmas` dosyasının okunup çözülmesi (`_scanLmasInBackground`; Precompile Materials ve Validate Assets kullanır), Regenerate Thumbnails için varlık indeksinin yenilenmesi, materyallerin kaynaktan matc ile derlenmesi (`buildPackageFromSource`) ve derlenen paketin paket klasörüne kopyalanması (`Isolate.run` ile `copyArtifact`; projenin pişirilmiş varlıklarını taşıyan bir Windows paketi gigabaytlarca olabilir ve UI isolate'inde kopyalanması editörün yanıt vermemesine yol açıyordu). Bunlar çalışırken günlük ve ilerleme güncellenmeye devam eder. `test/data/build_pipeline_responsiveness_test.dart`, bir adım çalışırken test isolate'indeki bir zamanlayıcının en uzun donmasını ölçer.
+
 **Üst Düzey Fonksiyonlar (Top-level Functions):**
 
-- **`MatcResult buildPackageFromSource(String name, String source, {String? includeDirectory})`**: Compiles the whole `.mat` [source] with the material compiler (every header key, `vertex` and `fragment` blocks, `#include`s from [includeDirectory]), as the Material Editor does.
+- **`Future<MatcResult> buildPackageFromSource(String name, String source, {String? includeDirectory})`**: Bütün `.mat` [source]'u materyal derleyicisiyle (her başlık anahtarı, `vertex` ve `fragment` blokları, [includeDirectory]'den `#include`'lar) Materyal Editörü'nün yaptığı gibi, arka plan isolate'inde derler.
 - **`Future<MaterialCompileOutcome> call(MaterialCompileInput input)`**: `call` işlemini gerçekleştirir.
 - **`void dispose()`**: Yerel FFI göstericilerini, dinleyicileri ve bellek bloklarını serbest bırakır.
 - **`BuildStepKind kind`**: `kind` işlemini gerçekleştirir.

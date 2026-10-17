@@ -167,8 +167,9 @@ class ThumbnailRegenStep implements BuildStep {
   @override
   Future<StepResult> execute(BuildStepContext ctx) async {
     // The asset index lists the candidates; only stale assets are decoded.
-    final index = LuminaAssetIndex.open(ctx.projectDir)..refreshSync();
-    final all = [for (final e in index.entries) if (_renderable.contains(e.type)) e];
+    // Off the UI isolate: refreshing reads every asset's summary.
+    final entries = await _assetIndexInBackground(ctx.projectDir);
+    final all = [for (final e in entries) if (_renderable.contains(e.type)) e];
     final stale = all.where(isStale).toList();
     ctx.log('Thumbnails: ${all.length} asset(s) scanned, ${stale.length} stale or missing');
     if (stale.isEmpty) return StepResult.ok('Thumbnails up to date (${all.length} assets)');
@@ -177,7 +178,7 @@ class ThumbnailRegenStep implements BuildStep {
     for (final s in stale) {
       if (ctx.token.isCancelled) return StepResult.cancelled('Thumbnail regeneration cancelled after $done/${stale.length}');
       try {
-        final a = LuminaAsset.fromBytes(s.file.readAsBytesSync());
+        final a = LuminaAsset.fromBytes(await s.file.readAsBytes());
         final rendered = a.type == AssetType.filamesh || a.type == AssetType.filamat;
         final png = rendered ? await _service.renderAssetThumbnail(a) : await _service.renderTypeIconThumbnail(a.type);
         // Into the .lmas only, stamped current (no sidecar).
@@ -208,7 +209,8 @@ class AssetValidationStep implements BuildStep {
 
   @override
   Future<StepResult> execute(BuildStepContext ctx) async {
-    final assets = _scanLmas(ctx.projectDir, onError: (p, e) => ctx.log('Unreadable asset $p: $e', level: 'warning'));
+    final assets =
+        await _scanLmasInBackground(ctx.projectDir, onError: (p, e) => ctx.log('Unreadable asset $p: $e', level: 'warning'));
     final byPath = {for (final a in assets) a.relativePath: a};
     final byId = <String, _ScannedAsset>{for (final a in assets.where((a) => a.asset.assetId.isNotEmpty)) a.asset.assetId: a};
     final issues = <ValidationIssue>[];

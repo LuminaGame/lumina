@@ -504,7 +504,10 @@ class PackageTargetsStep implements BuildStep {
       }
       final packageDir = packageDirFor(target);
       try {
-        final bytes = copyArtifact(result.artifactPath!, packageDir);
+        // A Windows or Linux bundle is hundreds of megabytes: copied on a
+        // background isolate, so the editor keeps drawing and the log follows.
+        tctx.log('Copying $label into $packageDir…');
+        final bytes = await _copyArtifactInBackground(result.artifactPath!, packageDir);
         await afterPackage?.call(tctx, target, result.artifactPath!, packageDir);
         outcome[target] = PackageTargetStatus.ok;
         final msg = '$label packaged into $packageDir (${CookAndPackageStep.formatBytes(bytes)})';

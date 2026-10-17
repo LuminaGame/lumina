@@ -125,9 +125,11 @@ Build Manager state: step selection, target/config, one pipeline at a time, per-
 
 ## `lib/ui/features/sub_editors/services/build_pipeline_service.dart`
 
+**Off the UI isolate.** The pipeline runs on the editor's UI isolate, so its heavy work runs on background isolates: reading and decoding every `.lmas` (`_scanLmasInBackground`, used by Precompile Materials and Validate Assets), refreshing the asset index for Regenerate Thumbnails, compiling materials from source with matc (`buildPackageFromSource`) and copying the built bundle into the package folder (`copyArtifact` through `Isolate.run`; a Windows bundle with a project's cooked assets can be gigabytes, and copying it on the UI isolate made the editor stop responding). The log and the progress keep updating while they run. `test/data/build_pipeline_responsiveness_test.dart` measures the longest stall of a timer on the test isolate while a step runs.
+
 **Top-level Functions:**
 
-- **`MatcResult buildPackageFromSource(String name, String source, {String? includeDirectory})`**: Compiles the whole `.mat` [source] with the material compiler (every header key, `vertex` and `fragment` blocks, `#include`s from [includeDirectory]), as the Material Editor does.
+- **`Future<MatcResult> buildPackageFromSource(String name, String source, {String? includeDirectory})`**: Compiles the whole `.mat` [source] with the material compiler (every header key, `vertex` and `fragment` blocks, `#include`s from [includeDirectory]), as the Material Editor does, on a background isolate.
 - **`Future<MaterialCompileOutcome> call(MaterialCompileInput input)`**: Executes `call` operation.
 - **`void dispose()`**: Releases native FFI pointers, event subscriptions, and allocated memory.
 - **`BuildStepKind kind`**: Executes `kind` operation.

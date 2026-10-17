@@ -60,9 +60,11 @@ class FilamentMaterialCompiler {
 
   /// Compiles the whole `.mat` [source] with the material compiler (every
   /// header key, `vertex` and `fragment` blocks, `#include`s from
-  /// [includeDirectory]), as the Material Editor does.
-  MatcResult buildPackageFromSource(String name, String source, {String? includeDirectory}) =>
-      FilamentMatc.compile(source, fileName: '$name.mat', defaultName: name, includeDirectory: includeDirectory);
+  /// [includeDirectory]), as the Material Editor does, on a background
+  /// isolate: matc takes about a second, and the build runs on the editor's
+  /// UI isolate.
+  Future<MatcResult> buildPackageFromSource(String name, String source, {String? includeDirectory}) =>
+      _matcInBackground(name, source, includeDirectory);
 
   Future<MaterialCompileOutcome> call(MaterialCompileInput input) async {
     Uint8List package = input.package;
@@ -81,7 +83,7 @@ class FilamentMaterialCompiler {
       try {
         // What this Filament deprecated or removed is compiled as its current form.
         final source = MatMigration.of(input.source).source;
-        final result = buildPackageFromSource(input.name, source, includeDirectory: input.includeDirectory);
+        final result = await buildPackageFromSource(input.name, source, includeDirectory: input.includeDirectory);
         final built = result.package;
         if (built == null || !isFilamatPackage(built)) {
           return MaterialCompileOutcome.failed('matc: ${result.errorText}');
@@ -165,7 +167,8 @@ class MaterialPrecompileStep implements BuildStep {
 
   @override
   Future<StepResult> execute(BuildStepContext ctx) async {
-    final materials = _scanLmas(ctx.projectDir, onError: (p, e) => ctx.log('Unreadable asset $p: $e', level: 'warning'))
+    final materials = (await _scanLmasInBackground(ctx.projectDir,
+            onError: (p, e) => ctx.log('Unreadable asset $p: $e', level: 'warning')))
         .where((s) => s.asset.type == AssetType.filamat)
         .toList();
     if (materials.isEmpty) return const StepResult.skipped('No FILAMAT assets in contents/ — nothing to precompile');

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart';
@@ -356,6 +357,36 @@ class _ScannedAsset {
 
 /// Every parseable `.lmas` under `contents/`, sorted by path. Unreadable
 /// files are reported through [onError] and skipped.
+/// [_scanLmas] on a background isolate: reading and decoding every `.lmas` of
+/// a real project holds the isolate for seconds, and the build runs on the
+/// editor's UI isolate. Unreadable assets are reported through [onError] here.
+Future<List<_ScannedAsset>> _scanLmasInBackground(String projectDir,
+    {void Function(String path, Object error)? onError}) async {
+  final (assets, errors) = await Isolate.run(() {
+    final errors = <(String, String)>[];
+    final assets = _scanLmas(projectDir, onError: (path, error) => errors.add((path, '$error')));
+    return (assets, errors);
+  });
+  for (final (path, error) in errors) {
+    onError?.call(path, error);
+  }
+  return assets;
+}
+
+/// The asset index entries of [projectDir], refreshed on a background
+/// isolate (refreshing reads every asset's summary).
+Future<List<AssetIndexEntry>> _assetIndexInBackground(String projectDir) =>
+    Isolate.run(() => (LuminaAssetIndex.open(projectDir)..refreshSync()).entries);
+
+/// Compiles a whole `.mat` source with matc on a background isolate.
+Future<MatcResult> _matcInBackground(String name, String source, String? includeDirectory) => Isolate.run(
+      () => FilamentMatc.compile(source, fileName: '$name.mat', defaultName: name, includeDirectory: includeDirectory),
+    );
+
+/// [PackageTargetsStep.copyArtifact] on a background isolate.
+Future<int> _copyArtifactInBackground(String from, String to) =>
+    Isolate.run(() => PackageTargetsStep.copyArtifact(from, to));
+
 List<_ScannedAsset> _scanLmas(String projectDir, {void Function(String path, Object error)? onError}) {
   final contents = Directory('$projectDir/contents');
   if (!contents.existsSync()) return const [];

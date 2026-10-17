@@ -105,9 +105,7 @@ void main() {
     expect(find.byKey(const ValueKey('build_manager_cancel')), findsOneWidget);
 
     gate.complete();
-    for (var i = 0; i < 20 && vm.isRunning; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
+    await pumpWhile(tester, () => vm.isRunning, max: 20);
     await tester.pump();
     expect(vm.isRunning, isFalse);
     expect(vm.stepState(BuildStepKind.precompileMaterials).status, BuildStepStatus.ok);
@@ -143,9 +141,7 @@ void main() {
     }
     await pumpEditor(tester, vm, onReveal: (i) => revealed.add(i.assetPath));
     await tester.tap(find.byKey(const ValueKey('build_manager_build_all')));
-    for (var i = 0; i < 40 && (vm.isRunning || vm.lastPipelineStatus == null); i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
+    await pumpWhile(tester, () => (vm.isRunning || vm.lastPipelineStatus == null), max: 40);
     await tester.pump();
     expect(vm.issues.length, 2);
     expect(vm.stepState(BuildStepKind.validateAssets).status, BuildStepStatus.failed);
@@ -416,9 +412,7 @@ void main() {
     }
     await pumpEditor(tester, vm);
     await tester.tap(find.byKey(const ValueKey('build_manager_cook')));
-    for (var i = 0; i < 40 && (vm.isRunning || vm.lastPipelineStatus == null); i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
+    await pumpWhile(tester, () => (vm.isRunning || vm.lastPipelineStatus == null), max: 40);
     expect(asked, 1);
     expect(spawned, isFalse);
     expect(vm.stepState(BuildStepKind.cookAndPackage).status, BuildStepStatus.pending);
@@ -437,9 +431,7 @@ void main() {
     bm.setStepEnabled(BuildStepKind.precompileMaterials, false);
     editor.commands.execute('build.buildAll');
     expect(editor.openTabs.any((t) => t.category == 'buildManager'), isTrue);
-    for (var i = 0; i < 60 && (bm.isRunning || bm.lastPipelineStatus == null); i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
+    await pumpWhile(tester, () => (bm.isRunning || bm.lastPipelineStatus == null), max: 60);
     expect(bm.lastPipelineStatus, BuildStepStatus.ok);
     expect(bm.stepState(BuildStepKind.buildNavigation).status, BuildStepStatus.skipped);
     expect(bm.stepState(BuildStepKind.validateAssets).status, BuildStepStatus.ok);
@@ -449,4 +441,15 @@ void main() {
     expect(editor.selectedFolder, 'contents/meshes');
     expect(editor.searchQuery, 'SM_Crate');
   });
+}
+
+/// Pumps while [running] holds (at most [max] rounds), letting the real event
+/// loop run between frames: the build's steps read assets, compile
+/// materials and copy packages on background isolates, whose results only
+/// arrive in real time.
+Future<void> pumpWhile(WidgetTester tester, bool Function() running, {int max = 40}) async {
+  for (var i = 0; i < max && running(); i++) {
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    await tester.pump(const Duration(milliseconds: 50));
+  }
 }

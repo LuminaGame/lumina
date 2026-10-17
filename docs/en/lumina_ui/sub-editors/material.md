@@ -686,7 +686,7 @@ The real seam: builds the `Material` on a headless Filament engine from the asse
 | :--- | :--- | :--- |
 | `timeout` | `final Duration timeout` |  |
 | `isFilamatPackage` | `static bool isFilamatPackage(Uint8List? bytes)` | Whether [bytes] look like a compiled `.filamat` package (a `MAT_VERS` chunk of size 4). Filament aborts the process on arbitrary bytes, so this guard is mandatory before `fromBuffer`. |
-| `buildPackageFromSource` | `MatcResult buildPackageFromSource(String name, String source, {String? includeDirectory})` | Compiles the whole `.mat` [source] with the material compiler (every header key, `vertex` and `fragment` blocks, `#include`s from [includeDirectory]), as the Material Editor does. |
+| `buildPackageFromSource` | `Future<MatcResult> buildPackageFromSource(String name, String source, {String? includeDirectory})` | Compiles the whole `.mat` [source] with the material compiler (every header key, `vertex` and `fragment` blocks, `#include`s from [includeDirectory]), as the Material Editor does, on a background isolate (the build runs on the UI isolate). |
 | `call` | `Future<MaterialCompileOutcome> call(MaterialCompileInput input) async` | Builds the material from the stored package; a package compiled for another material version is treated like a missing one: compiled again from the source rewritten with `MatMigration`, not written back (the note says so). |
 | `dispose` | `void dispose()` |  |
 
