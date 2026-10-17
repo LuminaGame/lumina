@@ -427,7 +427,8 @@ Orchestrates levels, actors, Filament scene bindings, and the 5-phase determinis
 | `filamentViewOrNull` | `FilamentView? get filamentViewOrNull` | The bound native Filament view, or null if unbound. |
 | `postProcess` | `LuminaPostProcessController get postProcess` | The post-process controller for this world. Throws [StateError] if no FilamentView is bound. |
 | `bindView` | `void bindView(FilamentView view)` | Binds a native [FilamentView] to this world and initializes the post-process controller. |
-| `activeCamera` | `LuminaCameraComponent? get activeCamera` | The active primary camera component in this world, if one exists. |
+| `activeCamera` | `LuminaCameraComponent? get activeCamera` | Bağlı görünümün çizdiği kamera: etkin ve bu dünyada olduğu sürece `playerViewCamera`, yoksa aktör sırasındaki ilk etkin kamera bileşeni. |
+| `playerViewCamera` | `LuminaCameraComponent? playerViewCamera` | Sahip olunan pawn'ın kendi kamerası. Oyuncu 0'ın `LuminaPlayerCameraManager`'ı, görüş hedefi o pawn iken bunu atar. Seviyeye yerleştirilmiş ve kamerası da etkin olan başka bir karakter oyuncunun görüşünü asla almaz. |
 | `appliedScalability` | `LuminaScalabilityProfile? get appliedScalability` | The currently applied engine scalability profile, or null if unconfigured. |
 | `stagedSunShadowOptions` | `ShadowOptions? get stagedSunShadowOptions` | The staged sun shadow options computed from scalability/shadow settings. |
 | `updateDirectionalLightShadows` | `void updateDirectionalLightShadows(ShadowOptions shadowOpts)` | Pushes updated [shadowOpts] to all shadow-casting directional sun lights in this world. |

@@ -3,6 +3,25 @@ part of '../world.dart';
 /// Points the bound view's camera and applies the post-process blend at the
 /// end of every rendered frame.
 extension _LuminaWorldViewSync on LuminaWorld {
+  /// [activeCamera]: the player's own camera first, so another character
+  /// placed in the level, whose camera is active too, never takes the view
+  /// from the pawn the player controls.
+  LuminaCameraComponent? _chooseActiveCamera() {
+    final preferred = playerViewCamera;
+    final owner = preferred?.owner;
+    if (preferred != null && preferred.isActive && owner != null && !owner.isDestroyed && identical(owner.world, this)) {
+      return preferred;
+    }
+    for (final level in [persistentLevel, ...streamingLevels]) {
+      for (final actor in level.actors) {
+        for (final comp in actor.components) {
+          if (comp is LuminaCameraComponent && comp.isActive) return comp;
+        }
+      }
+    }
+    return null;
+  }
+
   /// Resolves the blender for the current camera and applies the result when
   /// it changed. Runs for every world type that renders (editor and game).
   void _applyPostProcessBlend() {

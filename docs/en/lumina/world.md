@@ -427,7 +427,8 @@ Orchestrates levels, actors, Filament scene bindings, and the 5-phase determinis
 | `filamentViewOrNull` | `FilamentView? get filamentViewOrNull` | The bound native Filament view, or null if unbound. |
 | `postProcess` | `LuminaPostProcessController get postProcess` | The post-process controller for this world. Throws [StateError] if no FilamentView is bound. |
 | `bindView` | `void bindView(FilamentView view)` | Binds a native [FilamentView] to this world and initializes the post-process controller. |
-| `activeCamera` | `LuminaCameraComponent? get activeCamera` | The active primary camera component in this world, if one exists. |
+| `activeCamera` | `LuminaCameraComponent? get activeCamera` | The camera the bound view renders through: `playerViewCamera` while it is active and in this world, else the first active camera component in actor order. |
+| `playerViewCamera` | `LuminaCameraComponent? playerViewCamera` | The possessed pawn's own camera, set by player 0's `LuminaPlayerCameraManager` while its view target is that pawn. Another character placed in the level, whose camera is active too, never takes the player's view. |
 | `appliedScalability` | `LuminaScalabilityProfile? get appliedScalability` | The currently applied engine scalability profile, or null if unconfigured. |
 | `stagedSunShadowOptions` | `ShadowOptions? get stagedSunShadowOptions` | The staged sun shadow options computed from scalability/shadow settings. |
 | `updateDirectionalLightShadows` | `void updateDirectionalLightShadows(ShadowOptions shadowOpts)` | Pushes updated [shadowOpts] to all shadow-casting directional sun lights in this world. |

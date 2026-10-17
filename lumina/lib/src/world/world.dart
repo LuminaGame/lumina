@@ -394,20 +394,14 @@ class LuminaWorld extends LuminaObject {
     );
   }
 
-  /// The active primary camera component in this world, if one exists.
-  LuminaCameraComponent? get activeCamera {
-    final allLevels = [persistentLevel, ...streamingLevels];
-    for (final level in allLevels) {
-      for (final actor in level.actors) {
-        for (final comp in actor.components) {
-          if (comp is LuminaCameraComponent && comp.isActive) {
-            return comp;
-          }
-        }
-      }
-    }
-    return null;
-  }
+  /// The possessed pawn's camera the player camera manager views through
+  /// (its view target is the pawn itself); [activeCamera] prefers it.
+  LuminaCameraComponent? playerViewCamera;
+
+  /// The camera the bound view renders through: [playerViewCamera] while it
+  /// is active and in this world, else the first active camera component in
+  /// actor order (a world without a player: the editor, a preview).
+  LuminaCameraComponent? get activeCamera => _chooseActiveCamera();
 
   LuminaScalabilityProfile? _appliedScalability;
 

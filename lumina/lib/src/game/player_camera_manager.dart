@@ -233,6 +233,10 @@ class LuminaPlayerCameraManager {
     if (world == null) return;
     final plain = identical(_viewTarget, pawn) && !isBlending && _overriddenFov == null && _activeShakes.isEmpty;
     world.viewTargetPov = plain ? null : cameraCachePov;
+    // Viewing the pawn through its own camera: the world renders that
+    // camera, not the first active one it finds (another character placed
+    // in the level has an active camera too).
+    world.playerViewCamera = identical(_viewTarget, pawn) ? cameraCachePov.camera : null;
   }
 
   void _updateViewTarget() {

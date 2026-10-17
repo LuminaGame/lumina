@@ -61,5 +61,50 @@ void main() {
       scene.dispose();
       engine.dispose();
     });
+
+    test("the possessed pawn's camera wins over an active camera on a character placed earlier in the level", () {
+      final engine = FilamentEngine.create()!;
+      final scene = engine.createScene();
+      final view = engine.createView();
+      view.scene = scene;
+      view.camera = engine.createCamera(engine.createEntity());
+      view.setViewport(0, 0, 1280, 720);
+
+      final world = LuminaWorld(worldType: LuminaWorldType.game);
+      world.initializeNativeContext(engine, scene, view: view);
+      // A character placed in the level, registered first: its spring-arm
+      // camera is active, but nobody controls it.
+      final placedCamera = _activeCamera();
+      world.persistentLevel.registerActor(LuminaPawn(root: placedCamera, location: Vector3(800.0, 0.0, -90.0)));
+      // The pawn the game mode spawned for the player.
+      final playerCamera = LuminaCameraComponent(fieldOfViewInDegrees: 55.0)..isActive = true;
+      final player = LuminaPawn(root: playerCamera, location: Vector3(0.0, 90.0, 1200.0));
+      world.persistentLevel.registerActor(player);
+      final pc = LuminaPlayerController();
+      pc.possess(player);
+      world.beginPlay();
+      pc.onTick(1 / 60);
+      world.tick(1 / 60);
+
+      expect(world.activeCamera, same(playerCamera));
+      _expectViewThrough(view.camera!, playerCamera, aspect: 1280 / 720);
+
+      // The player walks: the view follows the pawn, not the placed character.
+      player.actorLocation = Vector3(0.0, 90.0, 800.0);
+      pc.onTick(1 / 60);
+      world.tick(1 / 60);
+      _expectViewThrough(view.camera!, playerCamera, aspect: 1280 / 720);
+
+      // Unpossessed, the world falls back to the first active camera.
+      pc.unpossess();
+      pc.onTick(1 / 60);
+      world.tick(1 / 60);
+      expect(world.activeCamera, same(placedCamera));
+
+      world.cleanup();
+      view.dispose();
+      scene.dispose();
+      engine.dispose();
+    });
   });
 }
