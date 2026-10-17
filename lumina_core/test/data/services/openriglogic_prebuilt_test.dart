@@ -22,7 +22,7 @@ void main() {
     final stage = Directory(p.join(temp.path, 'stage-${DateTime.now().microsecondsSinceEpoch}'));
     final top = Directory(p.join(stage.path, OpenRigLogicPrebuilt.baseName()))..createSync(recursive: true);
     File(p.join(top.path, OpenRigLogicPrebuilt.infoFileName))
-        .writeAsStringSync(jsonEncode({'platform': platform ?? '${os()}-x64', 'rigLogicVersion': '13.2.9'}));
+        .writeAsStringSync(jsonEncode({'platform': platform ?? ReleaseAssets.platformName(os()), 'rigLogicVersion': '13.2.9'}));
     if (withLibrary) {
       File(p.join(top.path, 'lib', OpenRigLogicPrebuilt.libraryName()))
         ..createSync(recursive: true)
@@ -75,12 +75,16 @@ void main() {
   test('asset names follow package_openriglogic.sh', () {
     expect(OpenRigLogicPrebuilt.archiveName('windows'), 'openriglogic-windows-x64.zip');
     expect(OpenRigLogicPrebuilt.archiveName('linux'), 'openriglogic-linux-${ReleaseAssets.hostArchitecture()}.tar.gz');
+    expect(OpenRigLogicPrebuilt.archiveName('macos'), 'openriglogic-macos-${ReleaseAssets.hostArchitecture()}.tar.gz');
     expect(ReleaseAssets.platformName('linux', 'arm64'), 'linux-arm64');
+    expect(ReleaseAssets.platformName('macos', 'arm64'), 'macos-arm64');
+    expect(ReleaseAssets.platformName('macos', 'x64'), 'macos-x64');
     expect(ReleaseAssets.platformName('windows', 'arm64'), 'windows-x64');
     expect(OpenRigLogicPrebuilt.libraryName('windows'), 'riglogic.lib');
     expect(OpenRigLogicPrebuilt.libraryName('linux'), 'libriglogic.a');
+    expect(OpenRigLogicPrebuilt.libraryName('macos'), 'libriglogic.a');
     expect(OpenRigLogicPrebuilt.archiveUri('v0.2.0', operatingSystem: 'linux').toString(),
-        'https://github.com/LuminaGame/lumina/releases/download/v0.2.0/openriglogic-linux-x64.tar.gz');
+        'https://github.com/LuminaGame/lumina/releases/download/v0.2.0/openriglogic-linux-${ReleaseAssets.hostArchitecture()}.tar.gz');
     expect(() => OpenRigLogicPrebuilt.osName('android'), throwsA(isA<OpenRigLogicPrebuiltException>()));
   });
 

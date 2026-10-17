@@ -156,7 +156,9 @@ linux,macos file out/cmake-release/third_party/glslang/tnt/SPIRV/libSPIRV.a
 linux,macos file out/cmake-release/third_party/glslang/tnt/glslang/OSDependent/Unix/libOSDependent.a
 linux,macos file out/cmake-release/third_party/glslang/tnt/glslang/libglslang.a
 linux,macos file out/cmake-release/third_party/libassimp/tnt/libassimp.a
+linux,macos file out/cmake-release/third_party/libpng/tnt/libpng.a
 linux,macos file out/cmake-release/third_party/libwebp/libwebpdecoder.a
+linux,macos file out/cmake-release/third_party/libz/tnt/libz.a
 linux,macos file out/cmake-release/third_party/meshoptimizer/tnt/libmeshoptimizer.a
 linux,macos file out/cmake-release/third_party/mikktspace/libmikktspace.a
 linux,macos file out/cmake-release/third_party/smol-v/tnt/libsmol-v.a
@@ -166,6 +168,7 @@ linux,macos file out/cmake-release/third_party/spirv-cross/tnt/libspirv-cross-ms
 linux,macos file out/cmake-release/third_party/spirv-tools/source/libSPIRV-Tools.a
 linux,macos file out/cmake-release/third_party/spirv-tools/source/opt/libSPIRV-Tools-opt.a
 linux,macos file out/cmake-release/third_party/stb/tnt/libstb.a
+linux,macos file out/cmake-release/third_party/tinyexr/tnt/libtinyexr.a
 linux,macos file out/cmake-release/third_party/zstd/tnt/libzstd.a
 linux,macos tool out/prebuilt-tools-release/tools/matc/matc out/cmake-release/tools/matc/matc
 windows tool out/prebuilt-tools-release/tools/matc/matc.exe out/cmake-release-windows/tools/matc/matc.exe

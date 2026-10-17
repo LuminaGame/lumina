@@ -467,9 +467,27 @@ void main(List<String> args) => runLuminaEditor(
       relInPlatform == 'flutter/generated_plugins.cmake' ||
       relInPlatform.startsWith('Flutter/ephemeral/') ||
       relInPlatform.startsWith('Flutter/GeneratedPluginRegistrant') ||
-      relInPlatform.startsWith('Pods/');
+      relInPlatform == 'Podfile.lock' ||
+      relInPlatform.startsWith('Pods/') ||
+      relInPlatform.contains('/xcuserdata/');
 
-  static const _textExtensions = {'.txt', '.cc', '.cpp', '.h', '.rc', '.manifest', '.cmake', '.swift', '.plist', '.xcconfig', '.pbxproj', '.gitignore', ''};
+  static const _textExtensions = {
+    '.txt',
+    '.cc',
+    '.cpp',
+    '.h',
+    '.rc',
+    '.manifest',
+    '.cmake',
+    '.swift',
+    '.plist',
+    '.xcconfig',
+    '.pbxproj',
+    '.xcscheme',
+    '.entitlements',
+    '.gitignore',
+    '',
+  };
 
   /// The engine's `<platform>/` runner folder with `lumina_ui` renamed to the
   /// host package (binary name, CMake project, Windows version resource,

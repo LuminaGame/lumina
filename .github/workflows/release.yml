@@ -598,18 +598,9 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  # macOS is written but not run: it has never been built or verified.
-  # Missing before it can be enabled:
-  #   - tool/filament/build_prebuilt.sh on macOS (a universal or arm64
-  #     out/cmake-release), a matching fetch_prebuilt.dart asset name, and
-  #     that archive in the filament-<VERSION> release (a macOS leg in the
-  #     filament matrix and in filament_release.sh's default OS list);
-  #   - an OpenRigLogic macOS build (build_openriglogic.sh targets Linux and
-  #     its bundled libc++);
-  #   - the macOS runner's entitlements (network client, process spawning for
-  #     project builds) and lumina_mouse_capture support;
-  #   - Developer ID signing and notarization of the .app and the .pkg
-  #     (Apple certificates and an App Store Connect key as secrets).
+  # macOS build and packaging pipeline (arm64 on macos-14).
+  # Disabled in automated tag releases until Apple Developer ID signing and
+  # notarization secrets (certificate + App Store Connect API key) are configured.
   macos:
     name: macOS (disabled)
     if: false
@@ -633,25 +624,27 @@ jobs:
           channel: stable
           cache: true
       - uses: ./lumina/.github/actions/checkout-siblings
-      - uses: ./lumina/.github/actions/filament-prebuilt
-        with:
-          extract: 'true'
-      - run: bash tools/flutter_riglogic/tool/build_openriglogic.sh
       - working-directory: lumina
         run: flutter pub get
+      - uses: ./lumina/.github/actions/filament-prebuilt
+        with:
+          fetch: 'true'
+          extract: 'true'
+      - name: Build OpenRigLogic (macOS)
+        run: bash tools/flutter_riglogic/tool/build_openriglogic.sh
+      - name: Package OpenRigLogic
+        run: bash lumina/.github/scripts/package_openriglogic.sh macos-arm64 tools/flutter_riglogic dist
+      - uses: ./lumina/.github/actions/jolt-build
+      - name: Package Jolt
+        run: bash lumina/.github/scripts/package_jolt.sh macos-arm64 tools/flutter_jolt dist
       - working-directory: lumina/lumina_ui
         run: >-
           flutter build macos --release
           --dart-define=LUMINA_VERSION=${{ env.TAG }}
           --dart-define=LUMINA_COMMIT=${{ env.SHA }}
-      - name: Package the app
-        run: |
-          set -euo pipefail
-          mkdir -p dist
-          app="$(find lumina/lumina_ui/build/macos/Build/Products/Release -maxdepth 1 -name '*.app' | head -n1)"
-          name="lumina-studio-$TAG-macos-arm64.zip"
-          ditto -c -k --keepParent "$app" "dist/$name"
-          (cd dist && shasum -a 256 "$name" > "$name.sha256")
+      - name: Package Studio
+        working-directory: lumina/lumina_ui
+        run: bash ../.github/scripts/package_studio.sh macos-arm64 "$TAG" ../../dist
       - name: .pkg
         run: bash lumina/installer/macos/build-pkg.sh "$VERSION" "$TAG" dist
       - uses: actions/upload-artifact@v7

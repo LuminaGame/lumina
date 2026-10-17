@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 # Builds lumina-studio-<tag>-macos.pkg with pkgbuild + productbuild.
-# NOT VERIFIED: macOS builds of Lumina Studio have never been run, and the
-# release workflow's macOS job is disabled (see .github/workflows/release.yml).
 #
 #   installer/macos/build-pkg.sh <version> [<tag>] [<out-dir>]
 #
@@ -41,6 +39,6 @@ if [ -n "${LUMINA_PKG_SIGN_IDENTITY:-}" ]; then
   sign=(--sign "$LUMINA_PKG_SIGN_IDENTITY")
 fi
 name="lumina-studio-$TAG-macos.pkg"
-productbuild --package "$work/lumina-studio-component.pkg" "${sign[@]}" "$OUT/$name"
+productbuild --package "$work/lumina-studio-component.pkg" ${sign[@]+"${sign[@]}"} "$OUT/$name"
 (cd "$OUT" && shasum -a 256 "$name" > "$name.sha256")
 echo "Built $OUT/$name"

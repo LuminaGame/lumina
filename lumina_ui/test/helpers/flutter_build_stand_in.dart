@@ -56,6 +56,21 @@ Future<void> main(List<String> args) async {
     }
     stdout.writeln('✓ Built build/linux/x64/release/bundle/$name');
   }
+  if (exitCodeWanted == 0 && target == 'macos') {
+    final xcconfigName = File('macos/Runner/Configs/AppInfo.xcconfig').existsSync()
+        ? RegExp(r'^PRODUCT_NAME\s*=\s*(\S+)', multiLine: true).firstMatch(File('macos/Runner/Configs/AppInfo.xcconfig').readAsStringSync())?.group(1)
+        : null;
+    final pubspecName = File('pubspec.yaml').existsSync()
+        ? RegExp(r'^name:\s*(\S+)', multiLine: true).firstMatch(File('pubspec.yaml').readAsStringSync())?.group(1)
+        : null;
+    final lmproject = Directory.current.listSync().whereType<File>().where((f) => f.path.endsWith('.lmproject')).firstOrNull;
+    final projectName = lmproject?.uri.pathSegments.last.replaceAll('.lmproject', '');
+    final name = xcconfigName ?? pubspecName ?? projectName ?? Directory.current.uri.pathSegments.where((s) => s.isNotEmpty).last;
+    final macosDir = Directory('build/macos/Build/Products/Release/$name.app/Contents/MacOS')..createSync(recursive: true);
+    final exe = File('${macosDir.path}/$name')..writeAsStringSync('#!/bin/sh\necho $name\n');
+    if (!Platform.isWindows) Process.runSync('chmod', ['+x', exe.path]);
+    stdout.writeln('✓ Built build/macos/Build/Products/Release/$name.app');
+  }
   if (exitCodeWanted != 0) stderr.writeln('stand-in failing on purpose');
   exit(exitCodeWanted);
 }
@@ -132,7 +147,7 @@ bool processAlive(int pid) {
 /// "game" in the bundle folder `StandaloneGameRunner.bundleExecutable`
 /// looks in — a real process that stays up until it is killed (Windows: a
 /// copy of sort.exe, which reads its stdin until it closes; elsewhere a `sleep 60` script).
-/// [binaryName] must match `BINARY_NAME` of the project's runner CMakeLists.
+/// [binaryName] must match `BINARY_NAME` of the project's runner CMakeLists (or `PRODUCT_NAME` on macOS).
 String standaloneFlutterStandIn(Directory dir, {required String binaryName}) {
   if (Platform.isWindows) {
     final bat = File('${dir.path}/flutter_standalone_stand_in.bat');
@@ -147,6 +162,21 @@ String standaloneFlutterStandIn(Directory dir, {required String binaryName}) {
       '',
     ].join('\r\n'));
     return bat.path;
+  }
+  if (Platform.isMacOS) {
+    final sh = File('${dir.path}/flutter_standalone_stand_in.sh');
+    final appExe = 'build/macos/Build/Products/Debug/$binaryName.app/Contents/MacOS/$binaryName';
+    sh.writeAsStringSync([
+      '#!/bin/sh',
+      'echo "Building macOS application (stand-in)..."',
+      'mkdir -p "build/macos/Build/Products/Debug/$binaryName.app/Contents/MacOS"',
+      "printf '#!/bin/sh\\necho game running\\nexec sleep 60\\n' > \"$appExe\"",
+      'chmod +x "$appExe"',
+      'echo "✓ Built build/macos/Build/Products/Debug/$binaryName.app"',
+      '',
+    ].join('\n'));
+    Process.runSync('chmod', ['+x', sh.path]);
+    return sh.path;
   }
   final sh = File('${dir.path}/flutter_standalone_stand_in.sh');
   sh.writeAsStringSync([

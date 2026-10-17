@@ -305,7 +305,8 @@ String _manifestHash(String root, List<String> dirs, {List<String> extraFiles = 
     // leads into other packages (their build folders too); the ephemeral
     // folder is the Flutter tool's own output.
     for (final f in dir.listSync(recursive: true, followLinks: false).whereType<File>()) {
-      if (p.split(p.relative(f.path, from: d)).contains('ephemeral')) continue;
+      final parts = p.split(p.relative(f.path, from: d));
+      if (parts.contains('ephemeral') || parts.contains('Pods') || parts.contains('xcuserdata') || parts.last == 'Podfile.lock') continue;
       add(f);
     }
   }

@@ -1,6 +1,5 @@
 #!/bin/sh
 # Starts Lumina Studio on macOS (installed as /usr/local/bin/lumina-studio).
-# NOT VERIFIED: see installer/macos/build-pkg.sh.
 #
 #   lumina-studio            open the editor with /opt/lumina/flutter/bin on PATH
 #   lumina-studio --update   download the latest release first

@@ -1,7 +1,6 @@
 #!/bin/sh
 # Downloads the latest Lumina Studio for macOS from the GitHub releases into
 # /Applications (installed as /usr/local/lib/lumina-studio/install-studio.sh).
-# NOT VERIFIED: see installer/macos/build-pkg.sh.
 #
 #   install-studio.sh [--tag <tag>|latest] [--repo <owner/name>]
 #
@@ -20,7 +19,14 @@ if [ "$TAG" = latest ]; then API="https://api.github.com/repos/$REPO/releases/la
 
 JSON="$(curl -fsSL --connect-timeout 20 --max-time 60 -H 'Accept: application/vnd.github+json' "$API")" || { echo "No answer from $API." >&2; exit 30; }
 URLS="$(printf '%s' "$JSON" | tr ',' '\n' | sed -n 's/.*"browser_download_url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
-ZIP_URL="$(printf '%s\n' "$URLS" | grep -E '/lumina-studio-[^/]+-macos-[a-z0-9_]+\.zip$' | head -n1 || true)"
+case "$(uname -m)" in
+  arm64|aarch64) ARCH=arm64 ;;
+  *) ARCH=x64 ;;
+esac
+ZIP_URL="$(printf '%s\n' "$URLS" | grep -E "/lumina-studio-[^/]+-macos-${ARCH}\.zip$" | head -n1 || true)"
+if [ -z "$ZIP_URL" ]; then
+  ZIP_URL="$(printf '%s\n' "$URLS" | grep -E '/lumina-studio-[^/]+-macos-[a-z0-9_]+\.zip$' | head -n1 || true)"
+fi
 [ -n "$ZIP_URL" ] || { echo "The release has no lumina-studio-*-macos-*.zip." >&2; exit 30; }
 SUM_URL="$(printf '%s\n' "$URLS" | grep -F "$(basename "$ZIP_URL").sha256" | head -n1 || true)"
 

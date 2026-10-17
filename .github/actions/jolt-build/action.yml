@@ -28,8 +28,8 @@ runs:
           tools/flutter_jolt/third_party/jolt/src/LICENSE
         key: jolt-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/flutter_jolt/tool/jolt_version.txt', 'tools/flutter_jolt/tool/build_jolt.sh', 'tools/flutter_jolt/tool/build_jolt.bat', 'tools/flutter_jolt/tool/write_jolt_defines.dart') }}
 
-    - name: Build Jolt (Linux)
-      if: steps.cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
+    - name: Build Jolt (Linux / macOS)
+      if: steps.cache.outputs.cache-hit != 'true' && runner.os != 'Windows'
       shell: bash
       run: bash tools/flutter_jolt/tool/build_jolt.sh
 

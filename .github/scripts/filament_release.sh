@@ -24,12 +24,12 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 
-# The platform keys: windows and linux are x64, linux-arm64 is the arm64 build.
+# The platform keys: windows, linux and macos are x64; linux-arm64 and macos-arm64 are arm64.
 archive_name() {
   case "$1" in
     windows) echo "filament-$2-windows-x64.zip" ;;
     linux | macos) echo "filament-$2-$1-x64.tar.gz" ;;
-    linux-arm64) echo "filament-$2-linux-arm64.tar.gz" ;;
+    linux-arm64 | macos-arm64) echo "filament-$2-$1.tar.gz" ;;
     *) echo "filament_release.sh: unknown platform $1" >&2; exit 64 ;;
   esac
 }

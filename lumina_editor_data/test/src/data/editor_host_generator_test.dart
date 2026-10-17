@@ -136,6 +136,29 @@ void main() {
         reason: 'binary files are copied verbatim');
   });
 
+  test('the macos branch renames PRODUCT_NAME, bundle identifier, pbxproj and xcscheme and skips Pods/ephemeral', () async {
+    if (!Directory(p.join(engineRoot, 'lumina_ui', 'macos')).existsSync()) {
+      markTestSkipped('lumina_ui/macos is absent');
+      return;
+    }
+    final gen = EditorHostGeneratorService(engineRoot: engineRoot, platform: 'macos');
+    await gen.generate(fx.projectDir.path, [await fx.plugin()]);
+    final host = p.join(fx.projectDir.path, '.lumina', 'editor', 'macos');
+    final xcconfig = File(p.join(host, 'Runner', 'Configs', 'AppInfo.xcconfig')).readAsStringSync();
+    expect(xcconfig, contains('PRODUCT_NAME = host_game_editor'));
+    expect(xcconfig, contains('PRODUCT_BUNDLE_IDENTIFIER = io.github.luminagame.host_game_editor'));
+    expect(xcconfig, isNot(contains('lumina_ui')));
+    final pbxproj = File(p.join(host, 'Runner.xcodeproj', 'project.pbxproj')).readAsStringSync();
+    expect(pbxproj, contains('host_game_editor.app'));
+    expect(pbxproj, isNot(contains('lumina_ui.app')));
+    final xcscheme = File(p.join(host, 'Runner.xcodeproj', 'xcshareddata', 'xcschemes', 'Runner.xcscheme')).readAsStringSync();
+    expect(xcscheme, contains('BuildableName = "host_game_editor.app"'));
+    expect(xcscheme, isNot(contains('lumina_ui.app')));
+    expect(Directory(p.join(host, 'Flutter', 'ephemeral')).existsSync(), isFalse);
+    expect(Directory(p.join(host, 'Pods')).existsSync(), isFalse);
+    expect(File(p.join(host, 'Podfile.lock')).existsSync(), isFalse);
+  });
+
   // Every project gets its own editor, plugins or not.
   test('zero code plugins: a plugin-less host (lumina_ui only, an empty registrar), byte-identical on a rerun', () async {
     final gen = EditorHostGeneratorService(engineRoot: engineRoot, platform: 'linux');

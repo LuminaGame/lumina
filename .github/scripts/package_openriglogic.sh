@@ -20,9 +20,9 @@ out="$3"
 
 case "$os" in
   windows) lib=riglogic.lib; ext=zip ;;
-  linux | linux-arm64) lib=libriglogic.a; ext=tar.gz ;;
+  linux | linux-arm64 | macos | macos-arm64) lib=libriglogic.a; ext=tar.gz ;;
   *)
-    echo "Unknown platform $os (windows|linux|linux-arm64)" >&2
+    echo "Unknown platform $os (windows|linux|linux-arm64|macos|macos-arm64)" >&2
     exit 64
     ;;
 esac
@@ -33,7 +33,7 @@ if [ ! -f "$src/lib/$lib" ]; then
 fi
 
 case "$os" in
-  linux-arm64) platform=linux-arm64 ;;
+  linux-arm64 | macos-arm64) platform="$os" ;;
   *) platform="$os-x64" ;;
 esac
 folder="openriglogic-$platform"
@@ -64,9 +64,10 @@ case "$os" in
     (cd "$stage" && /c/Windows/System32/tar.exe -a -c -f "$name" "$folder")
     mv "$stage/$name" "$out/$name"
     ;;
-  linux | linux-arm64)
+  linux | linux-arm64 | macos | macos-arm64)
     tar -C "$stage" -czf "$out/$name" "$folder"
     ;;
 esac
 
-(cd "$out" && sha256sum "$name" > "$name.sha256" && cat "$name.sha256")
+sha256_line() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi; }
+(cd "$out" && sha256_line "$name" > "$name.sha256" && cat "$name.sha256")

@@ -451,6 +451,55 @@ class ProjectEngineLink {
     return true;
   }
 
+  /// Ensures `<projectDir>/macos/Runner/Configs/Release.xcconfig` and
+  /// `<projectDir>/macos/Podfile` exclude the non-host architecture and set
+  /// `ONLY_ACTIVE_ARCH = YES` when present so macOS Release/Profile builds
+  /// (`-destination generic/platform=macOS`) target the host architecture
+  /// matching the single-architecture Filament, RigLogic and Jolt prebuilts
+  /// rather than attempting a universal build.
+  static bool ensureMacosActiveArch(String projectDir) {
+    var changed = false;
+    final file = File(p.join(projectDir, 'macos', 'Runner', 'Configs', 'Release.xcconfig'));
+    if (file.existsSync()) {
+      final existing = file.readAsStringSync();
+      final hasExcluded = RegExp(r'^\s*EXCLUDED_ARCHS\s*=', multiLine: true).hasMatch(existing);
+      final hasActiveArch = RegExp(r'^\s*ONLY_ACTIVE_ARCH\s*=', multiLine: true).hasMatch(existing);
+      if (!hasExcluded || !hasActiveArch) {
+        final nl = existing.contains('\r\n') ? '\r\n' : '\n';
+        final out = StringBuffer(existing.isEmpty || existing.endsWith('\n') ? existing : '$existing$nl');
+        if (!hasExcluded) {
+          out
+            ..write('EXCLUDED_ARCHS_arm64 = x86_64$nl')
+            ..write('EXCLUDED_ARCHS_x86_64 = arm64$nl')
+            ..write('EXCLUDED_ARCHS = \$(EXCLUDED_ARCHS_\$(HOST_ARCH))$nl');
+        }
+        if (!hasActiveArch) out.write('ONLY_ACTIVE_ARCH = YES$nl');
+        file.writeAsStringSync(out.toString());
+        changed = true;
+      }
+    }
+    final podfile = File(p.join(projectDir, 'macos', 'Podfile'));
+    if (podfile.existsSync()) {
+      final existing = podfile.readAsStringSync();
+      if (!existing.contains("config.build_settings['ONLY_ACTIVE_ARCH']") &&
+          existing.contains('flutter_additional_macos_build_settings(target)')) {
+        final nl = existing.contains('\r\n') ? '\r\n' : '\n';
+        final updated = existing.replaceFirst(
+          'flutter_additional_macos_build_settings(target)',
+          'flutter_additional_macos_build_settings(target)$nl'
+              '    target.build_configurations.each do |config|$nl'
+              "      config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'$nl"
+              '    end',
+        );
+        if (updated != existing) {
+          podfile.writeAsStringSync(updated);
+          changed = true;
+        }
+      }
+    }
+    return changed;
+  }
+
   /// Links the project at [projectDir] to the engine: the git `lumina`
   /// dependency in its pubspec, and — when the editor runs from a local
   /// checkout ([localEngineRoot]) — either the gitignored
@@ -493,6 +542,7 @@ class ProjectEngineLink {
       pubspec = withHookUserDefines(pubspec, defines);
     }
     if (pubspec != before) pubspecFile.writeAsStringSync(pubspec);
+    ensureMacosActiveArch(projectDir);
     return ProjectEngineLinkResult(engineRoot: engineRoot, overrides: packages, hookUserDefines: defines);
   }
 

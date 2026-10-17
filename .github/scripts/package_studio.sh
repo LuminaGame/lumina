@@ -41,10 +41,19 @@ case "$os" in
     [ -f "$bundle/lumina_ui" ] || { echo "::error::No $bundle/lumina_ui" >&2; exit 1; }
     tar -C "$bundle" -czf "$out/$name" .
     ;;
+  macos | macos-arm64)
+    arch="${os#macos}"; arch="${arch#-}"; arch="${arch:-x64}"
+    products=build/macos/Build/Products/Release
+    app="$(cd "$products" && ls -d *.app 2>/dev/null | head -n1)"
+    [ -n "$app" ] && [ -d "$products/$app" ] || { echo "::error::No .app bundle under $products" >&2; exit 1; }
+    name="lumina-studio-$tag-macos-$arch.tar.gz"
+    tar -C "$products" -czf "$out/$name" "$app"
+    ;;
   *)
-    echo "Unknown platform $os (windows|linux|linux-arm64)" >&2
+    echo "Unknown platform $os (windows|linux|linux-arm64|macos|macos-arm64)" >&2
     exit 64
     ;;
 esac
 
-(cd "$out" && sha256sum "$name" > "$name.sha256" && cat "$name.sha256")
+sha256_line() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi; }
+(cd "$out" && sha256_line "$name" > "$name.sha256" && cat "$name.sha256")

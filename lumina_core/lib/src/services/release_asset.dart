@@ -39,11 +39,11 @@ abstract final class ReleaseAssets {
     return v.contains('arm64') || v.contains('aarch64') ? 'arm64' : 'x64';
   }
 
-  /// The `<os>-<arch>` suffix of an asset for [os]: Linux builds exist for
-  /// x64 and arm64 ([architecture], default the host's); Windows and macOS
+  /// The `<os>-<arch>` suffix of an asset for [os]: Linux and macOS builds
+  /// exist for x64 and arm64 ([architecture], default the host's); Windows
   /// assets are x64 only.
   static String platformName(String os, [String? architecture]) {
-    final arch = os == 'linux' ? (architecture ?? hostArchitecture()) : 'x64';
+    final arch = (os == 'linux' || os == 'macos') ? (architecture ?? hostArchitecture()) : 'x64';
     return '$os-$arch';
   }
 

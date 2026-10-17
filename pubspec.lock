@@ -282,8 +282,8 @@ packages:
     dependency: transitive
     description:
       path: flutter_assimp
-      ref: ec8d456315290cb0c317d007a5009789c9561fa8
-      resolved-ref: ec8d456315290cb0c317d007a5009789c9561fa8
+      ref: 29273be586261ce794e1483eacffa7c42f81146e
+      resolved-ref: 29273be586261ce794e1483eacffa7c42f81146e
       url: "https://github.com/LuminaGame/tools.git"
     source: git
     version: "0.0.1"
@@ -297,7 +297,7 @@ packages:
     description:
       path: flutter_gstreamer
       ref: HEAD
-      resolved-ref: ec8d456315290cb0c317d007a5009789c9561fa8
+      resolved-ref: 29273be586261ce794e1483eacffa7c42f81146e
       url: "https://github.com/LuminaGame/tools.git"
     source: git
     version: "0.1.0"
@@ -305,8 +305,8 @@ packages:
     dependency: transitive
     description:
       path: flutter_jolt
-      ref: ec8d456315290cb0c317d007a5009789c9561fa8
-      resolved-ref: ec8d456315290cb0c317d007a5009789c9561fa8
+      ref: 29273be586261ce794e1483eacffa7c42f81146e
+      resolved-ref: 29273be586261ce794e1483eacffa7c42f81146e
       url: "https://github.com/LuminaGame/tools.git"
     source: git
     version: "0.0.1"
@@ -330,8 +330,8 @@ packages:
     dependency: transitive
     description:
       path: flutter_riglogic
-      ref: ec8d456315290cb0c317d007a5009789c9561fa8
-      resolved-ref: ec8d456315290cb0c317d007a5009789c9561fa8
+      ref: 29273be586261ce794e1483eacffa7c42f81146e
+      resolved-ref: 29273be586261ce794e1483eacffa7c42f81146e
       url: "https://github.com/LuminaGame/tools.git"
     source: git
     version: "0.0.1"
@@ -512,8 +512,8 @@ packages:
     dependency: transitive
     description:
       path: lumina_mouse_capture
-      ref: ec8d456315290cb0c317d007a5009789c9561fa8
-      resolved-ref: ec8d456315290cb0c317d007a5009789c9561fa8
+      ref: 29273be586261ce794e1483eacffa7c42f81146e
+      resolved-ref: 29273be586261ce794e1483eacffa7c42f81146e
       url: "https://github.com/LuminaGame/tools.git"
     source: git
     version: "0.0.1"
@@ -548,8 +548,8 @@ packages:
     dependency: transitive
     description:
       path: lumina_smoke
-      ref: ec8d456315290cb0c317d007a5009789c9561fa8
-      resolved-ref: ec8d456315290cb0c317d007a5009789c9561fa8
+      ref: 29273be586261ce794e1483eacffa7c42f81146e
+      resolved-ref: 29273be586261ce794e1483eacffa7c42f81146e
       url: "https://github.com/LuminaGame/tools.git"
     source: git
     version: "0.1.0"

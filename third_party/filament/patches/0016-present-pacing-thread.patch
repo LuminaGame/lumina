@@ -73,7 +73,15 @@ diff --git a/filament/backend/src/metal/MetalDriver.mm b/filament/backend/src/me
 index a4dd616a..57b726d4 100644
 --- a/filament/backend/src/metal/MetalDriver.mm
 +++ b/filament/backend/src/metal/MetalDriver.mm
-@@ -2857,6 +2857,17 @@ void MetalDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
+@@ -942,6 +942,7 @@ const char* toString(DescriptorType type) {
+         DESCRIPTOR_TYPE_CASE(UNIFORM_BUFFER)
+         DESCRIPTOR_TYPE_CASE(SHADER_STORAGE_BUFFER)
+         DESCRIPTOR_TYPE_CASE(INPUT_ATTACHMENT)
++        DESCRIPTOR_TYPE_CASE(ACCELERATION_STRUCTURE)
+     }
+ #undef DESCRIPTOR_TYPE_CASE
+     return "UNKNOWN";
+@@ -2857,6 +2858,17 @@ void MetalDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
          AccelerationStructureDeformation) {
  }
  

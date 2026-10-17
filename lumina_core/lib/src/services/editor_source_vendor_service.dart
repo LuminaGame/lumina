@@ -397,9 +397,12 @@ class EditorSourceVendorService {
       if (anywhereExcludes.contains(name)) continue;
       if (isPackageRoot && packageExcludes.contains(name)) continue;
       if (e is Directory) {
-        if (name == 'ephemeral' && p.basename(dir.path) == 'flutter') continue;
+        if (name == 'ephemeral' && p.basename(dir.path).toLowerCase() == 'flutter') continue;
+        if (name == 'Pods' && const {'macos', 'ios'}.contains(p.basename(dir.path))) continue;
+        if (name == 'xcuserdata') continue;
         _collect(e, '$rel/$name', closure, out);
       } else if (e is File) {
+        if (name == 'Podfile.lock' && const {'macos', 'ios'}.contains(p.basename(dir.path))) continue;
         out.add((e.path, '$rel/$name'));
       }
     }

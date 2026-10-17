@@ -428,7 +428,7 @@ void main() {
 
     test('play_standalone builds with the stand-in, runs the game as a job, stop_standalone cancels it and the pid is gone', () async {
       const binary = 'agent_game';
-      final platform = Platform.isWindows ? 'windows' : 'linux';
+      final platform = Platform.isWindows ? 'windows' : (Platform.isMacOS ? 'macos' : 'linux');
       File('${projectDir.path}/$platform/CMakeLists.txt')
         ..parent.createSync(recursive: true)
         ..writeAsStringSync('cmake_minimum_required(VERSION 3.14)\nproject(agent_game LANGUAGES CXX)\nset(BINARY_NAME "$binary")\n');

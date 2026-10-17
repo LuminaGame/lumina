@@ -24,7 +24,7 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_smoke
-      ref: ec8d456315290cb0c317d007a5009789c9561fa8
+      ref: 29273be586261ce794e1483eacffa7c42f81146e
   logging: ^1.3.0
   native_toolchain_c: ^0.17.4
   vector_math: ^2.1.4
@@ -34,8 +34,6 @@ flutter:
   plugin:
     platforms:
       android:
-        ffiPlugin: true
-      macos:
         ffiPlugin: true
       linux:
         ffiPlugin: true

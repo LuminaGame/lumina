@@ -21,7 +21,7 @@ void main() {
     final stage = Directory(p.join(temp.path, 'stage-${DateTime.now().microsecondsSinceEpoch}'));
     final top = Directory(p.join(stage.path, JoltPrebuilt.baseName()))..createSync(recursive: true);
     File(p.join(top.path, JoltPrebuilt.infoFileName))
-        .writeAsStringSync(jsonEncode({'platform': platform ?? '${os()}-x64', 'joltVersion': 'v5.6.0'}));
+        .writeAsStringSync(jsonEncode({'platform': platform ?? ReleaseAssets.platformName(os()), 'joltVersion': 'v5.6.0'}));
     if (withLibrary) {
       File(p.join(top.path, 'lib', JoltPrebuilt.libraryName()))
         ..createSync(recursive: true)
@@ -78,12 +78,16 @@ void main() {
   test('asset names follow package_jolt.sh', () {
     expect(JoltPrebuilt.archiveName('windows'), 'jolt-windows-x64.zip');
     expect(JoltPrebuilt.archiveName('linux'), 'jolt-linux-${ReleaseAssets.hostArchitecture()}.tar.gz');
+    expect(JoltPrebuilt.archiveName('macos'), 'jolt-macos-${ReleaseAssets.hostArchitecture()}.tar.gz');
     expect(ReleaseAssets.platformName('linux', 'arm64'), 'linux-arm64');
+    expect(ReleaseAssets.platformName('macos', 'arm64'), 'macos-arm64');
+    expect(ReleaseAssets.platformName('macos', 'x64'), 'macos-x64');
     expect(ReleaseAssets.platformName('windows', 'arm64'), 'windows-x64');
     expect(JoltPrebuilt.libraryName('windows'), 'Jolt.lib');
     expect(JoltPrebuilt.libraryName('linux'), 'libJolt.a');
+    expect(JoltPrebuilt.libraryName('macos'), 'libJolt.a');
     expect(JoltPrebuilt.archiveUri('v0.2.0', operatingSystem: 'linux').toString(),
-        'https://github.com/LuminaGame/lumina/releases/download/v0.2.0/jolt-linux-x64.tar.gz');
+        'https://github.com/LuminaGame/lumina/releases/download/v0.2.0/jolt-linux-${ReleaseAssets.hostArchitecture()}.tar.gz');
     expect(() => JoltPrebuilt.osName('android'), throwsA(isA<JoltPrebuiltException>()));
   });
 

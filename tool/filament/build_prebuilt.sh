@@ -57,12 +57,7 @@ log() { echo "[$(date +%H:%M:%S)] $*"; }
 
 case "$(uname -s)" in
   Linux) OS=linux ;;
-  Darwin)
-    OS=macos
-    if [ "${LUMINA_ENABLE_MACOS:-0}" != 1 ]; then
-      echo "The macOS prebuilt is prepared but disabled; set LUMINA_ENABLE_MACOS=1 to try it." >&2
-      exit 1
-    fi ;;
+  Darwin) OS=macos ;;
   *) echo "unsupported host: $(uname -s) (use build_prebuilt.ps1 on Windows)" >&2; exit 1 ;;
 esac
 # The host architecture names the archive and picks the bundled libc++ folder.
@@ -161,7 +156,11 @@ if [ "$OS" = linux ]; then
     "-DCMAKE_EXE_LINKER_FLAGS=$LINK_FLAGS" "-DCMAKE_SHARED_LINKER_FLAGS=$LINK_FLAGS"
   )
 else
-  CMAKE_ARGS+=(-DCMAKE_OSX_ARCHITECTURES=x86_64)
+  OSX_ARCH="$([ "$ARCH" = arm64 ] && echo arm64 || echo x86_64)"
+  CMAKE_ARGS+=(
+    "-DCMAKE_OSX_ARCHITECTURES=$OSX_ARCH"
+    -DFILAMENT_SUPPORTS_METAL=ON
+  )
 fi
 if [ "$SKIP_BUILD" = 0 ]; then
   started=$(date +%s)

@@ -172,8 +172,15 @@ class EditorBuildProgressParser {
     'kernel_snapshot_program: Complete': 0.4,
     'aot_elf_release: Starting': 0.45,
     'aot_elf_profile: Starting': 0.45,
+    'release_macos_framework: Starting': 0.45,
+    'profile_macos_framework: Starting': 0.45,
+    'debug_macos_framework: Starting': 0.45,
     'aot_elf_release: Complete': 0.9,
     'aot_elf_profile: Complete': 0.9,
+    'release_macos_framework: Complete': 0.9,
+    'profile_macos_framework: Complete': 0.9,
+    'debug_macos_framework: Complete': 0.9,
+    'macos_bundle_flutter_assets: Complete': 1.0,
     '_assets: Complete': 1.0,
   };
 
@@ -204,7 +211,8 @@ class EditorBuildProgressParser {
       case EditorBuildPhase.compilingDart:
         if (_compileMilestone > inPhase) inPhase = _compileMilestone;
         if (done != null && done.group(1)!.toLowerCase().endsWith('flutter_assemble.vcxproj') ||
-            line.contains('Building Linux application') && _compileMilestone >= 1) {
+            (line.contains('Building Linux application') || line.contains('Building macOS application')) && _compileMilestone >= 1 ||
+            line.contains('macos_bundle_flutter_assets: Complete')) {
           inPhase = 1;
           _enter(EditorBuildPhase.linking);
           _projectsDoneAtLink = _projectsDone.length;

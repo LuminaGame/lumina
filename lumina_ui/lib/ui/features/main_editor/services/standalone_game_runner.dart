@@ -61,15 +61,27 @@ class StandaloneGameRunner extends ChangeNotifier {
   }
 
   /// The desktop platform the game is built for: the host's.
-  static String get hostPlatform => Platform.isWindows ? 'windows' : 'linux';
+  static String get hostPlatform => Platform.isWindows ? 'windows' : (Platform.isMacOS ? 'macos' : 'linux');
 
   /// The built game's executable: `build/linux/<arch>/debug/bundle/<name>`
-  /// on Linux, `build/windows/<arch>/runner/Debug/<name>.exe` on Windows.
+  /// on Linux, `build/windows/<arch>/runner/Debug/<name>.exe` on Windows,
+  /// `build/macos/Build/Products/Debug/<name>.app/Contents/MacOS/<name>` on macOS.
   File? bundleExecutable() {
     final name = _binaryName();
     if (name == null) return null;
     final out = Directory('$projectDir/build/$hostPlatform');
     if (!out.existsSync()) return null;
+    if (Platform.isMacOS) {
+      final macExe = File('${out.path}/Build/Products/Debug/$name.app/Contents/MacOS/$name');
+      if (macExe.existsSync()) return macExe;
+      final products = Directory('${out.path}/Build/Products/Debug');
+      if (products.existsSync()) {
+        for (final app in products.listSync().whereType<Directory>().where((d) => d.path.endsWith('.app'))) {
+          final candidate = File('${app.path}/Contents/MacOS/$name');
+          if (candidate.existsSync()) return candidate;
+        }
+      }
+    }
     for (final arch in out.listSync().whereType<Directory>()) {
       final exe = Platform.isWindows
           ? File('${arch.path}/runner/Debug/$name.exe')
@@ -79,12 +91,29 @@ class StandaloneGameRunner extends ChangeNotifier {
     return null;
   }
 
-  /// `BINARY_NAME` of the project's `<platform>/CMakeLists.txt`.
+  /// `BINARY_NAME` of the project's `<platform>/CMakeLists.txt` (Linux/Windows)
+  /// or `PRODUCT_NAME` of `macos/Runner/Configs/AppInfo.xcconfig` (macOS).
   String? _binaryName() {
+    if (Platform.isMacOS) {
+      final xcconfig = File('$projectDir/macos/Runner/Configs/AppInfo.xcconfig');
+      if (xcconfig.existsSync()) {
+        final m = RegExp(r'^PRODUCT_NAME\s*=\s*(\S+)', multiLine: true).firstMatch(xcconfig.readAsStringSync());
+        if (m != null) return m.group(1);
+      }
+    }
     final cmake = File('$projectDir/$hostPlatform/CMakeLists.txt');
     if (!cmake.existsSync()) return null;
     final m = RegExp(r'set\(BINARY_NAME\s+"([^"]+)"\)').firstMatch(cmake.readAsStringSync());
     return m?.group(1);
+  }
+
+  bool _hasPlatformRunner(String platform) {
+    if (platform == 'macos') {
+      return File('$projectDir/macos/Runner/Configs/AppInfo.xcconfig').existsSync() ||
+          Directory('$projectDir/macos/Runner.xcodeproj').existsSync() ||
+          File('$projectDir/macos/CMakeLists.txt').existsSync();
+    }
+    return File('$projectDir/$platform/CMakeLists.txt').existsSync();
   }
 
   /// Builds and launches the game. Returns whether the game started.
@@ -94,8 +123,9 @@ class StandaloneGameRunner extends ChangeNotifier {
     output.clear();
     lastExitCode = null;
     final platform = hostPlatform;
-    if (!File('$projectDir/$platform/CMakeLists.txt').existsSync()) {
-      _logger.log('Play Standalone needs the project\'s $platform runner ($platform/CMakeLists.txt); '
+    if (!_hasPlatformRunner(platform)) {
+      final expected = platform == 'macos' ? 'macos/Runner.xcodeproj' : '$platform/CMakeLists.txt';
+      _logger.log('Play Standalone needs the project\'s $platform runner ($expected); '
           'run `flutter create --platforms=$platform .` in $projectDir.', level: 'error', source: _source);
       return false;
     }

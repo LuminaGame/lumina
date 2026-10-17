@@ -1,6 +1,5 @@
 #!/bin/sh
-# lumina-studio .pkg postinstall (runs as root). NOT VERIFIED: see
-# installer/macos/build-pkg.sh.
+# lumina-studio .pkg postinstall (runs as root).
 #
 # 1. Xcode Command Line Tools: checked; when missing, their installer is
 #    started (it asks the user) and the rest continues.

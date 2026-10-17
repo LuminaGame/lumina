@@ -93,7 +93,14 @@ class EditorBuildCache {
     await root.create(recursive: true);
     final tmp = _tmpDir(hash);
     if (tmp.existsSync()) await tmp.delete(recursive: true);
-    await _copyDir(builtBundle, Directory(p.join(tmp.path, 'bundle')));
+    final exeRel = stamp['executable'] as String? ?? '';
+    final firstSeg = p.split(exeRel).firstOrNull ?? '';
+    final appSubdir = firstSeg.endsWith('.app') ? Directory(p.join(builtBundle.path, firstSeg)) : null;
+    if (appSubdir != null && appSubdir.existsSync()) {
+      await _copyDir(appSubdir, Directory(p.join(tmp.path, 'bundle', firstSeg)));
+    } else {
+      await _copyDir(builtBundle, Directory(p.join(tmp.path, 'bundle')));
+    }
     await File(p.join(tmp.path, 'stamp.json')).writeAsString(const JsonEncoder.withIndent('  ').convert({'hash': hash, ...stamp}), flush: true);
     await File(p.join(tmp.path, 'last_used')).writeAsString(DateTime.now().toUtc().toIso8601String());
     await File(p.join(tmp.path, 'complete')).writeAsString('complete\n', flush: true);
@@ -253,7 +260,7 @@ class EditorBuildCache {
     if (e is File) return e.lengthSync();
     if (e is! Directory || !e.existsSync()) return 0;
     var total = 0;
-    for (final f in e.listSync(recursive: true).whereType<File>()) {
+    for (final f in e.listSync(recursive: true, followLinks: false).whereType<File>()) {
       total += f.lengthSync();
     }
     return total;

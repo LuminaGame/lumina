@@ -22,7 +22,7 @@ void main() {
     final stage = Directory(p.join(temp.path, 'stage-${DateTime.now().microsecondsSinceEpoch}'));
     final top = Directory(p.join(stage.path, FilamentPrebuilt.baseName(version)))..createSync(recursive: true);
     File(p.join(top.path, 'lumina-filament.json'))
-        .writeAsStringSync(jsonEncode({'version': infoVersion ?? version, 'platform': '${os()}-x64'}));
+        .writeAsStringSync(jsonEncode({'version': infoVersion ?? version, 'platform': ReleaseAssets.platformName(os())}));
     File(p.join(top.path, 'filament', 'include', 'filament', 'Engine.h'))
       ..createSync(recursive: true)
       ..writeAsStringSync('// header');
@@ -79,12 +79,16 @@ void main() {
     expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'windows'), 'filament-1.77.0-lumina.1-windows-x64.zip');
     expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'linux', 'x64'), 'filament-1.77.0-lumina.1-linux-x64.tar.gz');
     expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'linux', 'arm64'), 'filament-1.77.0-lumina.1-linux-arm64.tar.gz');
+    expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'macos', 'x64'), 'filament-1.77.0-lumina.1-macos-x64.tar.gz');
+    expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'macos', 'arm64'), 'filament-1.77.0-lumina.1-macos-arm64.tar.gz');
     expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'windows', 'arm64'), 'filament-1.77.0-lumina.1-windows-x64.zip',
         reason: 'Windows builds are x64 only');
     expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'linux'),
         'filament-1.77.0-lumina.1-linux-${ReleaseAssets.hostArchitecture()}.tar.gz');
+    expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'macos'),
+        'filament-1.77.0-lumina.1-macos-${ReleaseAssets.hostArchitecture()}.tar.gz');
     expect(FilamentPrebuilt.archiveUri('1.77.0-lumina.1', 'v0.2.0', operatingSystem: 'linux').toString(),
-        'https://github.com/LuminaGame/lumina/releases/download/v0.2.0/filament-1.77.0-lumina.1-linux-x64.tar.gz');
+        'https://github.com/LuminaGame/lumina/releases/download/v0.2.0/filament-1.77.0-lumina.1-linux-${ReleaseAssets.hostArchitecture()}.tar.gz');
     expect(() => FilamentPrebuilt.osName('android'), throwsA(isA<FilamentPrebuiltException>()));
   });
 
