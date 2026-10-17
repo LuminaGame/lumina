@@ -171,6 +171,52 @@ mixin _CharacterMovementSweeps on _CharacterMovementState {
     return totalConsumedFraction;
   }
 
+  bool _spawnSettled = false;
+
+  /// Stands a character that starts with its capsule in the floor on that
+  /// floor, once, before its first move. A character placed in a level with
+  /// its origin (the capsule centre) on the ground surface starts half in it
+  /// and would otherwise fall through a thin floor. The capsule is lifted by
+  /// its own height, swept back down and set where it first touches a
+  /// walkable surface. Only an upward correction of at most the capsule's
+  /// height is made: a free capsule, one buried deeper, or one with no room
+  /// above stays where it was placed. Returns whether it moved.
+  bool settleOnSpawn() {
+    final comp = updatedComponent;
+    final o = owner;
+    final colSys = o?.world?.subsystems.getSubsystem<LuminaCollisionSubsystem>();
+    if (comp == null || o == null || colSys == null) return false;
+    if (!_overlapsBlocking(comp, colSys)) return false;
+    final box = comp.getAABB();
+    final raise = (box.max.y - box.min.y) + 2 * skinWidth;
+    final start = o.actorLocation.clone();
+    o.actorLocation = start + Vector3(0.0, raise, 0.0);
+    comp.markCollisionDirty();
+    if (_overlapsBlocking(comp, colSys)) {
+      o.actorLocation = start;
+      comp.markCollisionDirty();
+      return false;
+    }
+    final hit = HitResult();
+    safeMove(Vector3(0.0, -raise, 0.0), hit);
+    comp.markCollisionDirty();
+    final walkable = hit.blockingHit &&
+        math.acos(hit.impactNormal.normalized().dot(Vector3(0.0, 1.0, 0.0)).clamp(-1.0, 1.0)) * 180.0 / math.pi <=
+            maxWalkSlopeAngle;
+    if (!walkable || o.actorLocation.y <= start.y + 1e-3) {
+      o.actorLocation = start;
+      comp.markCollisionDirty();
+      return false;
+    }
+    return true;
+  }
+
+  bool _overlapsBlocking(LuminaCollisionComponent comp, LuminaCollisionSubsystem colSys) {
+    final overlaps = <LuminaCollisionComponent>[];
+    colSys.overlapTest(comp.worldShape, comp.worldTransform, overlaps, ignore: comp);
+    return overlaps.any((ov) => ov != comp && effectiveResponse(comp, ov) == CollisionResponse.block);
+  }
+
   /// Pushes the character out of intersecting blocking geometry.
   bool resolvePenetration(ContactResult contact) {
     if (contact.penetrationDepth > 1e-2) {

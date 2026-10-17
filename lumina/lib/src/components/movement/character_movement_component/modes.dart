@@ -300,6 +300,11 @@ mixin _CharacterMovementModes
 
   /// Executes full kinematic move pipeline: input accumulation, per-mode physics, safeMove, slideAlongSurface, and resolvePenetration.
   void performMove(double deltaTime) {
+    if (!_spawnSettled) {
+      _spawnSettled = true;
+      // Placed with its capsule in the floor: stood on it, then walking.
+      if (settleOnSpawn() && _mode == MovementMode.falling) setMovementMode(MovementMode.walking);
+    }
     startNewPhysics(deltaTime);
     applyPhysicsInteraction(deltaTime);
   }
