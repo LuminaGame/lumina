@@ -104,6 +104,7 @@ How the level viewport draws a placed Blueprint: its first mesh component (the G
 | `capsuleRadius` | `final double capsuleRadius` |  |
 | `capsuleHalfHeight` | `final double capsuleHalfHeight` |  |
 | `parentClass` | `final String parentClass` |  |
+| `groundLift` | `double get groundLift` | Aktörün orijininin, yerleştirildiği yüzeyin ne kadar üstüne (cm) konduğu: bir Character'ın orijini kapsül merkezidir; bu yüzden bırakma noktasının kapsül yarı yüksekliği kadar üstüne konur ve kapsülün tabanı (ayaklar), Play'in onu zemine oturttuğu gibi yüzeye değer; diğer aktörler orijinleri üzerinde durur. `EditorViewModel.spawnActorFromAsset` bunu bırakılan ya da eklenen bir Blueprint'in konumuna ekler (konum yüzey noktasıdır). |
 | `read` | `static BlueprintActorPreview? read(String projectDir, String path)` | Reads the Blueprint at [path] (project-relative) in [projectDir]. |
 | `of` | `static BlueprintActorPreview of(LuminaBlueprintDocument doc)` |  |
 

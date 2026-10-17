@@ -392,14 +392,18 @@ mixin _EditorActorSpawning on _EditorViewModelState {
   }
 
   /// Places Blueprint [asset] as a `Blueprint` actor naming its class, drawn
-  /// by its first mesh component.
+  /// by its first mesh component. [location] is the surface point it is
+  /// placed on: a Character stands its capsule bottom there (its origin, the
+  /// capsule centre, goes [BlueprintActorPreview.groundLift] above it), as
+  /// Play stands it on the ground.
   Future<void> _spawnBlueprintActor(RealAssetInfo asset, BlueprintActorPreview preview,
       {required String id, required String name, List<double>? location}) async {
+    final surface = location ?? const [0.0, 0.0, 0.0];
     final node = EditorActorNode(
       id: id,
       name: name,
       type: 'Blueprint',
-      location: location ?? [0.0, 0.0, 0.0],
+      location: [surface[0], surface[1], surface[2] + preview.groundLift],
       thumbnailBytes: asset.thumbnailBytes,
     )..blueprintClass = asset.relativePath;
     await _loadBlueprintPreview(node, preview: preview);

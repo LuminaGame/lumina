@@ -272,6 +272,12 @@ class BlueprintActorPreview {
     required this.parentClass,
   });
 
+  /// How far above the surface it is placed on the actor's origin goes, cm:
+  /// a Character's origin is its capsule centre, so its capsule bottom (the
+  /// feet) rests on the surface at the capsule half height; other actors
+  /// stand on their origin.
+  double get groundLift => isCharacter ? capsuleHalfHeight : 0.0;
+
   static const Set<String> _meshTypes = {'LuminaStaticMeshComponent', 'LuminaSkeletalMeshComponent', 'LuminaAnimatedMeshComponent'};
 
   static Matrix4 _relative(LuminaBlueprintComponent c) {

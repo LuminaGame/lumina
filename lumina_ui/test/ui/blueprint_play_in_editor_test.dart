@@ -183,6 +183,40 @@ void main() {
     expect(BlueprintNavigation.instance.pending, isNull);
   });
 
+  testWidgets('a Character Blueprint placed on the ground stands its capsule on it, in the editor and in Play',
+      (tester) async {
+    // A MetaHuman-like character: a scene root, the capsule under it.
+    writeBlueprint(
+      dir,
+      'BP_Standing',
+      LuminaBlueprintDocument(parentClass: 'LuminaCharacter', components: [
+        LuminaBlueprintComponent(id: 'root', name: 'Root', type: 'LuminaSceneComponent'),
+        LuminaBlueprintComponent(
+          id: 'capsule',
+          name: 'CapsuleComponent',
+          type: 'LuminaCapsuleComponent',
+          parentId: 'root',
+          properties: {'capsuleRadius': 40.0, 'capsuleHalfHeight': 88.0},
+        ),
+        LuminaBlueprintComponent(id: 'movement', name: 'CharacterMovement', type: 'LuminaCharacterMovementComponent'),
+      ]),
+    );
+    final vm = await editorFor(tester);
+    final asset = vm.realAssets.firstWhere((a) => a.relativePath == 'contents/blueprints/BP_Standing.lmas');
+    await tester.runAsync(() => vm.spawnActorFromAsset(asset, location: [500.0, 0.0, 0.0]));
+    final placed = vm.actors.firstWhere((a) => a.blueprintClass == asset.relativePath);
+    expect(placed.location, [500.0, 0.0, 88.0], reason: 'the origin (capsule centre) a half height above the surface');
+
+    expect(await tester.runAsync(vm.requestPlay), isTrue, reason: '${vm.playBlockers}');
+    final world = LuminaWorld();
+    vm.pieController.startHeadlessForTest(world);
+    final runtime = world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(placed.id)) as LuminaCharacter;
+    expect(runtime.actorLocation, LuminaAxes.location([500.0, 0.0, 88.0]));
+    run(world, 60);
+    expect(runtime.actorLocation.y, greaterThan(80.0), reason: 'it stays on the ground: ${runtime.actorLocation}');
+    vm.pieController.stopHeadlessForTest();
+  });
+
   testWidgets('a placed BP_Crate draws its mesh where PIE spawns it', (tester) async {
     final barrel = File('${Directory.current.parent.path}/test-assets/Props/Barrels/fuel_barrel_red.glb');
     final mesh = 'contents/meshes/static/SM_Barrel.glb';

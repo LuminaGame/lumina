@@ -104,6 +104,7 @@ How the level viewport draws a placed Blueprint: its first mesh component (the G
 | `capsuleRadius` | `final double capsuleRadius` |  |
 | `capsuleHalfHeight` | `final double capsuleHalfHeight` |  |
 | `parentClass` | `final String parentClass` |  |
+| `groundLift` | `double get groundLift` | How far above the surface it is placed on the actor's origin goes, cm: a Character's origin is its capsule centre, so it is placed a capsule half height above the drop point and its capsule bottom (the feet) rests on the surface, as Play stands it on the ground; other actors stand on their origin. `EditorViewModel.spawnActorFromAsset` adds it to the location of a dropped or added Blueprint (the location is the surface point). |
 | `read` | `static BlueprintActorPreview? read(String projectDir, String path)` | Reads the Blueprint at [path] (project-relative) in [projectDir]. |
 | `of` | `static BlueprintActorPreview of(LuminaBlueprintDocument doc)` |  |
 
