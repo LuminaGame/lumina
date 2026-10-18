@@ -456,12 +456,20 @@ class ProjectEngineLink {
   /// `ONLY_ACTIVE_ARCH = YES` when present so macOS Release/Profile builds
   /// (`-destination generic/platform=macOS`) target the host architecture
   /// matching the single-architecture Filament, RigLogic and Jolt prebuilts
-  /// rather than attempting a universal build.
+  /// rather than attempting a universal build. The host architecture is
+  /// Xcode's `NATIVE_ARCH_ACTUAL`; a file an earlier editor wrote with the
+  /// undefined `HOST_ARCH` (which excluded nothing) is corrected.
   static bool ensureMacosActiveArch(String projectDir) {
     var changed = false;
     final file = File(p.join(projectDir, 'macos', 'Runner', 'Configs', 'Release.xcconfig'));
     if (file.existsSync()) {
-      final existing = file.readAsStringSync();
+      final read = file.readAsStringSync();
+      const legacy = r'$(EXCLUDED_ARCHS_$(HOST_ARCH))';
+      final existing = read.replaceAll(legacy, r'$(EXCLUDED_ARCHS_$(NATIVE_ARCH_ACTUAL))');
+      if (existing != read) {
+        file.writeAsStringSync(existing);
+        changed = true;
+      }
       final hasExcluded = RegExp(r'^\s*EXCLUDED_ARCHS\s*=', multiLine: true).hasMatch(existing);
       final hasActiveArch = RegExp(r'^\s*ONLY_ACTIVE_ARCH\s*=', multiLine: true).hasMatch(existing);
       if (!hasExcluded || !hasActiveArch) {
@@ -471,7 +479,7 @@ class ProjectEngineLink {
           out
             ..write('EXCLUDED_ARCHS_arm64 = x86_64$nl')
             ..write('EXCLUDED_ARCHS_x86_64 = arm64$nl')
-            ..write('EXCLUDED_ARCHS = \$(EXCLUDED_ARCHS_\$(HOST_ARCH))$nl');
+            ..write('EXCLUDED_ARCHS = \$(EXCLUDED_ARCHS_\$(NATIVE_ARCH_ACTUAL))$nl');
         }
         if (!hasActiveArch) out.write('ONLY_ACTIVE_ARCH = YES$nl');
         file.writeAsStringSync(out.toString());

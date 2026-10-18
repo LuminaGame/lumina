@@ -7,6 +7,8 @@
   (`FilamentResourceLoader.create(defaultPath:)` and `setConfiguration(gltfPath:)` are `@Deprecated`: feed external
   resources with `addResourceData`). `setConfiguration` without a path no longer hands gltfio a null string.
   `UserVariantFilterBit.directionalLighting` / `dynamicLighting` document that they only prune runtime pipelines.
+- Prebuilt `1.78.0-lumina.2`: the present pacing thread patch also lists the acceleration structure descriptor type
+  in the Metal driver's descriptor names, for the macOS build of the patched Filament.
 - Filament upgraded to v1.78.0 (prebuilt `1.78.0-lumina.1`): the twenty Lumina patches rebased onto the new tag,
   every compiled material rebuilt for material version 78 (older `.filamat` packages are refused by the engine), and the
   vendored filament-matp updated (matc ignores the deprecated `directionalLighting` variant filter and no longer accepts

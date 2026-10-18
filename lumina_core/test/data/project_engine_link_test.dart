@@ -346,4 +346,41 @@ hooks:
     expect(pubspec, isNot(contains('hooks:')));
     expect(File(p.join(project.path, 'pubspec_overrides.yaml')).existsSync(), isFalse);
   });
+
+  group('ensureMacosActiveArch', () {
+    File releaseConfig(String text) => File(p.join(temp.path, 'macos', 'Runner', 'Configs', 'Release.xcconfig'))
+      ..createSync(recursive: true)
+      ..writeAsStringSync(text);
+
+    test('limits a Release build to the build machine\'s architecture, once', () {
+      final config = releaseConfig('#include "../../Flutter/Flutter-Release.xcconfig"\n');
+      expect(ProjectEngineLink.ensureMacosActiveArch(temp.path), isTrue);
+      final text = config.readAsStringSync();
+      expect(text, contains(r'EXCLUDED_ARCHS = $(EXCLUDED_ARCHS_$(NATIVE_ARCH_ACTUAL))'));
+      expect(text, contains('EXCLUDED_ARCHS_arm64 = x86_64'));
+      expect(text, contains('EXCLUDED_ARCHS_x86_64 = arm64'));
+      expect(text, contains('ONLY_ACTIVE_ARCH = YES'));
+      expect(ProjectEngineLink.ensureMacosActiveArch(temp.path), isFalse, reason: 'a second run changes nothing');
+      expect(config.readAsStringSync(), text);
+    });
+
+    test('corrects a file written with the undefined HOST_ARCH, keeping its other lines', () {
+      final config = releaseConfig('#include "Warnings.xcconfig"\n'
+          'EXCLUDED_ARCHS_arm64 = x86_64\n'
+          'EXCLUDED_ARCHS_x86_64 = arm64\n'
+          r'EXCLUDED_ARCHS = $(EXCLUDED_ARCHS_$(HOST_ARCH))' '\n'
+          'ONLY_ACTIVE_ARCH = YES\n');
+      expect(ProjectEngineLink.ensureMacosActiveArch(temp.path), isTrue);
+      final text = config.readAsStringSync();
+      expect(text, isNot(contains('HOST_ARCH')));
+      expect(RegExp(r'^EXCLUDED_ARCHS = ', multiLine: true).allMatches(text), hasLength(1));
+      expect(text, contains(r'EXCLUDED_ARCHS = $(EXCLUDED_ARCHS_$(NATIVE_ARCH_ACTUAL))'));
+      expect(text, startsWith('#include "Warnings.xcconfig"\n'));
+    });
+
+    test('a project without a macOS runner is left alone', () {
+      expect(ProjectEngineLink.ensureMacosActiveArch(temp.path), isFalse);
+      expect(Directory(p.join(temp.path, 'macos')).existsSync(), isFalse);
+    });
+  });
 }

@@ -14,7 +14,7 @@ new installer.
 | Windows | `lumina-studio-<tag>-windows-x64.msix` (the editor itself) | `lumina_ui/tool/package_windows.dart` | released when the signing secrets exist |
 | Linux x64 | `lumina-studio_<version>-1_amd64.deb`, `lumina-studio-<version>-1.x86_64.rpm` (nfpm) | `linux/build.sh` | released |
 | Linux arm64 | `lumina-studio_<version>-1_arm64.deb`, `lumina-studio-<version>-1.aarch64.rpm` (nfpm, `linux/build.sh <version> <tag> <out> arm64`) | `linux/build.sh` | released |
-| macOS | `lumina-studio-<tag>-macos.pkg` (pkgbuild + productbuild) | `macos/build-pkg.sh` | written, not verified, disabled in the workflow |
+| macOS | `lumina-studio-<tag>-macos.pkg` (pkgbuild + productbuild) | `macos/build-pkg.sh` | built by the workflow's macOS job, which stays disabled until signing secrets exist |
 
 The release workflow (`.github/workflows/release.yml`) builds all of them for every `v*` tag. Every asset has a
 `.sha256` sidecar, and the installers check the editor download against it.
@@ -308,7 +308,7 @@ The package installs:
 
 The postinstall and postremove scripts run `update-mime-database` and `update-desktop-database` when present. Thumbnailers run in Nemo, Caja, Thunar (through tumbler) and other file managers that use `.thumbnailer` files. GNOME Files runs them in a bubblewrap sandbox without `/opt` or the GPU, so the editor cannot start there and Nautilus keeps the icon. Dolphin uses KIO plugins instead of `.thumbnailer` files.
 
-## macOS: .pkg (not verified)
+## macOS: .pkg
 
 `macos/build-pkg.sh <version> [<tag>] [<out-dir>]` builds a `.pkg` whose payload is only the
 `/usr/local/bin/lumina-studio` launcher and a download script. Its postinstall script:
@@ -317,11 +317,13 @@ The postinstall and postremove scripts run `update-mime-database` and `update-de
 2. installs `git cmake ninja gstreamer` with Homebrew as the logged-in user, or prints the command when Homebrew is
    missing;
 3. clones Flutter (stable) into `/opt/lumina/flutter` unless one is on PATH;
-4. downloads the latest `lumina-studio-<tag>-macos-*.zip` into `/Applications/Lumina Studio.app`.
+4. downloads the latest `lumina-studio-<tag>-macos-<arch>.tar.gz` for the Mac's architecture (`arm64` or `x64`;
+   older releases' `.zip` is still accepted), checks its `.sha256` and installs `/Applications/Lumina Studio.app`.
 
 `LUMINA_PKG_SIGN_IDENTITY` signs the product with a Developer ID Installer identity. The release workflow's
-macOS job is disabled (`if: false`) because no macOS build has been verified yet. Its comment lists what is
-missing.
+macOS job (arm64, `macos-14`) builds OpenRigLogic, Jolt, the Studio archive and the `.pkg`; it stays disabled
+(`if: false`) until the Developer ID signing and notarization secrets (certificate and App Store Connect API key)
+are configured.
 
 ## GitHub configuration
 

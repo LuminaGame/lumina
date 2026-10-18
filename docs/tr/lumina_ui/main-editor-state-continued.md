@@ -619,7 +619,7 @@ The game is launched from its bundle rather than through `flutter run` so the pr
 | `output` | `final List<String> output` | Lines the build and the game printed (also in the Output Log). |
 | `gameEnvironment` | `static Map<String, String> gameEnvironment([Map<String, String>? base])` | The environment the game runs in: the editor's, on the GPU the editor renders with (the one chosen in the launcher) unless the environment already picks one. |
 | `hostPlatform` | `static String get hostPlatform` | The desktop platform the game is built for: the host's. |
-| `bundleExecutable` | `File? bundleExecutable()` | The built game's executable: `build/linux/<arch>/debug/bundle/<name>` on Linux, `build/windows/<arch>/runner/Debug/<name>.exe` on Windows. |
+| `bundleExecutable` | `Future<File?> bundleExecutable()` | Derlenen oyunun çalıştırılabilir dosyası, asenkron dosya kontrolleriyle bulunur: Linux'ta `build/linux/<arch>/debug/bundle/<name>`, Windows'ta `build/windows/<arch>/runner/Debug/<name>.exe`, macOS'ta `build/macos/Build/Products/Debug/<name>.app/Contents/MacOS/<name>` (`macos/Runner/Configs/AppInfo.xcconfig` dosyasındaki `PRODUCT_NAME`). |
 | `start` | `Future<bool> start({Map<String, String>? environment}) async` | Builds and launches the game. Returns whether the game started. |
 | `stop` | `Future<void> stop({Duration grace = const Duration(seconds: 3)}) async` | Stops the game (SIGTERM, then SIGKILL after [grace]) or the build, and completes when the process has ended. |
 

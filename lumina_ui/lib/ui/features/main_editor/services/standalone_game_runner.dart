@@ -66,54 +66,55 @@ class StandaloneGameRunner extends ChangeNotifier {
   /// The built game's executable: `build/linux/<arch>/debug/bundle/<name>`
   /// on Linux, `build/windows/<arch>/runner/Debug/<name>.exe` on Windows,
   /// `build/macos/Build/Products/Debug/<name>.app/Contents/MacOS/<name>` on macOS.
-  File? bundleExecutable() {
-    final name = _binaryName();
+  Future<File?> bundleExecutable() async {
+    final name = await _binaryName();
     if (name == null) return null;
     final out = Directory('$projectDir/build/$hostPlatform');
-    if (!out.existsSync()) return null;
+    if (!await out.exists()) return null;
     if (Platform.isMacOS) {
       final macExe = File('${out.path}/Build/Products/Debug/$name.app/Contents/MacOS/$name');
-      if (macExe.existsSync()) return macExe;
+      if (await macExe.exists()) return macExe;
       final products = Directory('${out.path}/Build/Products/Debug');
-      if (products.existsSync()) {
-        for (final app in products.listSync().whereType<Directory>().where((d) => d.path.endsWith('.app'))) {
+      if (await products.exists()) {
+        await for (final app in products.list().where((e) => e is Directory && e.path.endsWith('.app'))) {
           final candidate = File('${app.path}/Contents/MacOS/$name');
-          if (candidate.existsSync()) return candidate;
+          if (await candidate.exists()) return candidate;
         }
       }
     }
-    for (final arch in out.listSync().whereType<Directory>()) {
+    await for (final arch in out.list().where((e) => e is Directory)) {
       final exe = Platform.isWindows
           ? File('${arch.path}/runner/Debug/$name.exe')
           : File('${arch.path}/debug/bundle/$name');
-      if (exe.existsSync()) return exe;
+      if (await exe.exists()) return exe;
     }
     return null;
   }
 
   /// `BINARY_NAME` of the project's `<platform>/CMakeLists.txt` (Linux/Windows)
   /// or `PRODUCT_NAME` of `macos/Runner/Configs/AppInfo.xcconfig` (macOS).
-  String? _binaryName() {
+  Future<String?> _binaryName() async {
     if (Platform.isMacOS) {
       final xcconfig = File('$projectDir/macos/Runner/Configs/AppInfo.xcconfig');
-      if (xcconfig.existsSync()) {
-        final m = RegExp(r'^PRODUCT_NAME\s*=\s*(\S+)', multiLine: true).firstMatch(xcconfig.readAsStringSync());
+      if (await xcconfig.exists()) {
+        final m = RegExp(r'^PRODUCT_NAME\s*=\s*(\S+)', multiLine: true).firstMatch(await xcconfig.readAsString());
         if (m != null) return m.group(1);
       }
     }
     final cmake = File('$projectDir/$hostPlatform/CMakeLists.txt');
-    if (!cmake.existsSync()) return null;
-    final m = RegExp(r'set\(BINARY_NAME\s+"([^"]+)"\)').firstMatch(cmake.readAsStringSync());
+    if (!await cmake.exists()) return null;
+    final m = RegExp(r'set\(BINARY_NAME\s+"([^"]+)"\)').firstMatch(await cmake.readAsString());
     return m?.group(1);
   }
 
-  bool _hasPlatformRunner(String platform) {
+  /// Whether the project has the [platform] runner `flutter build` needs.
+  Future<bool> _hasPlatformRunner(String platform) async {
     if (platform == 'macos') {
-      return File('$projectDir/macos/Runner/Configs/AppInfo.xcconfig').existsSync() ||
-          Directory('$projectDir/macos/Runner.xcodeproj').existsSync() ||
-          File('$projectDir/macos/CMakeLists.txt').existsSync();
+      return await File('$projectDir/macos/Runner/Configs/AppInfo.xcconfig').exists() ||
+          await Directory('$projectDir/macos/Runner.xcodeproj').exists() ||
+          await File('$projectDir/macos/CMakeLists.txt').exists();
     }
-    return File('$projectDir/$platform/CMakeLists.txt').existsSync();
+    return File('$projectDir/$platform/CMakeLists.txt').exists();
   }
 
   /// Builds and launches the game. Returns whether the game started.
@@ -123,10 +124,13 @@ class StandaloneGameRunner extends ChangeNotifier {
     output.clear();
     lastExitCode = null;
     final platform = hostPlatform;
-    if (!_hasPlatformRunner(platform)) {
+    // Busy from here on: a second start while the runner is looked up is refused.
+    _setState(StandaloneState.building);
+    if (!await _hasPlatformRunner(platform)) {
       final expected = platform == 'macos' ? 'macos/Runner.xcodeproj' : '$platform/CMakeLists.txt';
       _logger.log('Play Standalone needs the project\'s $platform runner ($expected); '
           'run `flutter create --platforms=$platform .` in $projectDir.', level: 'error', source: _source);
+      _setState(StandaloneState.idle);
       return false;
     }
     // Ensure all content asset directories are registered in pubspec.yaml before building.
@@ -143,7 +147,6 @@ class StandaloneGameRunner extends ChangeNotifier {
       }
     }
     final env = gameEnvironment(environment);
-    _setState(StandaloneState.building);
     _logger.log('Play Standalone: flutter build $platform --debug${env['FILAMENT_GPU'] != null ? ' (GPU "${env['FILAMENT_GPU']}")' : ''}',
         level: 'info', source: _source);
     try {
@@ -167,7 +170,7 @@ class StandaloneGameRunner extends ChangeNotifier {
         _setState(StandaloneState.idle);
         return false;
       }
-      final exe = bundleExecutable();
+      final exe = await bundleExecutable();
       if (exe == null) {
         _logger.log('Play Standalone: the build succeeded but no game executable is in build/$platform.',
             level: 'error', source: _source);

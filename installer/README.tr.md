@@ -13,7 +13,7 @@ yeni bir installer değil, yalnızca yeni bir release gerekir.
 | Windows | `lumina-studio-<tag>-windows-x64-store.msix` (editör, imzasız, Microsoft Store için) | `lumina_ui/tool/package_windows.dart --store` | yayımlanıyor |
 | Windows | `lumina-studio-<tag>-windows-x64.msix` (editörün kendisi) | `lumina_ui/tool/package_windows.dart` | imzalama secret'ları varsa yayımlanıyor |
 | Linux | `lumina-studio_<version>-1_amd64.deb`, `lumina-studio-<version>-1.x86_64.rpm` (nfpm) | `linux/build.sh` | yayımlanıyor |
-| macOS | `lumina-studio-<tag>-macos.pkg` (pkgbuild + productbuild) | `macos/build-pkg.sh` | yazıldı, doğrulanmadı, workflow'da kapalı |
+| macOS | `lumina-studio-<tag>-macos.pkg` (pkgbuild + productbuild) | `macos/build-pkg.sh` | workflow'un macOS job'u derler; imzalama secret'ları eklenene kadar bu job kapalı |
 
 Release workflow'u (`.github/workflows/release.yml`) her `v*` tag'i için hepsini build eder. Her asset'in bir
 `.sha256` sidecar'ı vardır ve installer'lar editör indirmesini buna göre doğrular.
@@ -305,7 +305,7 @@ Paket şunları kurar:
 
 postinstall ve postremove script'leri, varsa `update-mime-database` ve `update-desktop-database` çalıştırır. Thumbnailer'lar Nemo, Caja, Thunar (tumbler üzerinden) ve `.thumbnailer` dosyalarını kullanan diğer dosya yöneticilerinde çalışır. GNOME Files onları `/opt`'a ve GPU'ya erişimi olmayan bir bubblewrap sandbox'ında çalıştırır; editör orada başlayamaz ve Nautilus ikonu korur. Dolphin `.thumbnailer` dosyaları yerine KIO eklentilerini kullanır.
 
-## macOS: .pkg (doğrulanmadı)
+## macOS: .pkg
 
 `macos/build-pkg.sh <version> [<tag>] [<out-dir>]` bir `.pkg` build eder; payload'u yalnızca
 `/usr/local/bin/lumina-studio` launcher'ı ve bir indirme script'idir. Postinstall script'i:
@@ -314,11 +314,12 @@ postinstall ve postremove script'leri, varsa `update-mime-database` ve `update-d
 2. `git cmake ninja gstreamer` paketlerini oturumdaki kullanıcı olarak Homebrew ile kurar, Homebrew yoksa
    komutu yazdırır;
 3. PATH'te bir Flutter yoksa Flutter'ı (stable) `/opt/lumina/flutter` klasörüne clone eder;
-4. en son `lumina-studio-<tag>-macos-*.zip` dosyasını `/Applications/Lumina Studio.app` olarak indirir.
+4. Mac'in mimarisine (`arm64` ya da `x64`) uygun en son `lumina-studio-<tag>-macos-<arch>.tar.gz` dosyasını indirir
+   (eski sürümlerin `.zip` dosyası da kabul edilir), `.sha256` ile doğrular ve `/Applications/Lumina Studio.app` olarak kurar.
 
-`LUMINA_PKG_SIGN_IDENTITY`, ürünü bir Developer ID Installer kimliğiyle imzalar. Henüz hiçbir macOS build'i
-doğrulanmadığı için release workflow'unun macOS job'u kapalıdır (`if: false`). Neyin eksik olduğunu job'un
-yorumu listeler.
+`LUMINA_PKG_SIGN_IDENTITY`, ürünü bir Developer ID Installer kimliğiyle imzalar. Release workflow'unun macOS
+job'u (arm64, `macos-14`) OpenRigLogic, Jolt, Studio arşivini ve `.pkg` dosyasını derler; Developer ID imzalama ve
+notarization secret'ları (sertifika ve App Store Connect API anahtarı) eklenene kadar kapalıdır (`if: false`).
 
 ## GitHub yapılandırması
 
