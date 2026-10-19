@@ -74,6 +74,47 @@ void main() {
     expect(actor.actorLocation.y, closeTo(160, 1e-6));
   });
 
+  test('an obstacle nearer than the clip was authored for: the approach is warped, the root never runs past it', () {
+    final actor = LuminaActor(location: Vector3(0, 90, 0));
+    // The clip covers 160 cm up to the window's end; the target is 60 cm ahead.
+    final player = LuminaRootMotionMontagePlayer(
+      rig: rig,
+      clip: clip('Climb'),
+      montage: const LuminaRootMotionMontage(clip: 'Climb', windows: [LuminaWarpWindow(target: 'Ledge', start: 0.5, end: 0.8)]),
+      owner: actor,
+      feetOffset: 90,
+      targets: {'Ledge': LuminaWarpTarget(Vector3(0, 80, -60), math.pi)},
+    )..begin();
+    expect(player.approachFitted, isTrue);
+    expect(player.windows.single.start, 0.0);
+    var previous = 0.0;
+    while (player.time < 0.8 - 1e-9) {
+      player.advance(1 / 60);
+      final ahead = -player.rootLocation.z;
+      expect(ahead, lessThanOrEqualTo(60 + 1e-6), reason: 'past the target at ${player.time}');
+      expect(ahead, greaterThanOrEqualTo(previous - 1e-6), reason: 'pulled back at ${player.time}');
+      previous = ahead;
+    }
+    expect(player.rootLocation.distanceTo(Vector3(0, 80, -60)), lessThan(1e-6));
+  });
+
+  test('with room to spare the clip plays its approach as authored and the window warps as authored', () {
+    final player = LuminaRootMotionMontagePlayer(
+      rig: rig,
+      clip: clip('Climb'),
+      montage: const LuminaRootMotionMontage(clip: 'Climb', windows: [LuminaWarpWindow(target: 'Ledge', start: 0.5, end: 0.8)]),
+      owner: LuminaActor(location: Vector3(0, 90, 0)),
+      feetOffset: 90,
+      targets: {'Ledge': LuminaWarpTarget(Vector3(0, 80, -250), math.pi)},
+    )..begin();
+    expect(player.approachFitted, isFalse);
+    expect(player.windows.single.start, 0.5);
+    for (var i = 0; i < 30; i++) {
+      player.advance(1 / 60);
+    }
+    expect(player.rootLocation.z, closeTo(-100, 1e-6), reason: 'unwarped before the window');
+  });
+
   test('a warp point bone resolves to its offset from the root at the window end', () {
     final player = LuminaRootMotionMontagePlayer(
       rig: rig,

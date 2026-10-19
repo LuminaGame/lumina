@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -195,6 +196,7 @@ class LuminaRootMotionMontagePlayer implements LuminaAnimSlotPlayer {
       _root = actor.actorLocation - Vector3(0.0, feetOffset, 0.0);
       _yaw = LuminaMotionMatchingCharacter.facingYaw(actor);
     }
+    _fitApproach();
     sample(_time, _target);
     final names = rig.sampler.nodeNames;
     final compatible = fromPose != null &&
@@ -214,6 +216,45 @@ class LuminaRootMotionMontagePlayer implements LuminaAnimSlotPlayer {
       _shown.setAll(0, _target);
     }
   }
+
+  /// When the clip's own motion up to the first translation window would
+  /// carry the root past where that window must bring it (the obstacle is
+  /// nearer than the clip was authored for), the window starts with the
+  /// montage instead: the whole approach is fitted to the room there is.
+  /// Played as authored, the root ran into the obstacle and the window then
+  /// pulled it back out, the body going through the obstacle's face.
+  void _fitApproach() {
+    final windows = warper.windows;
+    final i = windows.indexWhere((w) => w.warpTranslation && warper.targets.containsKey(w.target));
+    if (i < 0) return;
+    final w = windows[i];
+    if (w.start <= _time + 1e-6) return;
+    final goal = warper.rootTargetOf(w, w.warpRotation ? warper.targets[w.target]!.yaw : _yaw);
+    final (gx, gz) = LuminaPoseMath.rotateYaw(goal.x - _root.x, goal.z - _root.z, -_yaw);
+    final clip = track.delta(_time, w.end);
+    // Forward room: what the clip covers up to the window's end against
+    // what there is (both along the facing at the start).
+    if (gz >= clip.z - 1.0) return;
+    windows[i] = LuminaWarpWindow(
+      target: w.target,
+      start: _time,
+      end: w.end,
+      warpTranslation: w.warpTranslation,
+      warpRotation: w.warpRotation,
+      ignoreVertical: w.ignoreVertical,
+      warpPointOffset: w.warpPointOffset,
+      warpPointBone: w.warpPointBone,
+    );
+    approachFitted = true;
+    developer.log(
+        'root motion montage ${montage.clip}: ${gx.toStringAsFixed(0)}, ${gz.toStringAsFixed(0)} cm to the warp target '
+        'against ${clip.z.toStringAsFixed(0)} cm in the clip: warping from ${_time.toStringAsFixed(2)} s',
+        name: 'LuminaRootMotion');
+  }
+
+  /// Whether [begin] moved the first translation window back to the
+  /// montage's start ([_fitApproach]).
+  bool approachFitted = false;
 
   static bool _sameNames(List<String> a, List<String> b) {
     if (a.length != b.length) return false;

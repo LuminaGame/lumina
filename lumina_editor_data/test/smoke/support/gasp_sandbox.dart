@@ -20,6 +20,7 @@ const _h = SmokeVideo.defaultHeight;
 class GaspSandbox {
   GaspSandbox._({
     required this.engine,
+    required this.view,
     required this.world,
     required this.pc,
     required this.input,
@@ -34,6 +35,9 @@ class GaspSandbox {
   });
 
   final FilamentEngine engine;
+
+  /// The view the captures render.
+  final FilamentView view;
   final LuminaWorld world;
   final LuminaPlayerController pc;
   final LuminaInputSubsystem input;
@@ -195,6 +199,7 @@ class GaspSandbox {
     }
     return GaspSandbox._(
       engine: engine,
+      view: view,
       world: world,
       pc: pc,
       input: input,

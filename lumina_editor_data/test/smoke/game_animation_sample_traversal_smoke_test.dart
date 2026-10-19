@@ -7,6 +7,7 @@ import 'package:lumina/testing.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import 'support/gasp_contact.dart';
 import 'support/gasp_sandbox.dart';
 
 /// Traversal in the built Game Animation Sample project on GPU 1: the
@@ -92,6 +93,23 @@ void main() {
     }
 
     final results = <String, String>{};
+    final boxes = gaspBoxes(actors);
+    final capsule = character.capsuleComponent;
+    /// How deep the capsule is in any box now (cm, ≤ 0 clear).
+    (double, String) capsuleDepth() {
+      final c = LuminaAxes.toAuthoringLocation(capsule.worldLocation);
+      final axis = capsule.halfHeight - capsule.radius;
+      var best = (-1e9, '');
+      for (var k = -2; k <= 2; k++) {
+        final p = [c[0], c[1], c[2] + axis * k / 2];
+        for (final b in boxes) {
+          final d = capsule.radius + b.depth(p);
+          if (d > best.$1) best = (d, b.name);
+        }
+      }
+      return best;
+    }
+
     for (final a in approaches) {
       final b = block(a.block);
       // The block's near face along the approach, and the floor it stands on.
@@ -129,9 +147,45 @@ void main() {
       expect(t.actionCount, before + 1, reason: '${a.label}: ${t.lastCheck}');
       expect(t.lastCheck!.actionType, a.action, reason: '${a.label}: ${t.lastCheck}');
       var shot = false;
+      var deepest = (-1e9, '', '');
+      var deepestAt = 0.0;
+      var capsuleWorst = (-1e9, '');
+      final hands = <String>[];
+      double? lastWindowEnd;
       while (t.isTraversing) {
         tick();
         final p = t.player;
+        if (p != null) {
+          final d = gaspDeepestJoint(s.mesh, boxes);
+          if (d.$1 > deepest.$1) {
+            deepest = d;
+            deepestAt = p.time;
+          }
+          if (Platform.environment['GASP_TRACE'] == '1') {
+            final box = GaspBox(a.block, b.center, b.size, 0);
+            final root = LuminaAxes.toAuthoringLocation(character.actorLocation);
+            final toFace = (face[0] - root[0]) * a.direction[0] + (face[1] - root[1]) * a.direction[1];
+            final hl = gaspJoint(s.mesh, 'hand_l')!, hr = gaspJoint(s.mesh, 'hand_r')!;
+            final top = b.center[2] + b.size[2] / 2;
+            stderr.writeln('TRACE ${a.label} t=${p.time.toStringAsFixed(3)} rootToFace=${toFace.toStringAsFixed(1)} '
+                'feet=${(root[2] - halfHeight).toStringAsFixed(1)} '
+                'hl(z-top=${(hl[2] - top).toStringAsFixed(1)} in=${box.depth(hl).toStringAsFixed(1)}) '
+                'hr(z-top=${(hr[2] - top).toStringAsFixed(1)} in=${box.depth(hr).toStringAsFixed(1)}) deepest=${d.$2}:${d.$1.toStringAsFixed(1)}');
+          }
+          final cd = capsuleDepth();
+          if (cd.$1 > capsuleWorst.$1) capsuleWorst = cd;
+          final front = [for (final w in p.windows) if (w.target == 'FrontLedge') w.end];
+          if (front.isNotEmpty && lastWindowEnd == null && p.time >= front.first) {
+            lastWindowEnd = p.time;
+            final top = b.center[2] + b.size[2] / 2;
+            for (final h in ['hand_l', 'hand_r']) {
+              final q = gaspJoint(s.mesh, h);
+              if (q == null) continue;
+              final box = GaspBox(a.block, b.center, b.size, 0);
+              hands.add('$h z-top ${(q[2] - top).toStringAsFixed(1)} over ${box.over(q)} depth ${box.depth(q).toStringAsFixed(1)}');
+            }
+          }
+        }
         if (!shot && p != null && p.windows.isNotEmpty && p.time >= p.windows.first.end) {
           shot = true;
           SmokeArtifacts.saveScreenshot('$name — ${a.label}', SmokeArtifacts.encodePng(_w, _h, s.capture()),
@@ -149,8 +203,14 @@ void main() {
         tick();
       }
       final feet = LuminaAxes.toAuthoringLocation(character.actorLocation)[2] - halfHeight;
+      results['${a.label} contact'] = 'deepest joint ${deepest.$2} ${deepest.$1.toStringAsFixed(1)} cm in ${deepest.$3} '
+          'at ${deepestAt.toStringAsFixed(2)} s; capsule ${capsuleWorst.$1.toStringAsFixed(1)} cm in ${capsuleWorst.$2}; '
+          'hands at the first front-ledge warp end: $hands';
       results[a.label] = '${t.lastChoice!.animation.clip} (start ${t.lastChoice!.startTime.toStringAsFixed(2)} s): '
           '${t.lastCheck}; feet at ${feet.toStringAsFixed(1)} cm, state ${s.anim.currentState}';
+      // Hands and legs stay out of the blocks: the approach is fitted to the
+      // room there is, so no joint goes more than 2 cm into a block.
+      expect(deepest.$1, lessThanOrEqualTo(2.0), reason: '${a.label}: ${results['${a.label} contact']}');
       expect(s.mesh.poseDriver, same(s.anim.motionMatching.player), reason: '${a.label}: motion matching took the mesh back');
       if (a.action == LuminaTraversalActionType.mantle) {
         expect(feet, closeTo(b.center[2] + b.size[2] / 2, 6), reason: '${a.label}: standing on the block');
