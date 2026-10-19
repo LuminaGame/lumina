@@ -444,6 +444,7 @@ Declarative game built from the editor's level actors for Play-In-Editor.  Every
 | :--- | :--- | :--- |
 | `viewModel` | `EditorViewModel viewModel` | `viewModel` alanını (field/property) ve ilişkili veriyi saklar. |
 | `lastError` | `String? lastError` | Last error raised while mounting or ticking the runtime world, or null. |
+| `frameStats` | `final PieFrameStats frameStats` | Bir Play karesinin süresinin nereye gittiği, son 60 karenin ortalaması (`lib/ui/features/main_editor/services/pie_frame_stats.dart`): oyun tick'i ve aralığı (oyun FPS'i), editörün `SchedulerBinding.addTimingsCallback`'ten gelen Flutter build, raster ve kare süresi. Play çalışırken toplanır; `pie_status` raporlar. |
 | `game` | `EditorPieGame? get game` | The mounted runtime game while playing, or null. |
 | `playerPawn` | `LuminaTemplateCharacter? get playerPawn` | The possessed character while playing, or null. |
 | `templateKindForProject` | `GameTemplateKind templateKindForProject()` | Which pawn this project's template scaffolds, read from the manifest. |

@@ -694,7 +694,12 @@ restarts the cadence instead of bursting.
 
 By default a native `FilamentWidget` renders into a headless SwapChain, reads every frame back and shows it as a
 `RawImage`; Flutter composites and presents. Frame generation's extra frames never reach the screen that way (only the
-last image of a frame is read back) and the readback costs a GPU wait per frame. Given a `nativeSurface`, the widget
+last image of a frame is read back). The readback is pipelined (`lib/src/texture_readback.dart`,
+`FilamentTextureReadback`): a tick renders the frame and queues its read with a Filament callback, then only flushes;
+the UI thread never waits for the GPU, up to two frames are on the GPU at once (a third waits a tick), and the pixels
+are decoded into the `RawImage` when they arrive (the newest frame waits while one decodes, older ones are dropped).
+`onFrame` reports a read-back frame on the tick after its pixels arrived (always inside a frame tick, never from the
+readback callback between frames), with the CPU time its submission took. Given a `nativeSurface`, the widget
 presents **directly**. `FilamentNativeSurface` and `FilamentDirectPresenter` use Flutter foundation types, so they are
 exported from `flutter_filament.dart` (with the widget), not from the engine barrel `filament.dart`:
 

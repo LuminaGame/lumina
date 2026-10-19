@@ -107,6 +107,9 @@ void main() {
     // The toast times out after 8 s.
     await tester.pump(const Duration(seconds: 9));
     await settle(tester);
+    // The editor view goes first: its viewport reports frames to the view
+    // model for as long as it is mounted.
+    await tester.pumpWidget(const SizedBox());
     editor!.dispose();
     await drainRealIo(tester);
   });

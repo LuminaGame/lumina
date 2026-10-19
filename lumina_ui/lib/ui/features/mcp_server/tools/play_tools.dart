@@ -34,6 +34,11 @@ void registerPlayTools(McpToolRegistry registry, EditorViewModel vm, {required M
       // The keys agents hold and the frames they advanced.
       'held_keys': play.heldKeys,
       'frames_advanced': play.framesAdvanced,
+      // Where the frame time goes while Play runs (averages over 60 frames).
+      'frame_stats': {
+        ...pie.frameStats.toJson(),
+        'viewport_render_cpu_ms': double.parse(vm.cpuMs.toStringAsFixed(2)),
+      },
     };
   }
 

@@ -444,6 +444,7 @@ Declarative game built from the editor's level actors for Play-In-Editor.  Every
 | :--- | :--- | :--- |
 | `viewModel` | `EditorViewModel viewModel` | Holds the `viewModel` property or configuration state. |
 | `lastError` | `String? lastError` | Last error raised while mounting or ticking the runtime world, or null. |
+| `frameStats` | `final PieFrameStats frameStats` | Where a Play frame's time goes, averaged over the last 60 frames (`lib/ui/features/main_editor/services/pie_frame_stats.dart`): the game tick and its interval (game FPS), and the editor's Flutter build, raster and frame span from `SchedulerBinding.addTimingsCallback`. Collected while Play runs; `pie_status` reports it. |
 | `game` | `EditorPieGame? get game` | The mounted runtime game while playing, or null. |
 | `playerPawn` | `LuminaTemplateCharacter? get playerPawn` | The possessed character while playing, or null. |
 | `templateKindForProject` | `GameTemplateKind templateKindForProject()` | Which pawn this project's template scaffolds, read from the manifest. |

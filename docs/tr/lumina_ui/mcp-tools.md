@@ -811,7 +811,7 @@ Play-In-Editor as MCP tools: start, stop, pause, resume, step, and the session's
 
 | Araç | Risk | Başlık | Açıklama |
 | :--- | :--- | :--- | :--- |
-| `pie_status` | readOnly | Play-In-Editor status | Whether Play-In-Editor is running or paused, which pawn class the player possesses and where it is (cm, Z up), the last runtime error, and the Blueprint blockers / warnings of the last Play attempt. |
+| `pie_status` | readOnly | Play-In-Editor status | Whether Play-In-Editor is running or paused, which pawn class the player possesses and where it is (cm, Z up), the last runtime error, and the Blueprint blockers / warnings of the last Play attempt; `frame_stats`: oyun FPS'i, tick süresi ve aralığı, Flutter build / raster / kare süresi, viewport render CPU'su (ms). |
 | `start_pie` | editorState | Start Play-In-Editor | Presses Play: open Blueprints compile first; compile errors keep Play from starting and come back as a tool error listing the Blueprint, node and message. Play runs in the level viewport: an open sub-editor tab gives way to the level tab, and the call returns once the viewport has drawn Play's first frames. |
 | `stop_pie` | editorState | Stop Play-In-Editor | Stops Play and restores the editor's level, selection and camera from before Play. |
 | `pause_pie` | editorState | Pause Play-In-Editor | Pauses the running game (timers, physics and audio freeze). |

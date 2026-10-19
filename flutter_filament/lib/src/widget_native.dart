@@ -1,8 +1,5 @@
 import 'dart:async';
-import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
-import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:flutter_filament/src/ffi_package_platform.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -17,7 +14,7 @@ import 'package:flutter_filament/src/native_surface.dart';
 import 'package:flutter_filament/src/renderer.dart';
 import 'package:flutter_filament/src/scene.dart';
 import 'package:flutter_filament/src/swap_chain.dart';
-import 'package:flutter_filament/src/filament_bindings.dart' as c;
+import 'package:flutter_filament/src/texture_readback.dart';
 import 'package:flutter_filament/src/view.dart';
 import 'package:flutter_filament/src/widget.dart';
 
@@ -54,7 +51,8 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
   @visibleForTesting
   (int, int) get renderSize => (_viewWidth, _viewHeight);
 
-  ffi.Pointer<ffi.Uint8>? _nativePixelBuffer;
+  /// The texture path's pipelined readbacks.
+  late final FilamentTextureReadback _readback = FilamentTextureReadback(onFrame: _onReadback);
   ui.Image? _renderedImage;
   ui.Image? _previousImage;
 
@@ -192,8 +190,6 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
 
       _viewWidth = widget.width.isInfinite ? 800 : widget.width.toInt();
       _viewHeight = widget.height.isInfinite ? 600 : widget.height.toInt();
-      _nativePixelBuffer = calloc<ffi.Uint8>(_viewWidth * _viewHeight * 4);
-
       final swapChain = engine.createHeadlessSwapChain(_viewWidth, _viewHeight);
 
       view.scene = scene;
@@ -237,34 +233,49 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
     }
   }
 
-  bool _isRenderingFrame = false;
-
   /// Target FPS on the display's refresh (the ticker's vsync timestamps).
   final FilamentFrameLimiter _limiter = FilamentFrameLimiter();
 
   int _lastTickTimestamp = 0;
+
+  /// A decoded frame is being turned into an image; the newest frame read
+  /// back meanwhile waits here (older ones are dropped).
+  bool _decoding = false;
+  FilamentReadbackFrame? _pendingFrame;
+
+  /// Test seam: frames on the GPU whose pixels are not back yet.
+  @visibleForTesting
+  int get readbacksInFlight => _readback.inFlight;
+
+  /// The texture path. A frame is rendered and its pixels are read back
+  /// asynchronously: this tick only submits the work, the GPU runs it while
+  /// the UI thread goes on, and [_onReadback] presents the pixels when they
+  /// arrive. Up to two frames are on the GPU at once; a third waits a tick.
+  /// (Waiting for the GPU and for the image decode inside the tick kept the
+  /// viewport at every other vsync or worse.)
   void _onFrameTick() {
     if (!_isInitialized ||
         widget.isPaused ||
         widget.pauseRendering ||
-        _isRenderingFrame ||
         _renderer == null ||
         _view == null ||
-        _swapChain == null ||
-        _nativePixelBuffer == null) {
+        _swapChain == null) {
       return;
     }
     if (_direct != null) {
       _renderDirect(_direct!);
       return;
     }
+    final engine = _engine!;
+    _readback.poll(engine);
+    _reportArrivedFrames();
 
     final limiter = widget.frameLimiter ?? _limiter;
     limiter.configure(targetFps: widget.targetFps ?? 0, vsync: widget.vsyncEnabled);
+    if (!widget.skipReadPixels && !_readback.canSubmit) return;
     if (!limiter.shouldRender(SchedulerBinding.instance.currentFrameTimeStamp)) return;
     final int startTick = DateTime.now().microsecondsSinceEpoch;
 
-    _isRenderingFrame = true;
     try {
       if (widget.cameraManipulator != null && _camera != null) {
         widget.cameraManipulator!.updateCamera(_camera!);
@@ -276,74 +287,79 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
         for (final view in views) {
           _renderer!.render(view);
         }
-        
-        if (!widget.skipReadPixels) {
-          c.filament_renderer_read_pixels(
-            _renderer!.nativePointer,
-            _engine!.nativePointer,
-            0,
-            0,
-            _viewWidth,
-            _viewHeight,
-            _nativePixelBuffer!.cast(),
-            ffi.nullptr,
-            ffi.nullptr,
-          );
-          _engine!.flushAndWait();
-        }
-        
+        final cpu = Duration(microseconds: DateTime.now().microsecondsSinceEpoch - startTick);
+        if (!widget.skipReadPixels) _readback.submit(_renderer!, engine, _viewWidth, _viewHeight, cpu);
         _renderer!.endFrame();
-        _engine!.flushAndWait();
-        
-        final endTick = DateTime.now().microsecondsSinceEpoch;
-        if (widget.onFrame != null && _lastTickTimestamp != 0) {
-          final frameCpu = Duration(microseconds: endTick - startTick);
-          final frameTime = Duration(microseconds: endTick - _lastTickTimestamp);
-          widget.onFrame!(frameCpu, frameTime);
-        }
-        _lastTickTimestamp = endTick;
-        
-        _framesThisSecond++;
-        final int now = DateTime.now().millisecondsSinceEpoch;
-        if (now - _lastFpsTimestamp >= 1000) {
-          _fps = _framesThisSecond;
-          _framesThisSecond = 0;
-          _lastFpsTimestamp = now;
-        }
-
-        if (widget.skipReadPixels) {
-          _isRenderingFrame = false;
-          return;
-        }
-
-        final snapshot = Uint8List.fromList(
-          _nativePixelBuffer!.asTypedList(_viewWidth * _viewHeight * 4),
-        );
-        ui.decodeImageFromPixels(
-          snapshot,
-          _viewWidth,
-          _viewHeight,
-          ui.PixelFormat.rgba8888,
-          (ui.Image image) {
-            _isRenderingFrame = false;
-            if (mounted) {
-              final old = _previousImage;
-              _previousImage = _renderedImage;
-              _renderedImage = image;
-              old?.dispose();
-              setState(() {});
-            } else {
-              image.dispose();
-            }
-          },
-        );
-      } else {
-        _isRenderingFrame = false;
+        // To the GPU now, without waiting for it.
+        engine.flush();
+        if (widget.skipReadPixels) _frameDone(cpu);
       }
     } catch (e) {
-      _isRenderingFrame = false;
       debugPrint('[Filament Frame Loop Error (Handled Safely)]: $e');
     }
+  }
+
+  /// Frames read back since the last tick: their submission CPU time and
+  /// when their pixels arrived (microseconds).
+  final List<(Duration, int)> _arrivedFrames = [];
+
+  /// Reports the frames read back since the last tick. The readback callback
+  /// runs between frames, where the owner of [FilamentWidget.onFrame] may
+  /// already be torn down; the tick runs only while this widget is alive and
+  /// ticking, as the synchronous path always did.
+  void _reportArrivedFrames() {
+    if (_arrivedFrames.isEmpty) return;
+    final arrived = List.of(_arrivedFrames);
+    _arrivedFrames.clear();
+    for (final (cpu, at) in arrived) {
+      _frameDone(cpu, at: at);
+    }
+  }
+
+  /// A frame is shown (or, without readback, rendered): [FilamentWidget.onFrame]
+  /// and the FPS badge. [at] is when it completed (microseconds), default now.
+  void _frameDone(Duration cpu, {int? at}) {
+    final endTick = at ?? DateTime.now().microsecondsSinceEpoch;
+    if (widget.onFrame != null && _lastTickTimestamp != 0) {
+      widget.onFrame!(cpu, Duration(microseconds: endTick - _lastTickTimestamp));
+    }
+    _lastTickTimestamp = endTick;
+    _framesThisSecond++;
+    final int now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _lastFpsTimestamp >= 1000) {
+      _fps = _framesThisSecond;
+      _framesThisSecond = 0;
+      _lastFpsTimestamp = now;
+    }
+  }
+
+  void _onReadback(FilamentReadbackFrame frame) {
+    if (!mounted) return;
+    _arrivedFrames.add((frame.cpu, DateTime.now().microsecondsSinceEpoch));
+    if (_decoding) {
+      _pendingFrame = frame;
+      return;
+    }
+    _decode(frame);
+  }
+
+  void _decode(FilamentReadbackFrame frame) {
+    _decoding = true;
+    ui.decodeImageFromPixels(frame.pixels, frame.width, frame.height, ui.PixelFormat.rgba8888, (ui.Image image) {
+      _decoding = false;
+      if (!mounted) {
+        image.dispose();
+        return;
+      }
+      final old = _previousImage;
+      _previousImage = _renderedImage;
+      _renderedImage = image;
+      old?.dispose();
+      setState(() {});
+      final next = _pendingFrame;
+      _pendingFrame = null;
+      if (next != null) _decode(next);
+    });
   }
 
   /// One frame into the native window's SwapChain: the views, then the UI
@@ -422,15 +438,13 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
     }
     _renderedImage?.dispose();
     _previousImage?.dispose();
-    if (_nativePixelBuffer != null) {
-      calloc.free(_nativePixelBuffer!);
-      _nativePixelBuffer = null;
-    }
     final engine = _engine;
     if (engine != null && !engine.isDisposed) {
       try {
         engine.flushAndWait();
       } catch (_) {}
+      // The GPU wrote every pending readback: their buffers can go.
+      _readback.dispose();
       // This viewport's own objects, dependents first: the view references
       // the scene and the camera. On a shared engine nothing else is
       // destroyed here — other viewports keep drawing.
@@ -452,6 +466,7 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
         engine.dispose();
       }
     } else {
+      _readback.dispose();
       _lease?.release();
     }
     _lease = null;
@@ -469,10 +484,6 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
 
     _viewWidth = targetWidth;
     _viewHeight = targetHeight;
-    if (_nativePixelBuffer != null) {
-      calloc.free(_nativePixelBuffer!);
-    }
-    _nativePixelBuffer = calloc<ffi.Uint8>(_viewWidth * _viewHeight * 4);
 
     if (_isInitialized && _engine != null) {
       try {

@@ -17,6 +17,7 @@ import 'package:lumina_ui/ui/features/main_editor/services/blueprint_play_suppor
 import 'package:lumina_ui/ui/features/main_editor/services/camera_actor_properties.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/environment_actor_properties.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/light_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/pie_frame_stats.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/pie_mouse_capture.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/pie_pointer_input.dart';
 import 'package:lumina_ui/ui/features/details/services/blueprint_collision_overrides.dart';
@@ -50,6 +51,9 @@ class PieController with _PieBlueprintsInPlay, _PieGameInput {
   bool isPaused = false;
   @override
   bool isEjected = false;
+
+  /// Where the running session's frame time goes (`pie_status`).
+  final PieFrameStats frameStats = PieFrameStats();
 
   /// Last error raised while mounting or ticking the runtime world, or null.
   String? lastError;
@@ -166,6 +170,7 @@ class PieController with _PieBlueprintsInPlay, _PieGameInput {
 
     isPlaying = true;
     isPaused = false;
+    frameStats.start();
     isEjected = false;
     lastError = null;
 
@@ -537,6 +542,7 @@ class PieController with _PieBlueprintsInPlay, _PieGameInput {
     isPlaying = false;
     isPaused = false;
     isEjected = false;
+    frameStats.stop();
 
     viewModel.transactions.isFrozen = false;
     _restoreEditorState();
@@ -640,11 +646,13 @@ class PieController with _PieBlueprintsInPlay, _PieGameInput {
     // The debugged placed instance follows the selection.
     if (viewModel.primarySelectedActor?.id != _debugSelection) _publishDebugTargets();
     pointer.syncViewportSize();
+    final start = DateTime.now().microsecondsSinceEpoch;
     try {
       _game?.tickGame(dt);
     } catch (e) {
       lastError = e.toString();
       viewModel.logger.log('PIE tick raised: $e', level: 'error', source: 'PIE');
     }
+    frameStats.addTick(start, DateTime.now().microsecondsSinceEpoch - start);
   }
 }

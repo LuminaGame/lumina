@@ -694,7 +694,12 @@ patlaması yerine ritmi yeniden başlatır.
 
 Varsayılan olarak native `FilamentWidget` headless bir SwapChain'e çizer, her kareyi geri okur ve `RawImage` olarak
 gösterir; birleştirmeyi ve sunumu Flutter yapar. Bu yolda frame generation'ın ek kareleri ekrana hiç ulaşmaz (bir karenin
-yalnızca son görüntüsü okunur) ve geri okuma her karede GPU'yu bekler. `nativeSurface` verildiğinde widget **doğrudan**
+yalnızca son görüntüsü okunur). Geri okuma boru hattı şeklindedir (`lib/src/texture_readback.dart`,
+`FilamentTextureReadback`): bir tick kareyi render eder, okumasını bir Filament geri çağrısıyla kuyruğa koyar ve yalnızca
+flush eder; UI thread'i GPU'yu hiç beklemez, GPU'da aynı anda en fazla iki kare olur (üçüncüsü bir tick bekler) ve
+pikseller geldiklerinde `RawImage`'a decode edilir (biri decode edilirken en yeni kare bekler, eskiler atılır).
+`onFrame` geri okunan bir kareyi, pikselleri geldikten sonraki tick'te (her zaman bir kare tick'i içinde, kareler arasındaki
+geri okuma geri çağrısından asla) gönderiminin CPU süresiyle bildirir. `nativeSurface` verildiğinde widget **doğrudan**
 sunar. `FilamentNativeSurface` ve `FilamentDirectPresenter` Flutter foundation türlerini kullandığından motor barrel'ı
 `filament.dart`'tan değil, widget ile birlikte `flutter_filament.dart`'tan dışa aktarılır:
 
