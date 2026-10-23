@@ -9,11 +9,11 @@ mixin _SubEditor3DViewportOverlays on _SubEditor3DViewportStateBase {
     if (_nativeScene == null || _nativeEngine == null) return;
     try {
       if (_selectedNodeWireframe != null) {
-        _nativeEngine!.flushAndWait();
         _nativeScene!.removeEntity(_selectedNodeWireframe!.entityId);
         _selectedNodeWireframe!.dispose();
         _selectedNodeWireframe = null;
-        _nativeEngine!.flushAndWait();
+        // Destruction is queued behind the frame in flight; no GPU wait.
+        _nativeEngine!.flush();
       }
 
       final node = widget.selectedNode;
@@ -46,7 +46,6 @@ mixin _SubEditor3DViewportOverlays on _SubEditor3DViewportStateBase {
     if (!force && identical(lines, _collisionLinesBuilt)) return;
     try {
       if (_collisionWireframe != null) {
-        _nativeEngine!.flushAndWait();
         _nativeScene!.removeEntity(_collisionWireframe!.entityId);
         _collisionWireframe!.dispose();
         _collisionWireframe = null;
@@ -79,7 +78,6 @@ mixin _SubEditor3DViewportOverlays on _SubEditor3DViewportStateBase {
         final set = wanted[id];
         if (!force && set != null && _overlayWires[id]!.$1 == set.signature) continue;
         final (_, wire) = _overlayWires.remove(id)!;
-        engine.flushAndWait();
         scene.removeEntity(wire.entityId);
         wire.dispose();
       }

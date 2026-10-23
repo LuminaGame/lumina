@@ -314,7 +314,7 @@ class MaterialPreviewRenderer {
         try {
           _scene?.removeEntity(_entity);
         } catch (_) {}
-        engine.flushAndWait();
+        engine.flush();
         engine.destroyEntityComponents(_entity);
         engine.destroyEntity(_entity);
         _entity = 0;

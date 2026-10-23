@@ -458,7 +458,9 @@ class FilamentThumbnailRenderer extends _FilamentThumbnailRendererState
           loader.destroyAsset(asset);
         } catch (_) {}
       }
-      engine.flushAndWait();
+      // Destruction is queued behind the frames already submitted; nothing
+      // waits for the GPU on the editor's isolate.
+      engine.flush();
     }
   }
 
@@ -528,7 +530,9 @@ class FilamentThumbnailRenderer extends _FilamentThumbnailRendererState
   }
 
   /// Renders a few frames (shadows and uploads settle), reads the last one
-  /// back and encodes it as a [size]² PNG off the calling isolate.
+  /// back and encodes it as a [size]² PNG off the calling isolate. The GPU
+  /// is awaited through fences, never with a blocking wait: on the editor's
+  /// shared engine a thumbnail must not hold the viewport's frame.
   @override
   Future<Uint8List?> _captureAndEncode() async {
     final renderer = _renderer!;
@@ -537,15 +541,16 @@ class FilamentThumbnailRenderer extends _FilamentThumbnailRendererState
     final pixels = Uint8List(px * px * 4);
     var rendered = 0;
     for (var attempt = 0; attempt < 20 && rendered < 3; attempt++) {
+      Future<void>? readback;
       if (renderer.beginFrame(_swapChain!)) {
         renderer.render(_view!);
         rendered++;
         if (rendered == 3) {
-          renderer.readPixels(x: 0, y: 0, width: px, height: px, outPixels: pixels);
+          readback = renderer.readPixelsAsync(x: 0, y: 0, width: px, height: px, outPixels: pixels);
         }
         renderer.endFrame();
       }
-      engine.flushAndWait();
+      await (readback ?? engine.whenIdle());
     }
     if (rendered < 3) return null;
     final out = size;

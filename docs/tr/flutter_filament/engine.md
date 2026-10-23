@@ -869,3 +869,24 @@ Component manager for associating string labels/names with entities.  In Filamen
 ---
 
 [Önceki: flutter_filament](index.md) | [Üst: flutter_filament](index.md) | [Sonraki: Renderer, view'ler ve frame pacing](renderer-and-view.md)
+
+### `lib/src/stall_audit.dart`
+
+#### `class FilamentStall`
+
+UI isolate'ında denetimin eşiğinden uzun süren bir iş bölümü: `name`, `duration` (bölümün çağıran isolate'ı tuttuğu duvar saati süresi) ve `at` (bittiği an). `toString()` `<name> took <ms> ms` döndürür.
+
+#### `class FilamentStallAudit`
+
+Çağıran isolate üzerindeki adlandırılmış motor iş bölümlerini ölçer ve `threshold`'dan uzun olanları bildirir; böylece bir editör karenin nereye gittiğini gösterebilir. Bölüm, senkron ya da asenkron herhangi bir gövdedir: bir sahne kurulumu, çağıranın hâlâ ihtiyaç duyduğu bir GPU beklemesi, bir geri okuma. Lumina Studio her takılmayı uyarı olarak günlükler (`StallAudit` kaynağı) ve tuttuğu GPU beklemelerini (`level viewport teardown`, `FilamentWidget`'taki viewport yeniden boyutlandırması) bölümlere sarar; `lumina_ui/test/architecture/no_gpu_waits_on_the_ui_isolate_test.dart` editörde ya da `lumina_editor_data`'da başka bir `flushAndWait` görürse başarısız olur.
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `threshold` | `static Duration threshold` | Bundan uzun bir bölüm takılmadır; varsayılan 8 ms (60 Hz'de yarım kare). |
+| `capacity` | `static const int capacity` | `recent`'ın tuttuğu takılma sayısı (64). |
+| `recent` | `static List<FilamentStall> get recent` | En son takılmalar, en eskisi önce. |
+| `stalls` | `static Stream<FilamentStall> get stalls` | Kaydedildiği anda her takılma (broadcast). |
+| `section` | `static T section<T>(String name, T Function() body)` | `body`'yi `name` bölümü olarak çalıştırır, `threshold`'u aşarsa kaydeder; sonucunu döndürür. |
+| `sectionAsync` | `static Future<T> sectionAsync<T>(String name, Future<T> Function() body)` | Asenkron gövde için `section`: ölçülen süre beklenenleri de kapsar, bu yüzden böyle bölümler bekledikleri şeyin adını taşır. |
+| `record` | `static void record(String name, Duration duration)` | Çağıranın ölçtüğü bir bölümü kaydeder. |
+| `clear` | `static void clear()` | Kaydedilen takılmaları unutur (testler). |

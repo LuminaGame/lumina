@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:isolate';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -177,6 +178,21 @@ class LuminaAsset {
       ..add([0x4C, 0x4D, 0x41, 0x53]) // LMAS Magic Header
       ..add(jsonBytes);
     return builder.toBytes();
+  }
+
+  /// A payload (or thumbnail) at least this large is serialized on a
+  /// background isolate by [toProtoBufferBytesAsync]: base64 and JSON of a
+  /// 19 MB mesh hold the calling isolate for about 200 ms otherwise.
+  static const int backgroundSerializationBytes = 256 * 1024;
+
+  /// [toProtoBufferBytes] without holding the calling isolate: a large
+  /// payload is encoded on a background isolate (the asset is copied there
+  /// and the bytes back), a small one inline, where the work costs less than
+  /// the isolate.
+  Future<Uint8List> toProtoBufferBytesAsync() {
+    final size = (rawPayload?.length ?? 0) + (thumbnailPng?.length ?? 0);
+    if (size < backgroundSerializationBytes) return Future.value(toProtoBufferBytes());
+    return Isolate.run(toProtoBufferBytes);
   }
 
   /// Deserializes asset from binary Protobuf bytes or JSON fallback payload.

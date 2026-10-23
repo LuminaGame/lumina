@@ -133,7 +133,8 @@ A live binding between an open sub-editor tab and its view model.
 | `setViewMode` | `void setViewMode(String mode)` | Updates the `ViewMode` parameter and applies changes to the system. |
 | `setBufferVisualization` | `void setBufferVisualization(String mode)` | Updates the `BufferVisualization` parameter and applies changes to the system. |
 | `toggleShowFlag` | `void toggleShowFlag(String flag)` | Toggles the target feature or visibility on/off. |
-| `reportFrameTime` | `void reportFrameTime(Duration cpu, Duration frame)` | Executes `reportFrameTime` operation. |
+| `frameTimeListener` | `void Function(Duration cpu, Duration frame)? frameTimeListener` | Every level-viewport frame as the widget reports it (UI-isolate time and frame interval): a measurement hook for tests and tooling, called before the FPS/CPU averages update. |
+| `reportFrameTime` | `void reportFrameTime(Duration cpu, Duration frame)` | Records one level-viewport frame (`FilamentWidget.onFrame`): feeds `frameTimeListener`, then the 30-frame FPS and CPU averages behind `viewportStatsLabel`. |
 | `totalTriangles` | `int get totalTriangles` | Getter accessor returning the current value of `totalTriangles`. |
 | `translateSnapEnabled` | `bool get translateSnapEnabled` | Getter accessor returning the current value of `translateSnapEnabled`. |
 | `rotateSnapEnabled` | `bool get rotateSnapEnabled` | Getter accessor returning the current value of `rotateSnapEnabled`. |

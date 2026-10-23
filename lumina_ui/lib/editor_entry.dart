@@ -7,6 +7,7 @@ library;
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter_filament/flutter_filament.dart' show FilamentStallAudit;
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_editor_data/lumina_editor.dart' show EngineBootstrap, EngineLoggerService, LuminaMedia, LuminaRtxController, LuminaViewportBudget, LuminaViewportScope, LuminaWidgets, ModelThumbnailCommand, PluginHostPatcherService;
 import 'package:lumina_editor_api/lumina_editor_api.dart';
@@ -88,6 +89,9 @@ Future<void> runLuminaEditor(
   // to 8 render at once; a game in Play has its own budget of 4.
   LuminaViewportBudget.shared = LuminaViewportBudget(scope: LuminaViewportScope.editor);
   EditorGraphicsPreferences().apply();
+  // Engine work that held the UI isolate longer than half a frame is logged
+  // with its section name, so a stutter in the editor names its cause.
+  FilamentStallAudit.stalls.listen((stall) => EngineLoggerService().log(stall.toString(), level: 'warning', source: 'StallAudit'));
   // The viewport's shared Vulkan engine is created later; the ray query (and,
   // with the NGX runtime, DLSS) extensions must be asked for before it exists.
   if (Platform.isWindows || Platform.isLinux) {

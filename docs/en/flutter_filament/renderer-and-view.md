@@ -489,6 +489,10 @@ A Renderer generates drawing commands for the render thread and manages frame la
 | `skipNextFrames` | `void skipNextFrames(int count)` | Requests the next [count] frames to be skipped. |
 | `frameToSkipCount` | `int get frameToSkipCount` | Remainder count of frames to be skipped. |
 | `pauseRenderThread` | `void pauseRenderThread(Duration duration)` | Stalls the render thread for the given duration (useful for pacing testing). |
+| `readPixels` | `void readPixels({required int x, required int y, required int width, required int height, required Uint8List outPixels})` | Reads the current swap chain back into `outPixels` (RGBA8), **blocking** the isolate until the GPU wrote it (`flushAndWait`). Call between `beginFrame` and `endFrame`. |
+| `readPixelsAsync` | `Future<void> readPixelsAsync({required int x, required int y, required int width, required int height, required Uint8List outPixels})` | `readPixels` without blocking: the readback is queued and the pixels are copied into `outPixels` once a fence reports the GPU done (`FilamentEngine.whenIdle`). Call between `beginFrame` and `endFrame`; the future completes after `endFrame`. The editor's thumbnails read back this way. |
+| `readPixelsInto` | `void readPixelsInto(Pointer<Uint8> buffer, {required int x, required int y, required int width, required int height})` | Queues a readback into a native buffer without waiting; the pixels are there once the engine was flushed and the GPU finished (`whenIdle` / `flushAndWait`). |
+| `readPixelsFromRenderTarget` | `Future<Uint8List> readPixelsFromRenderTarget(FilamentRenderTarget renderTarget, {required int x, required int y, required int width, required int height, PixelDataFormat format, PixelDataType type})` | Reads a render target back, awaiting the GPU through a fence (never blocking the isolate). Origin bottom-left. |
 | `dispose` | `void dispose()` | Destroys this renderer and releases its resources. |
 | `isDisposed` | `bool get isDisposed` | Checks current state or capability and returns a boolean value. |
 

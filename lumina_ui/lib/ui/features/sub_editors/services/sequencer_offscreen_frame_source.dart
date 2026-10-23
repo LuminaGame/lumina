@@ -344,8 +344,8 @@ class SequencerOffscreenFrameSource implements MovieFrameSource {
 
     // Standalone draw: deliberately outside any beginFrame/endFrame block.
     renderer.renderStandaloneView(_view!);
-    engine.flushAndWait();
-
+    // The readback awaits the GPU through a fence; the render queue writes
+    // the frames in order without holding the editor's isolate.
     return renderer.readPixelsFromRenderTarget(
       rt,
       x: 0,

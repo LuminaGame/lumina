@@ -348,6 +348,30 @@ class FilamentRenderer {
     }
   }
 
+  /// [readPixels] without blocking the calling isolate: the readback is
+  /// queued and the pixels are copied into [outPixels] once the GPU wrote
+  /// them (a fence polled from the event loop, see
+  /// [FilamentEngine.whenIdle]). Call between [beginFrame] and [endFrame]
+  /// like [readPixels]; the future completes after [endFrame].
+  Future<void> readPixelsAsync({
+    required int x,
+    required int y,
+    required int width,
+    required int height,
+    required Uint8List outPixels,
+  }) async {
+    _checkDisposed();
+    final ptr = calloc<ffi.Uint8>(outPixels.length);
+    try {
+      c.filament_renderer_read_pixels(
+          _ptr, _engine.nativePointer, x, y, width, height, ptr.cast(), ffi.nullptr, ffi.nullptr);
+      await _engine.whenIdle();
+      outPixels.setAll(0, ptr.asTypedList(outPixels.length));
+    } finally {
+      calloc.free(ptr);
+    }
+  }
+
   /// Queues a readback of the current viewport (swap chain) into [buffer],
   /// `width * height` RGBA8 pixels, without waiting for it: call between
   /// [beginFrame] and [endFrame]; the pixels are in [buffer], which must stay
@@ -365,7 +389,8 @@ class FilamentRenderer {
         _ptr, _engine.nativePointer, x, y, width, height, buffer.cast(), ffi.nullptr, ffi.nullptr);
   }
 
-  /// Reads back pixels from the specified [renderTarget].
+  /// Reads back pixels from the specified [renderTarget] without blocking
+  /// the calling isolate (the GPU is awaited through [FilamentEngine.whenIdle]).
   ///
   /// Origin (0,0) is at the bottom-left of the render target.
   Future<Uint8List> readPixelsFromRenderTarget(
@@ -399,7 +424,7 @@ class FilamentRenderer {
         ffi.nullptr,
       );
 
-      _engine.flushAndWait();
+      await _engine.whenIdle();
       final result = Uint8List.fromList(bufferPtr.asTypedList(totalBytes));
       completer.complete(result);
     } catch (e, st) {

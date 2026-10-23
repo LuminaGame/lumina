@@ -992,6 +992,8 @@ Dosyalar beklerken launcher'ın notu: "Open or create a project to import <adlar
 
 ### `runModelThumbnailEntry` (`lib/ui/core/host/model_thumbnail_entry.dart`)
 
+`runLuminaEditor`, grafik tercihleri uygulandıktan hemen sonra `FilamentStallAudit.stalls`'a (flutter_filament) da abone olur: UI isolate'ını 8 ms'den uzun tutan her motor iş bölümü `StallAudit` kaynağından uyarı olarak günlüklenir; böylece editördeki bir takılma Output Log'da sebebini adlandırır.
+
 `Future<int> runModelThumbnailEntry(List<String> args)`: `runLuminaEditor`, `--lumina-thumbnail`'ı her şeyden önce buraya verir (pencere, crash oturumu ya da bootstrap yok) ve onun koduyla çıkar. Graphics Device tercihini uygular, paketteki stüdyo IBL'ini yükler ve `ModelThumbnailCommand`'ı (`lumina_editor_data`) çalıştırır. Windows ve Linux runner'ları bu flag için `--lumina-plugin-process` ile aynı pencere açmayan engine'i başlatır.
 
 ---

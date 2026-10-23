@@ -16,12 +16,32 @@ class MeshThumbnailGeometry {
 
   int get triangleCount => colors.length;
 
+  /// A payload at least this large is parsed and projected on a background
+  /// isolate: a 19 MB GLB holds the calling isolate for half a second
+  /// otherwise. A smaller one is done inline, where the work costs less than
+  /// an isolate spawn (and a widget test's fake-async zone never completes one).
+  static const int backgroundThresholdBytes = 256 * 1024;
+
   /// The geometry of [type]'s thumbnail drawn from [payload] (a GLB, or OBJ
   /// text): null when the type does not draw its mesh or the payload holds
   /// none, as the thumbnail then falls back to the type's badge.
   static Future<MeshThumbnailGeometry?> forPayload(AssetType type, Uint8List? payload) async {
     if (type != AssetType.filamesh && type != AssetType.filameshSk) return null;
     if (payload == null || payload.length <= 50) return null;
+    if (payload.length < backgroundThresholdBytes) return _compute(payload);
+    // The worker's log lines (the parser's) are carried back to this isolate's Output Log.
+    final result = await Isolate.run(() async {
+      MeshThumbnailGeometry? geometry;
+      final logs = await EngineLoggerService().captureLogsAsync(() async {
+        geometry = await _compute(payload);
+      });
+      return (geometry: geometry, logs: logs);
+    });
+    EngineLoggerService().replay(result.logs);
+    return result.geometry;
+  }
+
+  static Future<MeshThumbnailGeometry?> _compute(Uint8List payload) async {
     var mesh = await GlbParserService.parseGlb(payload);
     if (mesh == null) {
       try {

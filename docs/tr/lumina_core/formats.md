@@ -169,6 +169,8 @@ A square heightmap terrain plus its foliage layers — the single source of trut
 | `metadata` | `Map<String, String> metadata` | `metadata` alanını (field/property) ve ilişkili veriyi saklar. |
 | `toMap` | `Map<String, dynamic> toMap()` | `toMap` işlemini gerçekleştirir. |
 | `toProtoBufferBytes` | `Uint8List toProtoBufferBytes()` | Serializes asset to binary Protobuf bytes format with LMAS magic header. |
+| `toProtoBufferBytesAsync` | `Future<Uint8List> toProtoBufferBytesAsync()` | Çağıran isolate'ı tutmayan `toProtoBufferBytes`: payload'u ve thumbnail'ı `backgroundSerializationBytes`'a (256 KB) ulaşan bir asset arka plan isolate'ında kodlanır (19 MB'lık bir mesh'in base64 ve JSON'u yaklaşık 200 ms sürer), daha küçüğü yerinde. Asset deposu import edilen aileleri bununla yazar. |
+| `backgroundSerializationBytes` | `static const int backgroundSerializationBytes` | `toProtoBufferBytesAsync`'in arka plan isolate'ı kullanmaya başladığı payload boyutu. |
 
 ## `lib/src/formats/lumina_asset_summary.dart`
 

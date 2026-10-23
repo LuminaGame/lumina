@@ -341,6 +341,8 @@ Every render is lit by the same studio rig (a sun, image-based lighting and a ne
 
 Renders are serialized: callers may overlap, the engine never does.
 
+Bir render isolate'ı GPU için hiç bloklamaz: kareler otururken son kare fence'lerle geri okunur (`FilamentEngine.whenIdle`, `FilamentRenderer.readPixelsAsync`) ve asset'lerin yok edilmesi `flush()` ile sıralanır; böylece editörün paylaşılan motoruna kuyruklanan bir thumbnail viewport'un karesini tutmaz.
+
 `ThumbnailMeshLoader`'ın sakladığı GLB'den çizilen tek bir mesh (iskelet mesh'ine oturtulmuş bir animasyon klibi, dinlenme pozundaki mesh, bir Animation Blueprint ya da Blend Space) **saklanan bir asset'ten** çizilir: ilk render onu gltfio'ya yükler ve her düğümün transform'unu kaydeder; aynı GLB'nin sonraki render'ı düğümleri bu transform'lara geri getirip kendi klibini uygular; böylece her klip için 300 MB'lık bir asset yüklenip yok edilmez. Farklı bir mesh, `releasePosedMesh` ya da `dispose` onu yok eder. Klipleri morph-target ağırlıklarını süren bir GLB asla saklanmaz (ağırlıklar geri okunamaz).
 
 **Yapıcı Metotlar (Constructors):**

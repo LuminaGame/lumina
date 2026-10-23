@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- `FilamentStallAudit` (`lib/src/stall_audit.dart`): named sections of engine work on the calling isolate, reported
+  through `recent` and `stalls` when longer than `threshold` (8 ms). `FilamentRenderer.readPixelsAsync` reads the
+  swap chain back through a fence instead of blocking, `readPixelsFromRenderTarget` awaits the GPU the same way, and
+  `FilamentWidget` keeps one wait per resize (the readbacks in flight target the swap chain about to go), as an
+  audited section.
 - Asynchronous resources: `EngineConfig.asynchronousMode` (a worker thread by default; `FilamentEngine.create` turns on
   Filament's `backend.enable_asynchronous_operation` feature with it), `FilamentEngine.isAsynchronousModeEnabled` /
   `cancelAsyncCall` / `whenIdle` (a polled fence instead of `flushAndWait`), `FilamentTexture.createAsync` /

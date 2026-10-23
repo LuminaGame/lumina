@@ -489,6 +489,10 @@ A Renderer generates drawing commands for the render thread and manages frame la
 | `skipNextFrames` | `void skipNextFrames(int count)` | Requests the next [count] frames to be skipped. |
 | `frameToSkipCount` | `int get frameToSkipCount` | Remainder count of frames to be skipped. |
 | `pauseRenderThread` | `void pauseRenderThread(Duration duration)` | Stalls the render thread for the given duration (useful for pacing testing). |
+| `readPixels` | `void readPixels({required int x, required int y, required int width, required int height, required Uint8List outPixels})` | Geçerli swap chain'i `outPixels`'e (RGBA8) geri okur; GPU yazana kadar isolate'ı **bloklar** (`flushAndWait`). `beginFrame` ile `endFrame` arasında çağrılır. |
+| `readPixelsAsync` | `Future<void> readPixelsAsync({required int x, required int y, required int width, required int height, required Uint8List outPixels})` | Bloklamayan `readPixels`: geri okuma kuyruğa alınır, bir fence GPU'nun bittiğini bildirince pikseller `outPixels`'e kopyalanır (`FilamentEngine.whenIdle`). `beginFrame` ile `endFrame` arasında çağrılır; future `endFrame`'den sonra tamamlanır. Editörün thumbnail'ları bu yolla geri okur. |
+| `readPixelsInto` | `void readPixelsInto(Pointer<Uint8> buffer, {required int x, required int y, required int width, required int height})` | Beklemeden yerel bir tampona geri okuma kuyruğa alır; motor flush edilip GPU bitince pikseller oradadır (`whenIdle` / `flushAndWait`). |
+| `readPixelsFromRenderTarget` | `Future<Uint8List> readPixelsFromRenderTarget(FilamentRenderTarget renderTarget, {required int x, required int y, required int width, required int height, PixelDataFormat format, PixelDataType type})` | Bir render target'ı geri okur; GPU bir fence ile beklenir (isolate hiç bloklanmaz). Orijin sol alt. |
 | `dispose` | `void dispose()` | Destroys this renderer and releases its resources. |
 | `isDisposed` | `bool get isDisposed` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 

@@ -100,7 +100,12 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
     notifyListeners();
   }
 
+  /// Every level-viewport frame as the widget reports it (UI-isolate time
+  /// and frame interval): a measurement hook for tests and tooling.
+  void Function(Duration cpu, Duration frame)? frameTimeListener;
+
   void reportFrameTime(Duration cpu, Duration frame) {
+    frameTimeListener?.call(cpu, frame);
     final currentFps = frame.inMicroseconds > 0
         ? 1000000.0 / frame.inMicroseconds
         : 60.0;

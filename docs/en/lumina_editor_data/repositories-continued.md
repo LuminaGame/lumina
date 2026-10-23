@@ -45,7 +45,8 @@ A mesh's thumbnail drawing, worked out without `dart:ui` rendering so it can be 
 | `points` | `final Float64List points` | `x0, y0, x1, y1, x2, y2` per triangle. |
 | `colors` | `final Uint32List colors` | One opaque ARGB colour per triangle. |
 | `triangleCount` | `int get triangleCount` |  |
-| `forPayload` | `static Future<MeshThumbnailGeometry?> forPayload(AssetType type, Uint8List? payload) async` | The geometry of [type]'s thumbnail drawn from [payload] (a GLB, or OBJ text): null when the type does not draw its mesh or the payload holds none, as the thumbnail then falls back to the type's badge. |
+| `forPayload` | `static Future<MeshThumbnailGeometry?> forPayload(AssetType type, Uint8List? payload) async` | The geometry of [type]'s thumbnail drawn from [payload] (a GLB, or OBJ text): null when the type does not draw its mesh or the payload holds none, as the thumbnail then falls back to the type's badge. A payload of `backgroundThresholdBytes` (256 KB) or more is parsed and projected on a background isolate (its parser log lines are replayed here); a smaller one inline, where the work costs less than the isolate. |
+| `backgroundThresholdBytes` | `static const int backgroundThresholdBytes` | The payload size from which `forPayload` uses a background isolate. |
 | `fromMesh` | `static MeshThumbnailGeometry fromMesh(GlbMeshData glb)` | Projects [glb] isometrically into the thumbnail (at most ~5000 triangles), shades each triangle by a fixed light and colours it from its vertex colours or the mesh's base colour. |
 
 ## `lib/src/repositories/asset_repository/imported_material.dart`

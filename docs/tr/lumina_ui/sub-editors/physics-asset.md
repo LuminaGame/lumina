@@ -149,7 +149,7 @@ Builds world-space line geometry for the Physics Asset editor's body and constra
 
 ### `class PhysicsPreviewScene`
 
-Mounts the authored body / constraint overlays into the sub-editor viewport's real Filament scene as native LINES entities.  The viewport hands over its [LuminaWorld] (already carrying the native context) through `onPreviewWorldReady`; every line set becomes one [FilamentWireframeMesh]. Only sets whose geometry actually changed are rebuilt, and teardown follows the viewport's `flushAndWait` -> remove -> dispose ordering.
+Mounts the authored body / constraint overlays into the sub-editor viewport's real Filament scene as native LINES entities.  The viewport hands over its [LuminaWorld] (already carrying the native context) through `onPreviewWorldReady`; every line set becomes one [FilamentWireframeMesh]. Only sets whose geometry actually changed are rebuilt, and söküm viewport'un kaldır -> dispose -> `flush` sırasını izler (yok etme yoldaki karenin arkasına kuyruklanır; hiçbir şey GPU'yu beklemez).
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 

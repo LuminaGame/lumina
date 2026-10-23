@@ -60,6 +60,20 @@ class EngineLoggerService {
     return buffer;
   }
 
+  /// [captureLogs] for an asynchronous [body]: everything logged until its
+  /// future completes is buffered and returned.
+  Future<List<EngineLogEntry>> captureLogsAsync(Future<void> Function() body) async {
+    final previous = _captureBuffer;
+    final buffer = <EngineLogEntry>[];
+    _captureBuffer = buffer;
+    try {
+      await body();
+    } finally {
+      _captureBuffer = previous;
+    }
+    return buffer;
+  }
+
   /// Emits previously captured entries, keeping the moment each was produced
   /// rather than the moment it was replayed.
   void replay(Iterable<EngineLogEntry> entries) {

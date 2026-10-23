@@ -800,6 +800,9 @@ Which engine a Lumina Studio runs on, or which engine a project's copy of the en
 | `logStream` | `Stream<EngineLogEntry> get logStream` | Getter accessor returning the current value of `logStream`. |
 | `logs` | `List<EngineLogEntry> get logs` | Getter accessor returning the current value of `logs`. |
 | `clear` | `void clear()` | Clears all elements from the collection or buffer. |
+| `captureLogs` | `List<EngineLogEntry> captureLogs(void Function() body)` | Runs `body` with its log output buffered instead of emitted and returns what it logged: how a background isolate (which owns its own logger singleton) carries its lines back to the editor's Output Log, through `replay`. |
+| `captureLogsAsync` | `Future<List<EngineLogEntry>> captureLogsAsync(Future<void> Function() body)` | `captureLogs` for an asynchronous body: buffered until its future completes. |
+| `replay` | `void replay(Iterable<EngineLogEntry> entries)` | Emits previously captured entries with the timestamps they were produced at. |
 
 ## `lib/src/services/fbx_material_mapper.dart`
 

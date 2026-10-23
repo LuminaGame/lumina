@@ -55,7 +55,7 @@ mixin _ThumbnailMaterialPreview on _FilamentThumbnailRendererState {
     } finally {
       if (entity != 0) {
         _scene?.removeEntity(entity);
-        engine.flushAndWait();
+        engine.flush();
         engine.destroyEntityComponents(entity);
         engine.destroyEntity(entity);
       }

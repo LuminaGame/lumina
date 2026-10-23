@@ -287,6 +287,24 @@ void main() {
       colorTex.dispose();
     });
 
+    test('readPixelsAsync returns at once and fills the buffer after the GPU', () async {
+      final renderer = engine.createRenderer();
+      final view = engine.createView();
+      final swapChain = engine.createHeadlessSwapChain(32, 32);
+      view.setViewport(0, 0, 32, 32);
+      final pixels = Uint8List(32 * 32 * 4);
+      expect(renderer.beginFrame(swapChain), isTrue);
+      renderer.render(view);
+      final clock = Stopwatch()..start();
+      final readback = renderer.readPixelsAsync(x: 0, y: 0, width: 32, height: 32, outPixels: pixels);
+      expect(clock.elapsedMilliseconds, lessThan(5), reason: 'the call does not wait for the GPU');
+      renderer.endFrame();
+      await readback;
+      renderer.dispose();
+      view.dispose();
+      swapChain.dispose();
+    });
+
     test('Presentation time, frame skipping and material time epoch', () {
       final renderer = engine.createRenderer();
       final view = engine.createView();

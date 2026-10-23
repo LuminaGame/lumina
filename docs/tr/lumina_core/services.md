@@ -800,6 +800,9 @@ Bir Lumina Studio'nun hangi motorla çalıştığı ya da projenin motor kaynağ
 | `logStream` | `Stream<EngineLogEntry> get logStream` | `logStream` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `logs` | `List<EngineLogEntry> get logs` | `logs` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `clear` | `void clear()` | Koleksiyon veya tampon içeriğini tamamen temizler. |
+| `captureLogs` | `List<EngineLogEntry> captureLogs(void Function() body)` | `body`'yi günlük çıktısı yayılmak yerine tamponlanarak çalıştırır ve günlüklediklerini döndürür: kendi logger tekilini taşıyan bir arka plan isolate'ının satırlarını editörün Output Log'una `replay` ile böyle taşır. |
+| `captureLogsAsync` | `Future<List<EngineLogEntry>> captureLogsAsync(Future<void> Function() body)` | Asenkron gövde için `captureLogs`: future'ı tamamlanana kadar tamponlar. |
+| `replay` | `void replay(Iterable<EngineLogEntry> entries)` | Daha önce yakalanan girdileri üretildikleri zaman damgalarıyla yayar. |
 
 ## `lib/src/services/fbx_material_mapper.dart`
 

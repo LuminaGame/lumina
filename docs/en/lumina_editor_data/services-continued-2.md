@@ -341,6 +341,8 @@ Every render is lit by the same studio rig (a sun, image-based lighting and a ne
 
 Renders are serialized: callers may overlap, the engine never does.
 
+A render never blocks the isolate on the GPU: the frames settle and the last one is read back through fences (`FilamentEngine.whenIdle`, `FilamentRenderer.readPixelsAsync`), and the assets' destruction is ordered with `flush()`, so a thumbnail queued on the editor's shared engine does not hold the viewport's frame.
+
 A single mesh drawn from the GLB `ThumbnailMeshLoader` keeps (an animation clip posed on its skeletal mesh, the mesh at rest, an Animation Blueprint or a Blend Space) is drawn from a **kept asset**: the first render loads it into gltfio and records every node's transform; the next render of the same GLB puts the nodes back to those transforms and applies its clip, instead of loading and destroying a 300 MB asset per clip. A different mesh, `releasePosedMesh` or `dispose` destroys it. A GLB whose clips drive morph-target weights is never kept (the weights cannot be read back).
 
 **Constructors:**

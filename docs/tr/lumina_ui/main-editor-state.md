@@ -133,7 +133,8 @@ A live binding between an open sub-editor tab and its view model.
 | `setViewMode` | `void setViewMode(String mode)` | `ViewMode` parametresini günceller ve sisteme uygular. |
 | `setBufferVisualization` | `void setBufferVisualization(String mode)` | `BufferVisualization` parametresini günceller ve sisteme uygular. |
 | `toggleShowFlag` | `void toggleShowFlag(String flag)` | İlgili özelliğin açık/kapalı durumunu tersine çevirir. |
-| `reportFrameTime` | `void reportFrameTime(Duration cpu, Duration frame)` | `reportFrameTime` işlemini gerçekleştirir. |
+| `frameTimeListener` | `void Function(Duration cpu, Duration frame)? frameTimeListener` | Widget'ın bildirdiği her seviye viewport karesi (UI isolate süresi ve kare aralığı): testler ve araçlar için ölçüm kancası, FPS/CPU ortalamaları güncellenmeden önce çağrılır. |
+| `reportFrameTime` | `void reportFrameTime(Duration cpu, Duration frame)` | Bir seviye viewport karesini kaydeder (`FilamentWidget.onFrame`): önce `frameTimeListener`'ı, sonra `viewportStatsLabel`'ın arkasındaki 30 karelik FPS ve CPU ortalamalarını besler. |
 | `totalTriangles` | `int get totalTriangles` | `totalTriangles` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `translateSnapEnabled` | `bool get translateSnapEnabled` | `translateSnapEnabled` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `rotateSnapEnabled` | `bool get rotateSnapEnabled` | `rotateSnapEnabled` özelliğinin anlık değerini okuyan getter erişimcisi. |

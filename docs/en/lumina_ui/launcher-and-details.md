@@ -992,6 +992,8 @@ The launcher's note while files wait: "Open or create a project to import <names
 
 ### `runModelThumbnailEntry` (`lib/ui/core/host/model_thumbnail_entry.dart`)
 
+`runLuminaEditor` also subscribes `FilamentStallAudit.stalls` (flutter_filament) right after the graphics preferences apply: every section of engine work that held the UI isolate longer than 8 ms is logged as a warning from the `StallAudit` source, so a stutter in the editor names its cause in the Output Log.
+
 `Future<int> runModelThumbnailEntry(List<String> args)`: `runLuminaEditor` hands `--lumina-thumbnail` here before anything else (no window, crash session or bootstrap) and exits with its code. It applies the Graphics Device preference, loads the bundled studio IBL and runs `ModelThumbnailCommand` (`lumina_editor_data`). The Windows and Linux runners start the same windowless engine for the flag as for `--lumina-plugin-process`.
 
 ---

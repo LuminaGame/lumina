@@ -334,7 +334,8 @@ class PhysicsOverlayBuilder {
 /// bodies are authored at), lit by a sun and a sky of its own.
 /// Every line set becomes one [FilamentWireframeMesh]. Only sets whose
 /// geometry actually changed are rebuilt, and teardown follows the viewport's
-/// `flushAndWait` -> remove -> dispose ordering.
+/// remove -> dispose -> flush ordering (destruction is queued behind the frame
+/// in flight; nothing waits for the GPU).
 class PhysicsPreviewScene {
   LuminaWorld? _world;
 
@@ -568,12 +569,11 @@ class PhysicsPreviewScene {
       for (final name in _meshes.keys.toList()) {
         final set = wanted[name];
         if (set != null && _signatures[name] == _signatureOf(set)) continue;
-        engine.flushAndWait();
         final mesh = _meshes.remove(name)!;
         _signatures.remove(name);
         scene.removeEntity(mesh.entityId);
         mesh.dispose();
-        engine.flushAndWait();
+        engine.flush();
       }
       for (final set in sets) {
         if (_meshes.containsKey(set.name)) continue;
@@ -622,11 +622,9 @@ class PhysicsPreviewScene {
     _nextSolidSection = 0;
 
     if (_meshes.isEmpty) return;
-    final engine = world?.filamentEngineOrNull;
     final scene = world?.filamentSceneOrNull;
     for (final entry in _meshes.entries) {
       try {
-        engine?.flushAndWait();
         if (world != null && !world.isCleanedUp) scene?.removeEntity(entry.value.entityId);
         entry.value.dispose();
       } catch (_) {}

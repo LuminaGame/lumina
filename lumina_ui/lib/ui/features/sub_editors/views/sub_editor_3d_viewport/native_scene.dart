@@ -319,14 +319,16 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
     _meshGeneration++;
     if (engine == null || engine.isDisposed) return;
     try {
-      engine.flushAndWait();
+      // The previous asset's resources are destroyed behind the commands
+      // already queued: a flush orders it, no wait for the GPU.
+      engine.flush();
       _sceneEnvironment.detach();
       final pw = _previewWorld;
       if (pw != null) {
         _previewWorld = null;
         widget.onPreviewWorldDisposing?.call(pw);
         pw.cleanup();
-        engine.flushAndWait();
+        engine.flush();
       }
       if (_nativeWireframeMesh != null) {
         scene?.removeEntity(_nativeWireframeMesh!.entityId);
@@ -360,7 +362,7 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
         engine.destroyEntity(light);
       }
       _studioLights.clear();
-      engine.flushAndWait();
+      engine.flush();
       _releaseSocketAttachments();
       if (_nativeAsset != null) {
         if (scene != null) _nativeAsset!.removeFromScene(scene);

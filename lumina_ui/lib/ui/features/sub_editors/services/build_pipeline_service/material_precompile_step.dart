@@ -123,6 +123,7 @@ class FilamentMaterialCompiler {
       var completed = false;
       unawaited(done.then((_) => completed = true, onError: (_) => completed = true));
       while (!completed) {
+        // A build step on its own engine: waiting here holds no viewport.
         engine.flushAndWait();
         engine.pumpMessageQueues();
         if (completed) break;

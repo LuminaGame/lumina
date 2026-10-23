@@ -55,7 +55,6 @@ mixin _SubEditor3DViewportPoseAndMaterials on _SubEditor3DViewportStateBase {
           rm.setMaterialInstanceAt(entity, primitive, instance);
         }
       }
-      engine.flushAndWait();
     } catch (e) {
       debugPrint('[SubEditor3DViewport] section material override failed: $e');
     }
@@ -141,7 +140,6 @@ mixin _SubEditor3DViewportPoseAndMaterials on _SubEditor3DViewportStateBase {
           rm.setMorphWeights(entity, weightsList);
         }
       }
-      _nativeEngine?.flushAndWait();
     } catch (e) {
       debugPrint('[SubEditor3DViewport] Morph weights update error: $e');
     }
@@ -254,7 +252,6 @@ mixin _SubEditor3DViewportPoseAndMaterials on _SubEditor3DViewportStateBase {
       });
 
       _nativeAsset!.animator.updateBoneMatrices();
-      _nativeEngine?.flushAndWait();
     } catch (e) {
       debugPrint('[SubEditor3DViewport] Joint transforms update error: $e');
     }

@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kProfileMode, kReleaseMode;
 import 'package:flutter/gestures.dart' show kSecondaryMouseButton, PointerDeviceKind;
 import 'package:flutter/services.dart';
+import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
@@ -19,6 +23,10 @@ import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.da
 import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/camera_preview_panel.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/level_scene_view.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/blueprint_sub_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/skeletal_mesh/skeletal_mesh_sub_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/static_mesh_sub_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 
 import '../../test/helpers/scaffold_game_project.dart';
 
@@ -736,4 +744,206 @@ void main() {
     await shot('Viewport Smoke Scenario: a mesh selected, no camera preview');
     rec.save(scenario, usedAssets: usedAssets);
   }, timeout: const Timeout(Duration(minutes: 8)));
+
+  // The user's stutter scenarios on one editor: the level viewport with a
+  // placed AC unit, then the Static Mesh, Skeletal Mesh and Blueprint 3D
+  // tabs opened one after the other, a 19 MB GLB imported while the level
+  // viewport draws, and Play started. Every pump of the test loop is timed:
+  // a GPU wait or a synchronous upload on the UI isolate shows up as one long
+  // pump, and the stall audit names the section. Measured per phase: the
+  // longest pump, the level viewport's own frame time, and the audit's stalls.
+  testWidgets('Viewport Smoke Scenario: four 3D tabs and an import without stutter', (tester) async {
+    const scenario = 'Viewport Smoke Scenario: four 3D tabs and an import without stutter';
+    const usedAssets = [
+      'Props/AC_units/ac_unit_a_300x300.glb',
+      'mannequin/SKM_Manny_Simple.glb',
+      'fixtures/YVO3D_44368.glb',
+    ];
+    final assets = SmokeArtifacts.testAssetsDir.path;
+    final tempProjectsDir = Directory.systemTemp.createTempSync('lumina_smoke_stutter_');
+    addTearDown(() => tempProjectsDir.deleteSync(recursive: true));
+    final pDir = Directory('${tempProjectsDir.path}/SmokeStutter')..createSync(recursive: true);
+    const project = LuminaProject(projectName: 'SmokeStutter', activeLevel: 'contents/levels/L_Main.lmas');
+    File('${pDir.path}/SmokeStutter.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+    final vm = EditorViewModel(initialProject: project, projectLocation: tempProjectsDir.path);
+    addTearDown(vm.dispose);
+    await tester.runAsync(vm.ensureDefaultLevelAssets);
+    await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: '$assets/Props/AC_units/ac_unit_a_300x300.glb'));
+    await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: '$assets/mannequin/SKM_Manny_Simple.glb'));
+    vm.refreshAssets();
+    final acUnit = vm.realAssets.firstWhere((a) => a.type == AssetType.filamesh && a.fileName.startsWith('ac_unit_a'));
+    final manny = vm.realAssets.firstWhere(
+        (a) => (a.type == AssetType.filameshSk || a.type == AssetType.filamesh) && a.fileName.startsWith('SKM_Manny'));
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final boundaryKey = GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(
+      key: boundaryKey,
+      child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+    ));
+
+    // The level viewport's own frames while its tab draws (the first frame
+    // after a tab switch spans the pause), and the longest pump, per phase.
+    final levelFrames = <Duration>[];
+    var resumed = false;
+    vm.addListener(() {
+      if (vm.activeTabIndex != 0) resumed = true;
+    });
+    vm.frameTimeListener = (cpu, frame) {
+      if (vm.activeTabIndex != 0) return;
+      // The first frame after a tab switch spans the pause: not a frame time.
+      if (resumed) {
+        resumed = false;
+        return;
+      }
+      levelFrames.add(frame);
+    };
+    final phases = <Map<String, Object?>>[];
+    var phase = 'editor open';
+    var longestPump = Duration.zero;
+    var pumps = 0;
+    final stallsSeen = <FilamentStall>[];
+    final stallSub = FilamentStallAudit.stalls.listen(stallsSeen.add);
+    addTearDown(stallSub.cancel);
+    FilamentStallAudit.clear();
+
+    Future<void> settle([int frames = 10]) async {
+      for (var i = 0; i < frames; i++) {
+        final clock = Stopwatch()..start();
+        await tester.pump(const Duration(milliseconds: 16));
+        if (clock.elapsed > longestPump) longestPump = clock.elapsed;
+        pumps++;
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+      }
+    }
+
+    void endPhase() {
+      final frames = levelFrames.toList();
+      levelFrames.clear();
+      final sorted = frames.map((d) => d.inMicroseconds / 1000.0).toList()..sort();
+      final stalls = stallsSeen.toList();
+      stallsSeen.clear();
+      phases.add({
+        'phase': phase,
+        'pumps': pumps,
+        'longestPumpMs': longestPump.inMicroseconds / 1000.0,
+        'levelFrames': frames.length,
+        'levelFrameMedianMs': sorted.isEmpty ? null : sorted[sorted.length ~/ 2],
+        'levelFrameMaxMs': sorted.isEmpty ? null : sorted.last,
+        'stalls': [for (final s in stalls) s.toString()],
+      });
+      debugPrint('[stutter_smoke] ${phases.last}');
+      longestPump = Duration.zero;
+      pumps = 0;
+    }
+
+    final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+    Future<void> shot(String name) async =>
+        SmokeArtifacts.saveScreenshot(name, await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)), usedAssets: usedAssets);
+
+    await settle(30);
+    await tester.runAsync(() => vm.spawnActorFromAsset(acUnit, location: [0, 0, 0]));
+    await settle(40);
+    await rec.hold(const Duration(seconds: 2));
+    endPhase();
+
+    // Three more 3D tabs, each opened and left to draw, then back to the level.
+    Future<void> open(String label, String category, RealAssetInfo asset, Finder editor) async {
+      phase = 'open $label';
+      vm.openSubEditorTab(category, asset: asset);
+      await settle(40);
+      expect(editor, findsOneWidget, reason: '$label opened');
+      await rec.hold(const Duration(milliseconds: 1500));
+      await rec.captureIfChanged();
+      vm.selectTab(0);
+      await settle(30);
+      await rec.hold(const Duration(milliseconds: 1000));
+      endPhase();
+    }
+
+    await open('Static Mesh editor', 'Mesh', acUnit, find.byType(StaticMeshSubEditor));
+    await open('Skeletal Mesh editor', 'SKELETAL', manny, find.byType(SkeletalMeshSubEditor));
+
+    // A Blueprint whose component is the mannequin, on its 3D Viewport tab.
+    final bpDir = Directory('${pDir.path}/contents/blueprints')..createSync(recursive: true);
+    final mannyRel = manny.lmasPath!.substring(pDir.path.length + 1).replaceAll(r'\', '/');
+    final doc = LuminaBlueprintDocument(components: [
+      LuminaBlueprintComponent(id: 'root', name: 'DefaultSceneRoot', type: 'LuminaSceneComponent'),
+      LuminaBlueprintComponent(
+          id: 'mesh', name: 'Manny', type: 'LuminaSkeletalMeshComponent', parentId: 'root', properties: {'skeletalMeshAsset': mannyRel}),
+    ]);
+    final bpJson = doc.toFormattedJson();
+    File('${bpDir.path}/BP_Manny.lmas').writeAsBytesSync(LuminaAsset(
+      assetId: 'BP_Manny',
+      name: 'BP_Manny',
+      type: AssetType.actor,
+      rawPayload: Uint8List.fromList(utf8.encode(bpJson)),
+      rawMatSource: bpJson,
+      metadata: const {'parent_class': 'LuminaActor'},
+    ).toProtoBufferBytes());
+    vm.refreshAssets();
+    final bp = vm.realAssets.firstWhere((a) => a.fileName.startsWith('BP_Manny'));
+    phase = 'open Blueprint 3D Viewport';
+    vm.openSubEditorTab('Blueprint', asset: bp);
+    await settle(30);
+    expect(find.byType(BlueprintSubEditor), findsOneWidget);
+    await tester.tap(find.text('3D Viewport'));
+    await settle(40);
+    expect(find.byType(SubEditor3DViewport), findsWidgets);
+    await rec.hold(const Duration(milliseconds: 1500));
+    await shot('Viewport Smoke Scenario: four 3D tabs open, the Blueprint 3D Viewport on top');
+    expect(FilamentEngineHost.liveEngineCount, 1, reason: 'the four 3D tabs share one engine');
+    vm.selectTab(0);
+    await settle(30);
+    endPhase();
+
+    // A 19 MB GLB imported while the level viewport draws (and three other
+    // 3D tabs stay open): the viewport keeps its frame.
+    phase = 'import while drawing';
+    var imported = false;
+    await tester.runAsync(() async {
+      unawaited(vm.processImportPipeline(sourceFilePath: '$assets/fixtures/YVO3D_44368.glb').whenComplete(() => imported = true));
+    });
+    final importClock = Stopwatch()..start();
+    while (!imported) {
+      if (importClock.elapsed > const Duration(minutes: 3)) fail('the import did not finish in 3 minutes');
+      await settle(4);
+      await rec.captureIfChanged();
+    }
+    vm.refreshAssets();
+    await settle(20);
+    await rec.hold(const Duration(seconds: 1));
+    endPhase();
+
+    // Play: the game runs in the level viewport with the other tabs open.
+    phase = 'Play';
+    vm.startSimulation();
+    await settle(60);
+    await rec.hold(const Duration(seconds: 2));
+    await shot('Viewport Smoke Scenario: Play with four 3D tabs open after an import');
+    vm.stopSimulation();
+    await settle(20);
+    endPhase();
+    rec.save(scenario, usedAssets: usedAssets);
+
+    final report = File('${SmokeArtifacts.dir.path}/viewport_stutter_phases.json')
+      ..writeAsStringSync(const JsonEncoder.withIndent('  ').convert(phases));
+    debugPrint('[stutter_smoke] phases written to ${report.path}');
+    // No pump of the test loop (a UI-isolate frame) held longer than the
+    // budget: a blocking GPU wait or a synchronous multi-megabyte upload
+    // shows as hundreds of milliseconds. A debug build spends tens of
+    // milliseconds building a sub-editor's widgets, so its budget is wider.
+    final budgetMs = kProfileMode || kReleaseMode ? 100.0 : 600.0;
+    for (final p in phases) {
+      expect(p['longestPumpMs'] as double, lessThan(budgetMs), reason: '${p['phase']}: longest UI frame');
+    }
+    final importPhase = phases.firstWhere((p) => p['phase'] == 'import while drawing');
+    expect(importPhase['levelFrames'] as int, greaterThan(0), reason: 'the level viewport drew during the import');
+    expect(importPhase['levelFrameMaxMs'] as double, lessThan(budgetMs), reason: 'the import held no level-viewport frame');
+    final audited = [for (final p in phases) ...(p['stalls'] as List)];
+    expect(audited, isEmpty, reason: 'no audited GPU wait fired while the editor ran');
+  }, timeout: const Timeout(Duration(minutes: 15)));
 }

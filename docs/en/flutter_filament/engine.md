@@ -869,3 +869,24 @@ Component manager for associating string labels/names with entities.  In Filamen
 ---
 
 [Previous: flutter_filament](index.md) | [Up: flutter_filament](index.md) | [Next: Renderer, views and frame pacing](renderer-and-view.md)
+
+### `lib/src/stall_audit.dart`
+
+#### `class FilamentStall`
+
+One section of UI-isolate work that took longer than the audit's threshold: `name`, `duration` (wall time the section held the calling isolate) and `at` (when it ended). `toString()` reads `<name> took <ms> ms`.
+
+#### `class FilamentStallAudit`
+
+Measures named sections of engine work on the calling isolate and reports the ones longer than `threshold`, so an editor can show where a frame went. A section is any synchronous or asynchronous body: a scene setup, a GPU wait a caller still needs, a readback. Lumina Studio logs every stall as a warning (`StallAudit` source) and wraps the GPU waits it keeps (`level viewport teardown`, the viewport resize in `FilamentWidget`) in sections; `lumina_ui/test/architecture/no_gpu_waits_on_the_ui_isolate_test.dart` fails on any other `flushAndWait` in the editor or `lumina_editor_data`.
+
+| Member | Signature | Description |
+|---|---|---|
+| `threshold` | `static Duration threshold` | A section longer than this is a stall; 8 ms (half a frame at 60 Hz) by default. |
+| `capacity` | `static const int capacity` | How many stalls `recent` keeps (64). |
+| `recent` | `static List<FilamentStall> get recent` | The most recent stalls, oldest first. |
+| `stalls` | `static Stream<FilamentStall> get stalls` | Every stall as it is recorded (broadcast). |
+| `section` | `static T section<T>(String name, T Function() body)` | Runs `body` as the section `name`, recording it when it exceeds `threshold`; returns its result. |
+| `sectionAsync` | `static Future<T> sectionAsync<T>(String name, Future<T> Function() body)` | `section` for an asynchronous body: the time measured includes what it awaited, so name such sections after what they wait for. |
+| `record` | `static void record(String name, Duration duration)` | Records a section measured by the caller. |
+| `clear` | `static void clear()` | Forgets the recorded stalls (tests). |

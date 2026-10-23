@@ -33,6 +33,23 @@ void main() {
       expect(asset.metadata['polyCount'], equals('1250'));
     });
 
+    test('toProtoBufferBytesAsync writes the same bytes, on a background isolate for a large payload', () async {
+      final small = LuminaAsset(assetId: 'a', name: 'Small', type: AssetType.texture, rawPayload: Uint8List.fromList([1, 2, 3]));
+      expect(await small.toProtoBufferBytesAsync(), small.toProtoBufferBytes());
+      final big = LuminaAsset(
+        assetId: 'b',
+        name: 'Big',
+        type: AssetType.filamesh,
+        rawPayload: Uint8List.fromList(List.generate(LuminaAsset.backgroundSerializationBytes * 4, (i) => i & 0xFF)),
+        metadata: const {'payload_format': 'glb'},
+      );
+      final bytes = await big.toProtoBufferBytesAsync();
+      expect(bytes, big.toProtoBufferBytes());
+      final back = LuminaAsset.fromBytes(bytes);
+      expect(back.rawPayload, big.rawPayload);
+      expect(back.metadata['payload_format'], 'glb');
+    });
+
     test('Should serialize to Map/JSON and deserialize back accurately', () {
       final originalAsset = LuminaAsset(
         assetId: 'mat-9988',

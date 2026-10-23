@@ -14,6 +14,7 @@ import 'package:flutter_filament/src/native_surface.dart';
 import 'package:flutter_filament/src/renderer.dart';
 import 'package:flutter_filament/src/scene.dart';
 import 'package:flutter_filament/src/swap_chain.dart';
+import 'package:flutter_filament/src/stall_audit.dart';
 import 'package:flutter_filament/src/texture_readback.dart';
 import 'package:flutter_filament/src/view.dart';
 import 'package:flutter_filament/src/widget.dart';
@@ -478,16 +479,14 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
     if (targetWidth <= 0 || targetHeight <= 0) return;
     if (_viewWidth == targetWidth && _viewHeight == targetHeight) return;
 
-    try {
-      _engine?.flushAndWait();
-    } catch (_) {}
-
     _viewWidth = targetWidth;
     _viewHeight = targetHeight;
 
     if (_isInitialized && _engine != null) {
       try {
-        _engine?.flushAndWait();
+        // The one wait a resize keeps: the readbacks in flight target the
+        // swap chain about to go, so the GPU must be done with it first.
+        FilamentStallAudit.section('viewport resize', () => _engine?.flushAndWait());
         _swapChain?.dispose();
         _swapChain = _engine!.createHeadlessSwapChain(_viewWidth, _viewHeight);
         _view?.setViewport(0, 0, _viewWidth, _viewHeight);

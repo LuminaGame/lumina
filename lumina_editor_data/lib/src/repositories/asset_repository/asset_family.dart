@@ -33,9 +33,9 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
     for (final key in targetPaths.keys) {
       final path = '$projectPath/${targetPaths[key]}';
       final file = File(path);
-      if (file.existsSync()) {
+      if (await file.exists()) {
         try {
-           final bytes = file.readAsBytesSync();
+           final bytes = await file.readAsBytes();
            final asset = LuminaAsset.fromBytes(bytes);
            uuidMap[key] = asset.assetId;
         } catch (_) {
@@ -48,12 +48,13 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
 
     final baseName = convertedData['baseName'] as String;
 
-    // Helper to write asset
-    void writeAsset(String key, LuminaAsset asset) {
+    // Writes one asset; the file I/O is asynchronous so a 20 MB mesh never
+    // holds the calling isolate (the editor's UI) for the write.
+    Future<void> writeAsset(String key, LuminaAsset asset) async {
       final path = '$projectPath/${targetPaths[key]}';
       final file = File(path);
-      if (!file.parent.existsSync()) file.parent.createSync(recursive: true);
-      file.writeAsBytesSync(asset.toProtoBufferBytes());
+      await file.parent.create(recursive: true);
+      await file.writeAsBytes(await asset.toProtoBufferBytesAsync());
       emittedAssets.add(asset);
       writtenPaths?.add(targetPaths[key]!);
     }
@@ -86,7 +87,7 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
         },
         references: [],
       );
-      writeAsset(name, asset);
+      await writeAsset(name, asset);
 
       // Write companion image file (.png/.jpg/.ktx2) beside .lmas
       if (targetPaths.containsKey(name)) {
@@ -98,8 +99,8 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
         final lmasPath = '$projectPath/${targetPaths[name]}';
         final imgFile = File(lmasPath.replaceAll(RegExp(r'\.lmas$'), '.$ext'));
         try {
-          if (!imgFile.parent.existsSync()) imgFile.parent.createSync(recursive: true);
-          imgFile.writeAsBytesSync(payload);
+          await imgFile.parent.create(recursive: true);
+          await imgFile.writeAsBytes(payload);
         } catch (_) {}
       }
     }
@@ -144,7 +145,7 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
         },
         references: refs,
       );
-      writeAsset(name, asset);
+      await writeAsset(name, asset);
     }
 
     // 3.5. Animations
@@ -160,7 +161,7 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
           rawPayload: payload,
           references: [],
         );
-        writeAsset(name, asset);
+        await writeAsset(name, asset);
       }
     }
 
@@ -188,7 +189,7 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
     if (primaryType == AssetType.animation &&
         importMetadata['source_format'] == 'FBX' &&
         _isGlbBytes(primaryPayload)) {
-      _emitAnimation(
+      await _emitAnimation(
         projectPath: projectPath,
         targetPaths: targetPaths,
         convertedData: convertedData,
@@ -213,7 +214,7 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
         ...importMetadata,
       },
     );
-    writeAsset('primary', primaryAsset);
+    await writeAsset('primary', primaryAsset);
 
     // If it's a 3D mesh, also write companion .entity.glb file beside .lmas
     if (primaryType == AssetType.filamesh || primaryType == AssetType.filameshSk || primaryType == AssetType.actor) {
@@ -221,8 +222,8 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
         final primaryLmasPath = '$projectPath/${targetPaths['primary']}';
         final companionGlb = File(primaryLmasPath.replaceAll(RegExp(r'\.lmas$'), '.entity.glb'));
         try {
-          if (!companionGlb.parent.existsSync()) companionGlb.parent.createSync(recursive: true);
-          companionGlb.writeAsBytesSync(primaryPayload);
+          await companionGlb.parent.create(recursive: true);
+          await companionGlb.writeAsBytes(primaryPayload);
         } catch (_) {}
       }
     }
@@ -233,8 +234,8 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
       final ext = EncodedImageFormat.sniff(primaryPayload) == EncodedImageFormat.jpeg ? 'jpg' : 'png';
       final imgFile = File('$projectPath/${targetPaths['primary']}'.replaceAll(RegExp(r'\.lmas$'), '.$ext'));
       try {
-        if (!imgFile.parent.existsSync()) imgFile.parent.createSync(recursive: true);
-        imgFile.writeAsBytesSync(primaryPayload);
+        await imgFile.parent.create(recursive: true);
+        await imgFile.writeAsBytes(primaryPayload);
       } catch (_) {}
     }
 
@@ -247,15 +248,15 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
   /// template's clips); the first clip is the primary asset, further takes
   /// sit beside it as `<clip>.lmas`. Unbound, the primary keeps the clip GLB
   /// as its payload and says why in `retarget_status`.
-  void _emitAnimation({
+  Future<void> _emitAnimation({
     required String projectPath,
     required Map<String, String> targetPaths,
     required Map<String, dynamic> convertedData,
     required String primaryAssetId,
     required Map<String, String> importMetadata,
-    required void Function(String key, LuminaAsset asset) writeAsset,
+    required Future<void> Function(String key, LuminaAsset asset) writeAsset,
     List<String>? writtenPaths,
-  }) {
+  }) async {
     final baseName = convertedData['baseName'] as String;
     final payload = convertedData['primaryPayload'] as Uint8List;
     final thumbnail = convertedData['thumbnailPng'] as Uint8List?;
@@ -289,9 +290,9 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
             },
           );
           if (i == 0) {
-            writeAsset('primary', asset);
+            await writeAsset('primary', asset);
           } else {
-            File('$primaryDir/${clip.clipName}.lmas').writeAsBytesSync(asset.toProtoBufferBytes());
+            await File('$primaryDir/${clip.clipName}.lmas').writeAsBytes(await asset.toProtoBufferBytesAsync());
             writtenPaths?.add('${File(targetPaths['primary']!).parent.path}/${clip.clipName}.lmas');
           }
           _logger.log(
@@ -311,7 +312,7 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
       _logger.log('Animation "$baseName" $note', level: 'warning', source: 'AssetRepository');
     }
 
-    writeAsset(
+    await writeAsset(
       'primary',
       LuminaAsset(
         assetId: primaryAssetId,

@@ -74,7 +74,9 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
       return;
     }
     try {
-      engine.flushAndWait();
+      // The whole native scene goes: the one wait the level viewport keeps,
+      // so nothing in flight still references the assets freed below.
+      FilamentStallAudit.section('level viewport teardown', engine.flushAndWait);
       _rtxController?.dispose();
       _rtxController = null;
       _sceneEnvironment.detach();
@@ -145,10 +147,9 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
     if (_nativeGrid != null) {
       if (_lastGridStep != vm.gridStep || _lastGridExtent != vm.gridExtent) {
         _nativeGrid!.removeFromScene(_nativeScene!);
-
-        // Native teardown requires flush
-        _nativeEngine!.flushAndWait();
-
+        // Filament destroys the grid's buffers after the commands already
+        // queued; a flush orders that without waiting for the GPU.
+        _nativeEngine!.flush();
         _nativeGrid!.dispose();
         _nativeGrid = null;
       }
@@ -486,7 +487,6 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
             _selectionBoxes[selectedId] = box;
 
             final glb = actor.meshData;
-            _nativeEngine?.flushAndWait();
             if (glb != null &&
                 glb.minBounds.length >= 3 &&
                 glb.maxBounds.length >= 3) {
@@ -504,7 +504,6 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
                 baseScale: 1.0,
               );
             }
-            _nativeEngine?.flushAndWait();
             box.addToScene(_nativeScene!);
           }
 

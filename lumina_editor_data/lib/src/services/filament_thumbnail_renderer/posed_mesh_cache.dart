@@ -44,7 +44,7 @@ mixin _ThumbnailPosedMeshCache on _FilamentThumbnailRendererState {
     if (asset == null) return;
     try {
       _loader?.destroyAsset(asset);
-      _engine?.flushAndWait();
+      _engine?.flush();
     } catch (e) {
       _logger.log(
         'Thumbnail renderer: releasing the posed mesh failed: $e',

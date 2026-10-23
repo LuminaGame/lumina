@@ -169,6 +169,8 @@ A square heightmap terrain plus its foliage layers — the single source of trut
 | `metadata` | `Map<String, String> metadata` | Holds the `metadata` property or configuration state. |
 | `toMap` | `Map<String, dynamic> toMap()` | Executes `toMap` operation. |
 | `toProtoBufferBytes` | `Uint8List toProtoBufferBytes()` | Serializes asset to binary Protobuf bytes format with LMAS magic header. |
+| `toProtoBufferBytesAsync` | `Future<Uint8List> toProtoBufferBytesAsync()` | `toProtoBufferBytes` without holding the calling isolate: an asset whose payload and thumbnail reach `backgroundSerializationBytes` (256 KB) is encoded on a background isolate (base64 and JSON of a 19 MB mesh take about 200 ms), a smaller one inline. The asset repository writes imported families with it. |
+| `backgroundSerializationBytes` | `static const int backgroundSerializationBytes` | The payload size from which `toProtoBufferBytesAsync` uses a background isolate. |
 
 ## `lib/src/formats/lumina_asset_summary.dart`
 
