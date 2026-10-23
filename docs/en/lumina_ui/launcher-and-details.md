@@ -696,7 +696,7 @@ Shrinks the app window to a fixed, centred, always-on-top splash and puts it bac
 
 ### `class LuminaSplashScreen`
 
-Lumina Studio splash and loading screen — frameless 720×400 centered window with glowing Lumina logo, "Lumina Studio", engine/project subtitle, live status text, bottom-edge 2px accent progress bar, and hover/cancel controls. Used during initial launcher startup (project list scan), direct project opening (`--project <dir>`), and project resolution from the launcher grid.
+Lumina Studio splash and loading screen — frameless 720×400 centered window with the Prism L mark, "Lumina Studio", engine/project subtitle, live status text, bottom-edge 2px accent progress bar, and hover/cancel controls. Used during initial launcher startup (project list scan), direct project opening (`--project <dir>`), and project resolution from the launcher grid.
 
 **Constructors:**
 

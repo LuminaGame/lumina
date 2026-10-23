@@ -54,8 +54,8 @@ void main() {
   testWidgets('launcher from the host', (tester) async {
     await tester.runAsync(EditorAssets.configure);
     expect(EditorAssets.packaged, isTrue, reason: 'lumina_ui assets are bundled as packages/lumina_ui/…');
-    final logo = await tester.runAsync(() => EditorAssets.bundle.load('assets/logo_color.png'));
-    expect(logo!.lengthInBytes, greaterThan(1000));
+    final logo = await tester.runAsync(() => EditorAssets.bundle.load('assets/brand/prism_l.svg'));
+    expect(logo!.lengthInBytes, greaterThan(300));
     final mono = await tester.runAsync(() => EditorAssets.bundle.load('assets/fonts/JetBrainsMono-Regular.ttf'));
     expect(mono!.lengthInBytes, greaterThan(1000));
     // The engine guide (lumina_ui's `skills/` assets) loads in the host too.

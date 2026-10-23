@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Lumina's mark: the Prism L. A slanted stem with a lit top facet, a foot
+       that tilts up to the light and a faint under-shard, in the three blues.
+       One source: every app icon is rendered from these five polygons
+       (tool/brand/render_icons.dart) and LuminaMark paints the same geometry. -->
+  <polygon id="stem" points="26,12 46,19 46,74 26,67" fill="#31a5da"/>
+  <polygon id="top-facet" points="26,12 46,19 54,8 34,1" fill="#81c8e8"/>
+  <polygon id="foot" points="46,74 88,60 88,46 46,60" fill="#5db8e1"/>
+  <polygon id="foot-facet" points="46,60 88,46 80,38 46,50" fill="#81c8e8"/>
+  <polygon id="under-shard" points="26,67 46,74 46,88 26,81" fill="#31a5da" fill-opacity="0.55"/>
+</svg>

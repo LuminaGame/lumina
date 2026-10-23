@@ -696,7 +696,7 @@ Uygulama penceresini sabit boyutlu, ortalanmış, her zaman üstte duran bir spl
 
 ### `class LuminaSplashScreen`
 
-Lumina Studio açılış ve yükleme ekranı — parlayan Lumina logosu, "Lumina Studio", motor/proje alt başlığı, canlı durum metni, alt kenarda 2 px vurgu ilerleme çubuğu ve üzerine gelindiğinde/her zaman gösterilen iptal kontrollerine sahip 720×400 çerçevesiz merkezlenmiş pencere. İlk launcher başlangıcında (proje listesi taraması), doğrudan proje açılışında (`--project <dir>`) ve launcher tablosundan proje çözülürken yükleme ekranı olarak kullanılır.
+Lumina Studio açılış ve yükleme ekranı — Prism L işareti, "Lumina Studio", motor/proje alt başlığı, canlı durum metni, alt kenarda 2 px vurgu ilerleme çubuğu ve üzerine gelindiğinde/her zaman gösterilen iptal kontrollerine sahip 720×400 çerçevesiz merkezlenmiş pencere. İlk launcher başlangıcında (proje listesi taraması), doğrudan proje açılışında (`--project <dir>`) ve launcher tablosundan proje çözülürken yükleme ekranı olarak kullanılır.
 
 **Yapıcı Metotlar (Constructors):**
 

@@ -1,6 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/create_project_view_model.dart';
 import 'package:lumina_ui/ui/features/launcher/views/installed_template_widgets.dart';
@@ -39,7 +40,7 @@ class _CreateProjectDialogState extends State<CreateProjectDialog> {
     return AlertDialog(
       title: Row(
         children: [
-          Image.asset('assets/logo_color.png', height: 24),
+          const LuminaMark(size: 24),
           const SizedBox(width: 8),
           const Text('Create New Project'),
         ],

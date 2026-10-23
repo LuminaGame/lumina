@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
 import 'package:lumina_ui/ui/features/launcher/views/splash_window.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -207,11 +208,7 @@ class _LuminaSplashScreenState extends State<LuminaSplashScreen> with SingleTick
                           crossAxisAlignment: CrossAxisAlignment.end,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset(
-                              'assets/logo_color.png',
-                              height: 40,
-                              errorBuilder: (_, _, _) => const SizedBox(height: 40),
-                            ),
+                            const LuminaLockup(markSize: 40),
                             const SizedBox(height: 6),
                             const Text(
                               '© Lumina',
@@ -354,11 +351,7 @@ class _SplashArt extends StatelessWidget {
       ),
       child: Align(
         alignment: const Alignment(0, -0.35),
-        child: Image.asset(
-          'assets/logo_color.png',
-          height: 96,
-          errorBuilder: (_, _, _) => const SizedBox.shrink(),
-        ),
+        child: const LuminaMark(size: 96),
       ),
     );
     return Image.asset(

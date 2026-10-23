@@ -126,7 +126,7 @@ msix_config:
   publisher_display_name: Lumina Engine
   identity_name: LuminaEngine.LuminaEngine
   publisher: CN=76408633-2846-4256-BED6-0DF8748A95C6
-  logo_path: assets/logo_color.png
+  logo_path: assets/brand/store_logo.png
   # The marketplace (internet) and the loopback MCP server.
   capabilities: internetClient,privateNetworkClientServer
   execution_alias: lumina-studio
@@ -143,6 +143,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    - assets/brand/
     # Filament's logo (Apache-2.0, LICENSE alongside).
     - assets/third_party/filament/
     - assets/ibl/default_env/default_env_ibl.ktx

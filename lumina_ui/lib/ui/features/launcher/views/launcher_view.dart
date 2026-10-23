@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
+import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
 import 'package:lumina_ui/editor_entry.dart' show appThemeModeNotifier;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme_data.dart';
@@ -174,15 +175,7 @@ class _LauncherViewState extends _LauncherViewStateBase with _LauncherProjectOpe
               ),
               child: Row(
                 children: [
-                  Image.asset(
-                    isDark ? 'assets/logo_white.png' : 'assets/logo_black.png',
-                    height: 52,
-                    errorBuilder: (ctx, _, _) => const Icon(
-                      LucideIcons.box,
-                      size: 24,
-                      color: EditorColors.primary,
-                    ),
-                  ),
+                  const LuminaLockup(markSize: 36),
 
                   const SizedBox(width: 10),
                   Container(
@@ -294,15 +287,7 @@ class _LauncherViewState extends _LauncherViewStateBase with _LauncherProjectOpe
                           padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
-                              Image.asset(
-                                isDark ? 'assets/logo_white.png' : 'assets/logo_black.png',
-                                height: 20,
-                                errorBuilder: (ctx, _, _) => const Icon(
-                                  LucideIcons.box,
-                                  size: 16,
-                                  color: EditorColors.mutedForeground,
-                                ),
-                              ),
+                              const LuminaLockup(markSize: 20, compact: true),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(

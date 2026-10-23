@@ -11,7 +11,7 @@ mixin _ProjectSettingsLayout on _ProjectSettingsSubEditorStateBase {
       color: EditorColors.cardHeader,
       child: Row(
         children: [
-          Image.asset('assets/logo_color.png', height: 18),
+          const LuminaMark(size: 18),
           const SizedBox(width: 8),
           const Text('Project Settings',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: EditorColors.foreground)),

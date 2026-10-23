@@ -25,6 +25,7 @@ Continuation of App shell and shared UI: the remaining public files under `lib/`
 - [`lib/ui/core/theme/editor_theme_data.dart`](#libuicorethemeeditor_theme_datadart)
 - [`lib/ui/core/theme/editor_theme_store.dart`](#libuicorethemeeditor_theme_storedart)
 - [`lib/ui/core/widgets/editor_context_menu.dart`](#libuicorewidgetseditor_context_menudart)
+- [`lib/ui/core/widgets/lumina_logo.dart`](#libuicorewidgetslumina_logodart)
 
 ## `lib/editor_entry.dart`
 
@@ -854,3 +855,41 @@ This widget listens to raw pointer events instead, outside the gesture arena: po
 ---
 
 [Previous: App shell and shared UI](core.md) | [Up: lumina_ui (Lumina Studio)](index.md) | [Next: App shell and shared UI (continued, part 2)](core-continued-2.md)
+
+## `lib/ui/core/widgets/lumina_logo.dart`
+
+### `class LuminaBrand`
+
+Lumina's brand constants: the three blues of the mark (`blueDeep` `#31A5DA`, `blueMid` `#5DB8E1`, `blueLight` `#81C8E8`) and the five facets of the Prism L on its 100 × 100 grid. `assets/brand/prism_l.svg` carries the same polygons; the icon renderer (`tool/brand/render_icons.dart`) and `LuminaMark` read the same geometry, so the mark is drawn once, everywhere.
+
+**Members:**
+
+| Member | Type | Description |
+|---|---|---|
+| `facets` | `static const List<PrismFacet>` | The facets in paint order: stem, top facet, foot, foot facet, under-shard (55 %). |
+| `monoFacets` | `static List<PrismFacet> monoFacets(Color color)` | The mono mark: one colour, no under-shard. |
+
+### `class PrismFacet`
+
+One polygon of the mark on the 100 × 100 grid: `name`, `points`, `color`, `opacity`.
+
+### `class LuminaMark`
+
+The Prism L at `size` px: the three blues, or one colour with `mono: true` (`color` is the mono fill; the foreground colour when null). Painted by `PrismLPainter`, so it needs no asset and is crisp at every size (the status bar uses 11 px, the splash 96 px).
+
+**Constructors:**
+
+- `const LuminaMark({super.key, this.size = 30, this.mono = false, this.color})`
+
+### `class PrismLPainter`
+
+Paints a facet list scaled from the 100 × 100 grid into the box, centred on the shortest side.
+
+### `class LuminaLockup`
+
+The lockup: the mark beside `LUMINA` (800, 12 px, 0.12 em tracking) over `Studio` (600, 10 px, muted); `compact: true` puts the mark and `LUMINA` on one line (the status bar, small headers). The menu bar, the launcher header, the splash and the build splash use it.
+
+**Constructors:**
+
+- `const LuminaLockup({super.key, this.markSize = 30, this.compact = false, this.foreground, this.muted})`
+

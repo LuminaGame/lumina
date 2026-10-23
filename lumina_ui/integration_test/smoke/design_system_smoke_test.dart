@@ -47,6 +47,10 @@ import 'package:lumina_ui/ui/features/main_editor/views/content_browser_widget.d
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/outliner_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/viewport_widget.dart';
+import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
+import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
+import 'package:lumina_ui/ui/features/launcher/views/launcher_view.dart';
+import 'package:lumina_ui/ui/features/launcher/views/lumina_splash_screen.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// The prototype's retired predecessors. None of these may survive anywhere in
@@ -179,7 +183,7 @@ void main() {
 
     const List<String> assetRels = <String>[
       'Props/AC_units/roof_aircon_unit_150x150_a.glb',
-      'Props/Barrels/barrel_small_a.glb',
+      'Props/Barrels/fuel_barrel_red.glb',
       'Props/Banana Bunch/banana_bunch_long.glb',
     ];
     final List<String> usedAssets = <String>[];
@@ -368,7 +372,7 @@ void main() {
     });
     const List<String> assetRels = <String>[
       'Props/Access_cards/access_card_blue.glb',
-      'Props/Barrels/barrel_small_a.glb',
+      'Props/Barrels/fuel_barrel_red.glb',
       'Props/AC_units/roof_aircon_unit_150x150_a.glb',
     ];
     final List<String> usedAssets = <String>[];
@@ -654,6 +658,117 @@ void main() {
     // ignore: avoid_print
     print(report);
     expect(File('${configDir.path}/editor_preferences.json').readAsStringSync(), contains('"theme": "Lumina Dark"'));
+    expect(failures, isEmpty, reason: '${failures.join('\n')}\n$report');
+  }, timeout: const Timeout(Duration(minutes: 8)));
+
+  testWidgets('Design System Smoke: prism l logo and lockup', (WidgetTester tester) async {
+    const String testName = 'Design System Smoke: prism l logo and lockup';
+    final Directory tempDir = Directory.systemTemp.createTempSync('design_system_logo_smoke_');
+    final Directory configDir = Directory('${tempDir.path}/config')..createSync();
+    final Directory pDir = Directory('${tempDir.path}/LogoSmoke')..createSync(recursive: true);
+    Directory('${pDir.path}/contents/meshes').createSync(recursive: true);
+    Directory('${pDir.path}/contents/levels').createSync(recursive: true);
+    File('${pDir.path}/LogoSmoke.lmproject').writeAsStringSync('{}');
+    addTearDown(() {
+      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    });
+    final List<String> usedAssets = <String>[];
+    final File barrel = File('${SmokeArtifacts.testAssetsDir.path}/Props/Barrels/fuel_barrel_red.glb');
+    if (barrel.existsSync()) {
+      barrel.copySync('${pDir.path}/contents/meshes/fuel_barrel_red.glb');
+      usedAssets.add(barrel.path);
+    }
+    expect(usedAssets, isNotEmpty, reason: 'the smoke must load a real model from test-assets/');
+
+    final GlobalKey boundaryKey = GlobalKey();
+    final double dpr = tester.view.devicePixelRatio;
+    Uint8List crop(Uint8List png, Rect r) {
+      final img.Image im = img.decodePng(png)!;
+      final int x = (r.left * dpr).round().clamp(0, im.width - 1);
+      final int y = (r.top * dpr).round().clamp(0, im.height - 1);
+      final int w = (r.width * dpr).round().clamp(1, im.width - x);
+      final int h = (r.height * dpr).round().clamp(1, im.height - y);
+      return Uint8List.fromList(img.encodePng(img.copyCrop(im, x: x, y: y, width: w, height: h)));
+    }
+
+    // The mark's three blues must be painted inside the rectangle: the proof
+    // that the Prism L, not a fallback icon, is on screen.
+    final StringBuffer report = StringBuffer('MEASURE prism l mark:\n');
+    final List<String> failures = <String>[];
+    void expectMark(String where, Uint8List png, Rect r) {
+      final Map<int, int> hist = chromeHistogram(crop(png, r));
+      final int deep = hist[LuminaBrand.blueDeep.toARGB32() & 0xFFFFFF] ?? 0;
+      final int mid = hist[LuminaBrand.blueMid.toARGB32() & 0xFFFFFF] ?? 0;
+      final int light = hist[LuminaBrand.blueLight.toARGB32() & 0xFFFFFF] ?? 0;
+      report.writeln('  $where: deep $deep px, mid $mid px, light $light px');
+      if (deep == 0 || mid == 0 || light == 0) failures.add('$where: the three blues are not all painted');
+    }
+
+    // --- 1. the launcher: the lockup in the header, the mono mark in the empty state
+    final LauncherViewModel launcher = LauncherViewModel(configDir: configDir);
+    await tester.pumpWidget(RepaintBoundary(
+      key: boundaryKey,
+      child: ShadcnApp(theme: luminaEditorTheme(), home: LauncherView(viewModel: launcher)),
+    ));
+    await settle(tester, frames: 40);
+    final SmokeRecorder rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+    await rec.hold(const Duration(seconds: 3));
+    expect(find.byType(LuminaLockup), findsWidgets, reason: 'the launcher header shows the lockup');
+    Uint8List png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    final Rect header = tester.getRect(find.byType(LuminaLockup).first);
+    expectMark('launcher header lockup', png, header.inflate(4));
+    SmokeArtifacts.saveScreenshot('$testName — launcher header', crop(png, Rect.fromLTWH(0, 0, 720, 80)), usedAssets: usedAssets);
+
+    // --- 2. the splash: the mark alone over the gradient
+    await tester.pumpWidget(RepaintBoundary(
+      key: boundaryKey,
+      child: ShadcnApp(
+        theme: luminaEditorTheme(),
+        home: const LuminaSplashScreen(subtitle: 'Lumina Editor · LogoSmoke', statusText: 'Loading…', manageWindow: false),
+      ),
+    ));
+    await settle(tester, frames: 30);
+    await rec.hold(const Duration(seconds: 3));
+    png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    final Rect splashMark = tester.getRect(find.byType(LuminaMark).first);
+    expectMark('splash mark', png, splashMark.inflate(4));
+    SmokeArtifacts.saveScreenshot('$testName — splash', png, usedAssets: usedAssets);
+
+    // --- 3. the editor: the menu bar lockup and the About dialog's mark
+    final EditorViewModel vm = EditorViewModel(
+      initialProject: LuminaProject(
+        projectName: 'LogoSmoke',
+        activeLevel: 'contents/levels/L_Main.lmas',
+        settings: EngineScalabilitySettings(targetFps: 60),
+      ),
+      projectLocation: tempDir.path,
+    );
+    addTearDown(vm.dispose);
+    await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+    await tester.pumpWidget(RepaintBoundary(
+      key: boundaryKey,
+      child: ShadcnApp(theme: luminaEditorTheme(), home: Scaffold(child: MainEditorView(viewModel: vm))),
+    ));
+    await settle(tester);
+    await rec.hold(const Duration(seconds: 3));
+    png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    final Rect menuRow = tester.getRect(find.byType(MenuBarWidget).first);
+    final Rect lockup = tester.getRect(find.descendant(of: find.byType(MenuBarWidget), matching: find.byType(LuminaLockup)).first);
+    expectMark('menu bar lockup', png, lockup.inflate(4));
+    SmokeArtifacts.saveScreenshot('$testName — menu bar lockup', crop(png, Rect.fromLTWH(menuRow.left, menuRow.top, 480, 56)), usedAssets: usedAssets);
+
+    vm.commands.execute('help.about', tester.element(find.byType(MainEditorView)));
+    await settle(tester, frames: 30);
+    await rec.hold(const Duration(seconds: 2));
+    expect(find.text('About Lumina Studio'), findsOneWidget);
+    png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    final Rect aboutMark = tester.getRect(find.descendant(of: find.byType(AlertDialog), matching: find.byType(LuminaMark)).first);
+    expectMark('about dialog mark', png, aboutMark.inflate(4));
+    SmokeArtifacts.saveScreenshot('$testName — about dialog', png, usedAssets: usedAssets);
+    SmokeArtifacts.saveScreenshot(testName, png, usedAssets: usedAssets);
+    rec.save(testName, usedAssets: usedAssets);
+    // ignore: avoid_print
+    print(report);
     expect(failures, isEmpty, reason: '${failures.join('\n')}\n$report');
   }, timeout: const Timeout(Duration(minutes: 8)));
 }

@@ -107,10 +107,10 @@ mixin _ProjectSettingsDescription on _ProjectSettingsSubEditorStateBase {
       _row(
         'Monochrome Icon',
         Row(children: [
-          Image.asset('assets/logo_white.png', height: 28),
+          const LuminaMark(size: 28, mono: true),
           const SizedBox(width: 12),
           const Expanded(
-            child: Text('assets/logo_white.png — monochrome system tray icon of the editor; not used as an app icon',
+            child: Text('assets/brand/prism_l_mono.svg — monochrome system tray icon of the editor; not used as an app icon',
                 style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
           ),
         ]),

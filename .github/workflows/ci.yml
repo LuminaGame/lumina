@@ -86,6 +86,9 @@ jobs:
       - name: melos run analyze
         working-directory: lumina
         run: melos run analyze
+      - name: Brand icons are rendered from the source SVG
+        working-directory: lumina/lumina_ui
+        run: dart run tool/brand/render_icons.dart --check
 
   unit:
     name: Unit tests (noop backend)

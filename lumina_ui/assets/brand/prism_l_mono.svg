@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- The Prism L in one colour (currentColor): engraving, single-colour print,
+       the 20 px favicon. The under-shard is dropped. -->
+  <g fill="currentColor">
+    <polygon id="stem" points="26,12 46,19 46,74 26,67"/>
+    <polygon id="top-facet" points="26,12 46,19 54,8 34,1"/>
+    <polygon id="foot" points="46,74 88,60 88,46 46,60"/>
+    <polygon id="foot-facet" points="46,60 88,46 80,38 46,50"/>
+  </g>
+</svg>

@@ -117,7 +117,7 @@ contents:
     file_info:
       mode: 0644
   # The app icon: the Lumina emblem without the wordmark.
-  - src: ./lumina_ui/assets/app_icon.png
+  - src: ./lumina_ui/assets/brand/icon-512-linux.png
     dst: /usr/share/icons/hicolor/512x512/apps/lumina-studio.png
     file_info:
       mode: 0644

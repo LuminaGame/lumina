@@ -4,6 +4,7 @@ import 'package:lumina_editor_data/lumina_editor.dart'
     show LuminaGraphicsDevices, LuminaRelease, LuminaRenderBackendInfo, LuminaRtxController, ObservableAsValueListenable;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// The renderer the status bar and About name: `RHI: Vulkan · <gpu>`, the GPU
@@ -99,7 +100,7 @@ class AboutLuminaDialog extends StatelessWidget {
           children: [
             Row(
               children: [
-                Image.asset('assets/logo_color.png', height: 36),
+                const LuminaMark(size: 36),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(

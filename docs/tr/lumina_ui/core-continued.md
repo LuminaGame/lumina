@@ -25,6 +25,7 @@ Uygulama kabuğu ve ortak UI sayfasının devamı: `lib/`, `lib/testing/`, `lib/
 - [`lib/ui/core/theme/editor_theme_data.dart`](#libuicorethemeeditor_theme_datadart)
 - [`lib/ui/core/theme/editor_theme_store.dart`](#libuicorethemeeditor_theme_storedart)
 - [`lib/ui/core/widgets/editor_context_menu.dart`](#libuicorewidgetseditor_context_menudart)
+- [`lib/ui/core/widgets/lumina_logo.dart`](#libuicorewidgetslumina_logodart)
 
 ## `lib/editor_entry.dart`
 
@@ -854,3 +855,41 @@ This widget listens to raw pointer events instead, outside the gesture arena: po
 ---
 
 [Önceki: Uygulama kabuğu ve ortak UI](core.md) | [Üst: lumina_ui (Lumina Studio)](index.md) | [Sonraki: Uygulama kabuğu ve ortak UI (devamı, bölüm 2)](core-continued-2.md)
+
+## `lib/ui/core/widgets/lumina_logo.dart`
+
+### `class LuminaBrand`
+
+Lumina'nın marka sabitleri: işaretin üç mavisi (`blueDeep` `#31A5DA`, `blueMid` `#5DB8E1`, `blueLight` `#81C8E8`) ve Prism L'nin 100 × 100 ızgaradaki beş yüzü. `assets/brand/prism_l.svg` aynı çokgenleri taşır; ikon üretici (`tool/brand/render_icons.dart`) ve `LuminaMark` aynı geometriyi okur, böylece işaret her yerde bir kez çizilir.
+
+**Üyeler:**
+
+| Üye | Tür | Açıklama |
+|---|---|---|
+| `facets` | `static const List<PrismFacet>` | Boyama sırasıyla yüzler: gövde, üst yüz, ayak, ayak yüzü, alt kıymık (% 55). |
+| `monoFacets` | `static List<PrismFacet> monoFacets(Color color)` | Tek renkli işaret: tek renk, alt kıymık yok. |
+
+### `class PrismFacet`
+
+İşaretin 100 × 100 ızgaradaki bir çokgeni: `name`, `points`, `color`, `opacity`.
+
+### `class LuminaMark`
+
+`size` px'de Prism L: üç mavi, ya da `mono: true` ile tek renk (`color` tek renk dolgusu; null ise ön plan rengi). `PrismLPainter` ile çizilir; asset gerektirmez ve her boyutta nettir (durum çubuğu 11 px, splash 96 px kullanır).
+
+**Kurucular:**
+
+- `const LuminaMark({super.key, this.size = 30, this.mono = false, this.color})`
+
+### `class PrismLPainter`
+
+Bir yüz listesini 100 × 100 ızgaradan kutuya ölçekleyerek, kısa kenara ortalayarak boyar.
+
+### `class LuminaLockup`
+
+Kilit: işaretin yanında `LUMINA` (800, 12 px, 0.12 em aralık), altında `Studio` (600, 10 px, soluk); `compact: true` işaret ile `LUMINA`'yı tek satıra koyar (durum çubuğu, küçük başlıklar). Menü çubuğu, launcher başlığı, splash ve build splash bunu kullanır.
+
+**Kurucular:**
+
+- `const LuminaLockup({super.key, this.markSize = 30, this.compact = false, this.foreground, this.muted})`
+

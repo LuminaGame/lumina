@@ -1,6 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorSlot, MinimizedPluginDialogsBar;
+import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/about_dialog.dart' show rhiLabel;
@@ -34,7 +35,7 @@ class EditorStatusBar extends StatelessWidget {
         _ContentDrawerButton(viewModel: viewModel),
         // Minimized plugin dialogs dock here with their plugin icon and progress.
           const MinimizedPluginDialogsBar(),
-          Image.asset('assets/logo_white.png', height: 11),
+          const LuminaMark(size: 11, mono: true),
           const SizedBox(width: 6),
           // Engine · Filament · level · counts;
           // the level and counts truncate first, never a version.

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
 import 'package:lumina_ui/ui/core/editor_panels/editor_panel_docking.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/window/lumina_window.dart';
@@ -204,24 +205,10 @@ class MenuBarWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Engine Color SVG Logo & Title
-              Column(
-                children: [
-                  Image.asset('assets/logo_color.png', height: 48),
-                  const SizedBox(width: 6),
-                  Row(
-                    children: [
-                      const Text(
-                        'Studio',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: EditorColors.foreground,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              // The Prism L lockup: the mark beside LUMINA / Studio.
+              const Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: LuminaLockup(),
               ),
 
               const SizedBox(width: 12),

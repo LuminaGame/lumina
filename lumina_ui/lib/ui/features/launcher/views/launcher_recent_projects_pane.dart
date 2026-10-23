@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
+import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
@@ -156,15 +157,7 @@ class _LauncherRecentProjectsPaneState extends State<LauncherRecentProjectsPane>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Image.asset(
-            'assets/logo_white.png',
-            height: 48,
-            errorBuilder: (ctx, _, _) => const Icon(
-              LucideIcons.folderOpen,
-              size: 48,
-              color: EditorColors.mutedForeground,
-            ),
-          ),
+          const LuminaMark(size: 48, mono: true, color: EditorColors.mutedForeground),
           const SizedBox(height: 16),
           const Text(
             'No projects yet',

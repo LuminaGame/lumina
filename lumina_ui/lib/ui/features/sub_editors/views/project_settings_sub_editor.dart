@@ -16,6 +16,7 @@ import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/key_bin
 import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/neural_rendering_warning_dialog.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/web_loading_style_section.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/web_module_download_panel.dart';
+import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
 
 part 'project_settings/sub_editor/state.dart';
 part 'project_settings/sub_editor/layout.dart';

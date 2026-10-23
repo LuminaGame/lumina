@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:lumina_editor_data/lumina_editor.dart' show EngineBootstrapStep, EngineCheckout, EnginePrerequisite;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
 import 'package:lumina_ui/ui/core/host/editor_host.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/engine_bootstrap/view_models/engine_bootstrap_view_model.dart';
@@ -90,7 +91,7 @@ class _EngineBootstrapViewState extends State<EngineBootstrapView> {
             children: [
               Row(
                 children: [
-                  Image.asset('assets/logo_color.png', height: 36, errorBuilder: (_, _, _) => const SizedBox(height: 36)),
+                  const LuminaMark(size: 36),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text('Setting up Lumina Studio',

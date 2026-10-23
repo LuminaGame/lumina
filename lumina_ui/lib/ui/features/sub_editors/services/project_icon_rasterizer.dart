@@ -20,7 +20,7 @@ class ProjectIconRasterizer {
 
   /// The Lumina logo the editor ships (Project Settings shows it as the
   /// default Project Icon).
-  static const String defaultIconAsset = 'assets/logo_color.png';
+  static const String defaultIconAsset = 'assets/app_icon.png';
 
   /// Extensions Project Settings accepts as a project icon.
   static const List<String> supportedExtensions = ['svg', 'png', 'jpg', 'jpeg', 'webp'];

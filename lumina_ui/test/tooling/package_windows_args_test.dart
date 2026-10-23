@@ -128,8 +128,8 @@ void main() {
       expect(config.outputName, 'LuminaEngine');
       expect(config.executionAlias, 'lumina-studio');
       expect(config.architecture, 'x64');
-      expect(config.logoPath, 'assets/logo_color.png');
-      expect(File(config.logoPath!).existsSync(), isTrue, reason: 'the colour logo is in the repo');
+      expect(config.logoPath, 'assets/brand/store_logo.png');
+      expect(File(config.logoPath!).existsSync(), isTrue, reason: 'the Store logo is rendered into the repo');
       expect(config.capabilities, containsAll(['internetClient', 'privateNetworkClientServer']));
       expect(config.storePublisher, 'CN=76408633-2846-4256-BED6-0DF8748A95C6', reason: 'the Partner Center publisher');
       expect(config.osMinVersion, '10.0.19041.0');

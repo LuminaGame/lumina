@@ -169,7 +169,7 @@ class EditorAssets {
   static Future<void> configure() async {
     final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
     final keys = manifest.listAssets();
-    packaged = !keys.contains('assets/logo_color.png') && keys.contains('${packagePrefix}assets/logo_color.png');
+    packaged = !keys.contains('assets/brand/prism_l.svg') && keys.contains('${packagePrefix}assets/brand/prism_l.svg');
     if (!packaged) return;
     final mono = FontLoader('JetBrains Mono');
     for (final k in keys.where((k) => k.startsWith('${packagePrefix}assets/fonts/JetBrainsMono-') && k.endsWith('.ttf'))) {
