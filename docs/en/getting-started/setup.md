@@ -14,7 +14,7 @@ The Lumina repositories are meant to be checked out side by side:
   tools/         https://github.com/LuminaGame/tools
   plugins/       https://github.com/LuminaGame/plugins
   marketplace/   https://github.com/LuminaGame/marketplace
-  filament/      patched Filament v1.78.0 with its prebuilt out/ folders
+  filament/      patched Filament v1.78.1 with its prebuilt out/ folders
   test-assets/   https://github.com/LuminaGame/test-assets (optional, Git LFS)
 ```
 
@@ -67,7 +67,7 @@ A package resolved from git lives in the pub cache and has no Filament next to i
 
 ## Build Filament
 
-The hooks expect the static libraries in `filament/out/cmake-release/` (Linux and macOS) or `filament/out/cmake-release-windows/` (Windows). Lumina uses upstream Filament v1.78.0 with twenty local patches, kept in `third_party/filament/patches/` and explained in `third_party/filament/README.md`:
+The hooks expect the static libraries in `filament/out/cmake-release/` (Linux and macOS) or `filament/out/cmake-release-windows/` (Windows). Lumina uses upstream Filament v1.78.1 with twenty local patches, kept in `third_party/filament/patches/` and explained in `third_party/filament/README.md`:
 
 - a bounds fix in the bundled `libassimp`;
 - a `RenderPass.cpp` change that keeps skinned and morphed renderables out of the screen-space reflections pass (without it the Vulkan backend loses the device);

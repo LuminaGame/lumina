@@ -14,7 +14,7 @@ Lumina repository'leri yan yana checkout edilmek üzere tasarlanmıştır:
   tools/         https://github.com/LuminaGame/tools
   plugins/       https://github.com/LuminaGame/plugins
   marketplace/   https://github.com/LuminaGame/marketplace
-  filament/      prebuilt out/ klasörleriyle yamalı Filament v1.78.0
+  filament/      prebuilt out/ klasörleriyle yamalı Filament v1.78.1
   test-assets/   https://github.com/LuminaGame/test-assets (isteğe bağlı, Git LFS)
 ```
 
@@ -67,7 +67,7 @@ Git'ten çözülen bir paket pub cache'te durur ve yanında Filament yoktur; use
 
 ## Filament'i build etmek
 
-Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) ya da `filament/out/cmake-release-windows/` (Windows) altında bekler. Lumina, upstream Filament v1.78.0'ı yirmi yerel yamayla kullanır; yamalar `third_party/filament/patches/` altındadır ve `third_party/filament/README.md` içinde açıklanır:
+Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) ya da `filament/out/cmake-release-windows/` (Windows) altında bekler. Lumina, upstream Filament v1.78.1'ı yirmi yerel yamayla kullanır; yamalar `third_party/filament/patches/` altındadır ve `third_party/filament/README.md` içinde açıklanır:
 
 - gömülü `libassimp` içinde bir sınır (bounds) düzeltmesi;
 - skinned ve morph'lu renderable'ları screen-space reflections pass'inin dışında tutan bir `RenderPass.cpp` değişikliği (bu olmadan Vulkan backend'i device'ı kaybeder);

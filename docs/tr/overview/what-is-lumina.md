@@ -32,7 +32,7 @@ Eklentiler editörü, `lumina_core`, `lumina_plugin_process` ve `lumina_widgets`
 
 | Paket | Repository | Görevi |
 |---|---|---|
-| `flutter_filament` | lumina | Google Filament v1.78.0 için Dart FFI binding'leri |
+| `flutter_filament` | lumina | Google Filament v1.78.1 için Dart FFI binding'leri |
 | `lumina_core` | lumina | Saf Dart temeli: matematik, dosya formatları, yollar, logger, saf araç servisleri |
 | `lumina` | lumina | Engine: runtime ve Filament binding'i |
 | `lumina_widgets` | lumina | Oyunun Flutter tarafı: oyun widget'ı ve host'u, input, HUD, UMG, medya, web yükleme |

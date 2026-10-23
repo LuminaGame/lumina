@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Filament upgraded to v1.78.1 (prebuilt `1.78.1-lumina.1`): the twenty Lumina patches apply unchanged to the new tag
+  (upstream changed its blob-cache key, the Metal and Vulkan platform code, gltfio's extended loader and the build
+  scripts, and added a tvOS target; no public header moved), the vendored filament-matp and basisu copies are the
+  same files as before, and the material version stays 78.
 - Nothing deprecated in Filament 1.78 is called any more: the renderable and light entity lists read
   `getAllEntities()`, and `ResourceConfiguration::gltfPath` is set only when a caller passes a base path
   (`FilamentResourceLoader.create(defaultPath:)` and `setConfiguration(gltfPath:)` are `@Deprecated`: feed external
