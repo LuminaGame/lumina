@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Material textures upload on the engine's asynchronous path (`FilamentTexture.setImageAsync`): a material's sampler
+  textures (`LuminaMaterialTextures`) and a dynamic instance's pixel textures land on the GPU over the next frames
+  without holding the calling isolate; the mip chain is generated once the pixels are there.
 - Web builds use the bundled pose search caches: the cache fingerprint's document hash no longer depends on how the
   platform prints whole-number doubles (`LuminaPoseSearchBuilder.canonicalJson`), so the Game Animation Sample on the
   web no longer rebuilds every database on the page thread (freezes of 3.4, 2.5 and 2.5 s on the first walk and turn,

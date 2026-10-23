@@ -232,7 +232,9 @@ class LuminaDynamicMaterialInstance extends LuminaMaterialInstance {
       width: width,
       height: height,
     );
-    texture.setImage(
+    // On the asynchronous path: the material samples the texture as soon as
+    // its pixels land, a few frames later at most.
+    texture.setImageAsync(
       pixelData: rgbaBytes,
       width: width,
       height: height,

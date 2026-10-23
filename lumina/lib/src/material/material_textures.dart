@@ -236,8 +236,14 @@ class LuminaMaterialTextures {
       levels: levels,
       usage: TextureUsage.defaultUsage | (levels > 1 ? TextureUsage.genMipmappable : 0),
     );
-    texture.setImage(pixelData: pixels.rgba, width: pixels.width, height: pixels.height);
-    if (levels > 1) texture.generateMipmaps(engine);
+    // Queued on the engine's asynchronous path: the pixels land over the next
+    // frames and the mip chain is generated once they are there.
+    final upload = texture.setImageAsync(pixelData: pixels.rgba, width: pixels.width, height: pixels.height);
+    if (levels > 1) {
+      unawaited(upload.done.then((status) {
+        if (status == FilamentAsyncStatus.completed && !texture.isDisposed) texture.generateMipmaps(engine);
+      }));
+    }
     return _Uploaded(texture, _sampler(settings, mips: levels > 1), srgb);
   }
 
