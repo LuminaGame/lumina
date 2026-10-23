@@ -73,7 +73,10 @@ void main() {
     expect((mesh as LuminaAnimatedMeshComponent).meshAssetPath, '$dir/${LuminaThirdPersonContent.projectMeshGlbPath}',
         reason: 'SKM_Superhero_Female.lmas loads through its .entity.glb, as Play resolves it');
     const halfHeight = LuminaTemplateCharacterTuning.thirdPersonCapsuleHalfHeight;
-    expect(mesh.worldLocation.y, closeTo(-halfHeight, 1e-6), reason: 'at its relative transform (cm, Z up → Y up)');
+    expect(mesh.relativeLocation.y, closeTo(-halfHeight, 1e-6), reason: 'at its relative transform (cm, Z up → Y up)');
+    // The preview stands the actor on the floor like Play: the capsule's
+    // bottom, and with it the mesh's feet, rest at height 0.
+    expect(mesh.worldLocation.y, closeTo(0, 1e-6), reason: 'the actor is lifted by its capsule half height');
     expect(vm.preview.animInstanceFor('mesh'), isNotNull, reason: 'Mesh plays its Anim Class, ABP_Character');
     expect(vm.preview.animInstanceFor('mesh').currentState, 'Idle');
 
