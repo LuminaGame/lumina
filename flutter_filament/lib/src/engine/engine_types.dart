@@ -127,6 +127,32 @@ enum CompilerPriorityQueue {
 }
 
 /// Configuration options for initializing a [FilamentEngine].
+/// How the engine runs asynchronous resource creation and uploads
+/// (`Engine::Config::asynchronousMode`). A request, not a guarantee: read
+/// `FilamentEngine.isAsynchronousModeEnabled` before relying on it.
+enum FilamentAsynchronousMode {
+  /// No asynchronous operations (Filament's default).
+  none(0),
+
+  /// A dedicated worker thread; falls back to [amortization] where the
+  /// platform has no threads.
+  threadPreferred(1),
+
+  /// A few asynchronous tasks per engine update, on the main thread.
+  amortization(2);
+
+  const FilamentAsynchronousMode(this.value);
+  final int value;
+
+  static FilamentAsynchronousMode fromValue(int v) =>
+      values.firstWhere((m) => m.value == v, orElse: () => none);
+}
+
+/// The engine feature flag that lets `EngineConfig.asynchronousMode` take
+/// effect (`Engine::Builder::feature`); `FilamentEngine.create` turns it on
+/// whenever the mode is not [FilamentAsynchronousMode.none].
+const String asynchronousOperationFeature = 'backend.enable_asynchronous_operation';
+
 class EngineConfig {
   /// Size in MiB of the low-level command buffer arena.
   final int commandBufferSizeMB;
@@ -158,6 +184,11 @@ class EngineConfig {
   /// Type of technique for stereoscopic rendering.
   final StereoscopicType stereoscopicType;
 
+  /// Asynchronous resource creation and uploads; a worker thread when the
+  /// platform has one, so textures and buffers stream in without blocking
+  /// the caller.
+  final FilamentAsynchronousMode asynchronousMode;
+
   const EngineConfig({
     this.commandBufferSizeMB = 3,
     this.perRenderPassArenaSizeMB = 3,
@@ -169,6 +200,7 @@ class EngineConfig {
     this.materialCacheCapacity = 0,
     this.stereoscopicEyeCount = 2,
     this.stereoscopicType = StereoscopicType.none,
+    this.asynchronousMode = FilamentAsynchronousMode.threadPreferred,
   });
 
   /// Populates configuration with Filament's default settings.
@@ -187,11 +219,27 @@ class EngineConfig {
         materialCacheCapacity: arena.ref.material_cache_capacity,
         stereoscopicEyeCount: arena.ref.stereoscopic_eye_count,
         stereoscopicType: StereoscopicType.fromValue(arena.ref.stereoscopic_type),
+        asynchronousMode: FilamentAsynchronousMode.fromValue(arena.ref.asynchronous_mode),
       );
     } finally {
       calloc.free(arena);
     }
   }
+
+  /// This configuration with another [asynchronousMode].
+  EngineConfig withAsynchronousMode(FilamentAsynchronousMode mode) => EngineConfig(
+        commandBufferSizeMB: commandBufferSizeMB,
+        perRenderPassArenaSizeMB: perRenderPassArenaSizeMB,
+        minCommandBufferSizeMB: minCommandBufferSizeMB,
+        jobSystemThreadCount: jobSystemThreadCount,
+        preferredShaderLanguage: preferredShaderLanguage,
+        forceGLES2Context: forceGLES2Context,
+        gpuContextPriority: gpuContextPriority,
+        materialCacheCapacity: materialCacheCapacity,
+        stereoscopicEyeCount: stereoscopicEyeCount,
+        stereoscopicType: stereoscopicType,
+        asynchronousMode: mode,
+      );
 
   void _copyToNative(ffi.Pointer<c.filament_engine_config_t> ptr) {
     ptr.ref.command_buffer_size_mb = commandBufferSizeMB;
@@ -204,5 +252,6 @@ class EngineConfig {
     ptr.ref.material_cache_capacity = materialCacheCapacity;
     ptr.ref.stereoscopic_eye_count = stereoscopicEyeCount;
     ptr.ref.stereoscopic_type = stereoscopicType.value;
+    ptr.ref.asynchronous_mode = asynchronousMode.value;
   }
 }

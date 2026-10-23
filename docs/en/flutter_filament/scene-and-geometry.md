@@ -339,6 +339,9 @@ A buffer holding index data defining triangle or line primitives.
 | `indexCount` | `int get indexCount` | Number of indices this buffer can hold. |
 | `type` | `IndexType get type` | The element type of the indices (ushort or uint). |
 | `byteCapacity` | `int get byteCapacity` | Total capacity in bytes for this IndexBuffer. |
+| `createAsync` | `static Future<FilamentIndexBuffer> createAsync({required FilamentEngine engine, required int indexCount, IndexType type})` | `create` on the engine's asynchronous path; the future completes with the ready buffer (a cancelled creation disposes it and throws). |
+| `isCreationComplete` | `bool get isCreationComplete` | Whether an asynchronous creation has finished (true for a synchronous one). |
+| `setBufferAsync` | `FilamentAsyncUpload setBufferAsync(FilamentEngine engine, NativeBuffer data, {int byteOffset, bool autoFree})` | `setBuffer` queued on the asynchronous path; the `FilamentAsyncUpload` reports when the indices are on the GPU. |
 | `setUint16Data` | `void setUint16Data(Uint16List data)` | Sets 16-bit short index data (backward-compatible convenience). |
 | `setUint32Data` | `void setUint32Data(Uint32List data)` | Sets 32-bit int index data (backward-compatible convenience). |
 | `dispose` | `void dispose()` | Destroys this IndexBuffer. |
@@ -703,6 +706,9 @@ A buffer holding vertex data (positions, normals, UVs, colors, etc.).
 | `bufferCount` | `int get bufferCount` | Number of buffer slots. |
 | `enableBufferObjects` | `bool get enableBufferObjects` | Whether buffer object mode is enabled. |
 | `attributes` | `List<VertexAttributeDesc> get attributes` | The attribute descriptions for this vertex buffer. |
+| `createAsync` | `static Future<FilamentVertexBuffer> createAsync({required FilamentEngine engine, required int vertexCount, int bufferCount, List<VertexAttributeDesc>? attributes, bool withColor, bool withUv, bool enableBufferObjects, bool advancedSkinning})` | `create` on the engine's asynchronous path; the future completes with the ready buffer (a cancelled creation disposes it and throws). |
+| `isCreationComplete` | `bool get isCreationComplete` | Whether an asynchronous creation has finished (true for a synchronous one). |
+| `setBufferAtAsync` | `FilamentAsyncUpload setBufferAtAsync(FilamentEngine engine, int bufferIndex, NativeBuffer data, {int byteOffset, bool autoFree})` | `setBufferAt` queued on the asynchronous path; the `FilamentAsyncUpload` reports when the data is on the GPU. |
 | `dispose` | `void dispose()` | Destroys this VertexBuffer. |
 | `isDisposed` | `bool get isDisposed` | Checks current state or capability and returns a boolean value. |
 

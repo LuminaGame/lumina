@@ -525,6 +525,9 @@ A 2D, 3D, cubemap, or array texture.
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `generateMipmaps` | `void generateMipmaps(FilamentEngine engine)` | Generates the mipmap chain for this texture using the GPU. |
+| `createAsync` | `static Future<FilamentTexture> createAsync({required FilamentEngine engine, required TextureDescriptor desc})` | Motorun asenkron yolunda `create`: GPU ayırması çağıranın dışında çalışır, future hazır dokuyla tamamlanır (iptal edilen oluşturma dokuyu yok eder ve `FilamentException` fırlatır). O zamana kadar yalnızca `setImageAsync` çağrılabilir. |
+| `isCreationComplete` | `bool get isCreationComplete` | Asenkron oluşturmanın bitip bitmediği (senkron oluşturmada true). |
+| `setImageAsync` | `FilamentAsyncUpload setImageAsync({PixelBuffer? buffer, Uint8List? pixelData, int level, int xoffset, int yoffset, int zoffset, required int width, required int height, int depth, PixelFormat pixelFormat, PixelType pixelType, int strideInPixels, int alignment})` | Asenkron yolda kuyruğa alınan `setImage`; dönen `FilamentAsyncUpload` (`done`, `cancel()`, `id`, `FilamentAsyncUpload.group` / `allCompleted`) pikseller GPU'ya varınca bildirir. Tamamlanmalar motor çalıştıkça gelir: Vulkan'da çizilen kare başına birkaç iş, yani `done` kareler çizilirken çözülür. Asenkron mod yoksa yükleme senkron çalışır ve hemen tamamlanır. |
 | `levels` | `int get levels` | Total number of mip levels. |
 | `target` | `TextureSamplerType get target` | Target sampler type of this texture. |
 | `format` | `TextureFormat get format` | Internal format of this texture. |

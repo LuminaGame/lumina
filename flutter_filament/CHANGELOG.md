@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Asynchronous resources: `EngineConfig.asynchronousMode` (a worker thread by default; `FilamentEngine.create` turns on
+  Filament's `backend.enable_asynchronous_operation` feature with it), `FilamentEngine.isAsynchronousModeEnabled` /
+  `cancelAsyncCall` / `whenIdle` (a polled fence instead of `flushAndWait`), `FilamentTexture.createAsync` /
+  `setImageAsync`, `FilamentVertexBuffer.createAsync` / `setBufferAtAsync`, `FilamentIndexBuffer.createAsync` /
+  `setBufferAsync` and `FilamentAsyncUpload` (`done`, `cancel`, `group`, `allCompleted`). Completions arrive through the
+  callback bridge as the engine renders (Vulkan and OpenGL amortize a few jobs per frame); without an asynchronous mode
+  the same calls run synchronously and complete at once.
 - Filament upgraded to v1.78.1 (prebuilt `1.78.1-lumina.1`): the twenty Lumina patches apply unchanged to the new tag
   (upstream changed its blob-cache key, the Metal and Vulkan platform code, gltfio's extended loader and the build
   scripts, and added a tvOS target; no public header moved), the vendored filament-matp and basisu copies are the

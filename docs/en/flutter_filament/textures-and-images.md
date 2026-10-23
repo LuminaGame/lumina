@@ -525,6 +525,9 @@ A 2D, 3D, cubemap, or array texture.
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `generateMipmaps` | `void generateMipmaps(FilamentEngine engine)` | Generates the mipmap chain for this texture using the GPU. |
+| `createAsync` | `static Future<FilamentTexture> createAsync({required FilamentEngine engine, required TextureDescriptor desc})` | `create` on the engine's asynchronous path: the GPU allocation runs off the caller and the future completes with the ready texture (a cancelled creation disposes it and throws `FilamentException`). Until then only `setImageAsync` may be called on it. |
+| `isCreationComplete` | `bool get isCreationComplete` | Whether an asynchronous creation has finished (true for a synchronous one). |
+| `setImageAsync` | `FilamentAsyncUpload setImageAsync({PixelBuffer? buffer, Uint8List? pixelData, int level, int xoffset, int yoffset, int zoffset, required int width, required int height, int depth, PixelFormat pixelFormat, PixelType pixelType, int strideInPixels, int alignment})` | `setImage` queued on the asynchronous path; the returned `FilamentAsyncUpload` (`done`, `cancel()`, `id`, `FilamentAsyncUpload.group` / `allCompleted`) reports when the pixels are on the GPU. Completions arrive as the engine runs: on Vulkan a few jobs per rendered frame, so `done` resolves while frames are rendered. Without an asynchronous mode the upload runs synchronously and completes at once. |
 | `levels` | `int get levels` | Total number of mip levels. |
 | `target` | `TextureSamplerType get target` | Target sampler type of this texture. |
 | `format` | `TextureFormat get format` | Internal format of this texture. |

@@ -421,6 +421,8 @@ Configuration options for initializing a [FilamentEngine].
 | `materialCacheCapacity` | `int materialCacheCapacity` | Capacity of the LRU cache for material definitions. |
 | `stereoscopicEyeCount` | `int stereoscopicEyeCount` | Number of eyes for stereoscopic rendering. |
 | `stereoscopicType` | `StereoscopicType stereoscopicType` | Type of technique for stereoscopic rendering. |
+| `asynchronousMode` | `FilamentAsynchronousMode asynchronousMode` | Asenkron kaynak oluşturma ve yükleme (`Engine::Config::asynchronousMode`): varsayılan `threadPreferred`, `amortization` (ana iş parçacığında kare başına birkaç iş) ya da `none`. `FilamentEngine.create`, mod `none` değilse `backend.enable_asynchronous_operation` motor özelliğini açar; güvenmeden önce `FilamentEngine.isAsynchronousModeEnabled` okunmalı (Vulkan'da mod amortizasyon olarak uygulanır). |
+| `withAsynchronousMode` | `EngineConfig withAsynchronousMode(FilamentAsynchronousMode mode)` | Bu yapılandırmanın başka bir asenkron modla kopyası. |
 
 #### `class FilamentEngine`
 
@@ -474,6 +476,9 @@ The main entry point for the Filament rendering engine.  An [FilamentEngine] ins
 | `makeCanvasContextCurrent` | `void makeCanvasContextCurrent()` | Web derlemeleri: bu engine'in WebGL bağlamını sayfanın geçerli bağlamı yapar. Bir sayfadaki her engine tek geçerli bağlam üzerinden çizer; tuvali olan bir engine çizmeden, flush etmeden ya da yok edilmeden önce kendi bağlamını geçerli yapar (`flush`, `flushAndWait`, `dispose` ve web `FilamentWidget`'ı çağırır; `filament_web_make_context_current`). Tuvali yoksa etkisizdir. |
 | `flush` | `void flush()` | Flushes the current command buffer to the hardware rendering thread without blocking. |
 | `pumpMessageQueues` | `void pumpMessageQueues()` | Pumps the engine's internal message queues, processing pending callbacks and asynchronous events.  Recommended to call once per frame in the main game loop. |
+| `isAsynchronousModeEnabled` | `bool get isAsynchronousModeEnabled` | Motorun asenkron kaynak oluşturma ve yüklemeyi çalıştırıp çalıştırmadığı. False iken her `createAsync` / `setImageAsync` / `setBufferAtAsync` / `setBufferAsync` senkron çalışır ve hemen tamamlanır. |
+| `cancelAsyncCall` | `bool cancelAsyncCall(int id)` | Kuyruktaki bir asenkron çağrıyı Filament kimliğiyle iptal eder; henüz çalışmamışsa true (tamamlanması `FilamentAsyncStatus.canceled` bildirir). |
+| `whenIdle` | `Future<void> whenIdle({Duration pollInterval})` | Çağrıdan önce gönderilen her komutu GPU bitirince, isolate'ı bloklamadan tamamlanır (`pollInterval` ile yoklanan bir fence): yalnızca GPU'dan sonra sıralama gereken yerlerde `flushAndWait`'in bloklamayan karşılığı. |
 | `execute` | `void execute()` | Executes work on the calling thread. Only supported in single-threaded/web builds. |
 | `isPaused` | `bool get isPaused` | Whether the rendering thread is paused. |
 | `paused` | `paused(bool val)` | `paused` işlemini gerçekleştirir. |

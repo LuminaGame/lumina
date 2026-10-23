@@ -1,3 +1,4 @@
+import 'package:flutter_filament/src/async_resource.dart';
 import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
 import 'package:flutter_filament/src/ffi_package_platform.dart';
@@ -308,6 +309,41 @@ class FilamentTexture {
   static FilamentTexture create({
     required FilamentEngine engine,
     required TextureDescriptor desc,
+  }) =>
+      _create(engine: engine, desc: desc);
+
+  /// Creates a texture whose GPU allocation runs on the engine's asynchronous
+  /// path (when enabled); the future completes with the ready texture. A
+  /// cancelled creation (engine shutting down) disposes the texture and throws
+  /// a [FilamentException]. Until the future completes only `setImageAsync`
+  /// may be called on the texture.
+  static Future<FilamentTexture> createAsync({
+    required FilamentEngine engine,
+    required TextureDescriptor desc,
+  }) async {
+    late final FilamentTexture texture;
+    final upload = FilamentAsyncUpload.start(engine, (requestId) {
+      texture = _create(engine: engine, desc: desc, asyncRequestId: requestId);
+      return asyncCallSync;
+    });
+    final status = await upload.done;
+    if (status != FilamentAsyncStatus.completed) {
+      texture.dispose();
+      throw FilamentException('Asynchronous texture creation was cancelled');
+    }
+    return texture;
+  }
+
+  /// Whether an asynchronous creation has finished (true for a synchronous one).
+  bool get isCreationComplete {
+    _checkDisposed();
+    return c.filament_texture_is_creation_complete(_ptr);
+  }
+
+  static FilamentTexture _create({
+    required FilamentEngine engine,
+    required TextureDescriptor desc,
+    int? asyncRequestId,
   }) {
     final nativeDesc = calloc<c.FilamentTextureDesc>();
     nativeDesc.ref.width = desc.width;
@@ -330,7 +366,9 @@ class FilamentTexture {
       nativeDesc.ref.has_swizzle = false;
     }
 
-    final ptr = c.filament_texture_create(engine.nativePointer, nativeDesc);
+    final ptr = asyncRequestId == null
+        ? c.filament_texture_create(engine.nativePointer, nativeDesc)
+        : c.filament_texture_create_async(engine.nativePointer, nativeDesc, asyncRequestId);
     calloc.free(nativeDesc);
 
     if (ptr == ffi.nullptr) {
@@ -495,6 +533,64 @@ class FilamentTexture {
       callback,
       user,
     );
+  }
+
+  /// [setImage] on the engine's asynchronous path: the upload is queued and
+  /// the returned [FilamentAsyncUpload] reports when the pixels are on the
+  /// GPU (or that the upload was cancelled). Without an asynchronous mode the
+  /// upload runs synchronously and completes at once.
+  FilamentAsyncUpload setImageAsync({
+    PixelBuffer? buffer,
+    Uint8List? pixelData,
+    int level = 0,
+    int xoffset = 0,
+    int yoffset = 0,
+    int zoffset = 0,
+    required int width,
+    required int height,
+    int depth = 1,
+    PixelFormat pixelFormat = PixelFormat.rgba,
+    PixelType pixelType = PixelType.ubyte,
+    int strideInPixels = 0,
+    int alignment = 1,
+  }) {
+    _checkDisposed();
+    if (buffer == null && pixelData == null) {
+      throw ArgumentError('Either buffer or pixelData must be provided to setImageAsync');
+    }
+    final pBuf = buffer ??
+        PixelBuffer.fromBytes(
+          pixelData!,
+          format: pixelFormat,
+          type: pixelType,
+          strideInPixels: strideInPixels,
+          alignment: alignment,
+        );
+    final nativeBuf = pBuf.data;
+    final (user, callback, _) = BufferOwnershipRegistry.instance.register(
+      nativeBuf,
+      onFree: pBuf.autoFree ? () => nativeBuf.free() : null,
+    );
+    return FilamentAsyncUpload.start(_engine, (requestId) => c.filament_texture_set_image_async(
+          _engine.nativePointer,
+          _ptr,
+          level,
+          xoffset,
+          yoffset,
+          zoffset,
+          width,
+          height,
+          depth,
+          pBuf.format.value,
+          pBuf.type.value,
+          pBuf.strideInPixels,
+          pBuf.alignment,
+          nativeBuf.pointer.cast(),
+          nativeBuf.sizeInBytes,
+          callback,
+          user,
+          requestId,
+        ));
   }
 
   /// Convenience method for uploading a specific face of a cubemap texture.

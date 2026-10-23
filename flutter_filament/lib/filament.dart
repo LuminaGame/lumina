@@ -13,6 +13,7 @@ export 'package:flutter_filament/src/engine_host.dart';
 export 'package:flutter_filament/src/gpu.dart';
 export 'package:flutter_filament/src/entity.dart';
 export 'package:flutter_filament/src/fence.dart';
+export 'package:flutter_filament/src/async_resource.dart' hide FilamentEngineHandle;
 export 'package:flutter_filament/src/filamat_builder.dart';
 export 'package:flutter_filament/src/matc.dart';
 export 'package:flutter_filament/src/frame_limiter.dart';

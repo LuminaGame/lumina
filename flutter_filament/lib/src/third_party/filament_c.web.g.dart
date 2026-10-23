@@ -3921,6 +3921,39 @@ void filament_dlss_destroy(ffi.Pointer<ffi.Void> dlss) {
 ffi.Pointer<ffi.Char> filament_dlss_last_error() =>
     ffi.Pointer<ffi.Char>.fromAddress(_m.filament_dlss_last_error().toDartInt);
 
+bool filament_engine_is_asynchronous_mode_enabled(ffi.Pointer<ffi.Void> engine) =>
+    _m.filament_engine_is_asynchronous_mode_enabled(engine.address.toJS).toDartInt != 0;
+
+bool filament_engine_cancel_async_call(ffi.Pointer<ffi.Void> engine, int id) =>
+    _m.filament_engine_cancel_async_call(engine.address.toJS, id.toJS).toDartInt != 0;
+
+ffi.Pointer<ffi.Void> filament_texture_create_async(ffi.Pointer<ffi.Void> engine, ffi.Pointer<FilamentTextureDesc> desc, int request_id) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_texture_create_async(engine.address.toJS, desc.address.toJS, FlutterFilamentModule.toBigInt(request_id)).toDartInt);
+
+bool filament_texture_is_creation_complete(ffi.Pointer<ffi.Void> texture) =>
+    _m.filament_texture_is_creation_complete(texture.address.toJS).toDartInt != 0;
+
+int filament_texture_set_image_async(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> texture, int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth, int pixel_format, int pixel_type, int stride, int alignment, ffi.Pointer<ffi.Void> data, int size, filament_buffer_free_fn cb, ffi.Pointer<ffi.Void> user, int request_id) =>
+    _m.filament_texture_set_image_async(engine.address.toJS, texture.address.toJS, level.toJS, xoffset.toJS, yoffset.toJS, zoffset.toJS, width.toJS, height.toJS, depth.toJS, pixel_format.toJS, pixel_type.toJS, stride.toJS, alignment.toJS, data.address.toJS, size.toJS, cb.address.toJS, user.address.toJS, FlutterFilamentModule.toBigInt(request_id)).toDartInt.toUnsigned(32);
+
+ffi.Pointer<ffi.Void> filament_vertex_buffer_create_async(ffi.Pointer<ffi.Void> engine, int buffer_count, int vertex_count, int attribute_count, ffi.Pointer<FilamentVertexAttributeDesc> attributes, bool enable_buffer_objects, bool advanced_skinning, int request_id) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_vertex_buffer_create_async(engine.address.toJS, buffer_count.toJS, vertex_count.toJS, attribute_count.toJS, attributes.address.toJS, (enable_buffer_objects ? 1 : 0).toJS, (advanced_skinning ? 1 : 0).toJS, FlutterFilamentModule.toBigInt(request_id)).toDartInt);
+
+bool filament_vertex_buffer_is_creation_complete(ffi.Pointer<ffi.Void> vb) =>
+    _m.filament_vertex_buffer_is_creation_complete(vb.address.toJS).toDartInt != 0;
+
+int filament_vertex_buffer_set_buffer_at_async(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> vb, int buffer_index, ffi.Pointer<ffi.Void> data, int size, int byte_offset, filament_buffer_free_fn cb, ffi.Pointer<ffi.Void> user, int request_id) =>
+    _m.filament_vertex_buffer_set_buffer_at_async(engine.address.toJS, vb.address.toJS, buffer_index.toJS, data.address.toJS, size.toJS, byte_offset.toJS, cb.address.toJS, user.address.toJS, FlutterFilamentModule.toBigInt(request_id)).toDartInt.toUnsigned(32);
+
+ffi.Pointer<ffi.Void> filament_index_buffer_create_async(ffi.Pointer<ffi.Void> engine, int index_count, int buffer_type, int request_id) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_index_buffer_create_async(engine.address.toJS, index_count.toJS, buffer_type.toJS, FlutterFilamentModule.toBigInt(request_id)).toDartInt);
+
+bool filament_index_buffer_is_creation_complete(ffi.Pointer<ffi.Void> ib) =>
+    _m.filament_index_buffer_is_creation_complete(ib.address.toJS).toDartInt != 0;
+
+int filament_index_buffer_set_buffer_async(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> ib, ffi.Pointer<ffi.Void> data, int size, int byte_offset, filament_buffer_free_fn cb, ffi.Pointer<ffi.Void> user, int request_id) =>
+    _m.filament_index_buffer_set_buffer_async(engine.address.toJS, ib.address.toJS, data.address.toJS, size.toJS, byte_offset.toJS, cb.address.toJS, user.address.toJS, FlutterFilamentModule.toBigInt(request_id)).toDartInt.toUnsigned(32);
+
 bool filament_ray_tracing_request_extensions() =>
     _m.filament_ray_tracing_request_extensions().toDartInt != 0;
 
@@ -4606,6 +4639,9 @@ final class filament_engine_config_t extends ffi.Struct {
 
   int get stereoscopic_type => FlutterFilamentModule.heap.getInt32($address + 36, Endian.little);
   set stereoscopic_type(int value) => FlutterFilamentModule.heap.setInt32($address + 36, value, Endian.little);
+
+  int get asynchronous_mode => FlutterFilamentModule.heap.getInt32($address + 40, Endian.little);
+  set asynchronous_mode(int value) => FlutterFilamentModule.heap.setInt32($address + 40, value, Endian.little);
 }
 
 /// Live object counts of one engine: Filament's `Engine::get*Count()`,
@@ -8994,6 +9030,28 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_dlss_destroy(JSNumber dlss);
   @JS('_filament_dlss_last_error')
   external JSNumber filament_dlss_last_error();
+  @JS('_filament_engine_is_asynchronous_mode_enabled')
+  external JSNumber filament_engine_is_asynchronous_mode_enabled(JSNumber engine);
+  @JS('_filament_engine_cancel_async_call')
+  external JSNumber filament_engine_cancel_async_call(JSNumber engine, JSNumber id);
+  @JS('_filament_texture_create_async')
+  external JSNumber filament_texture_create_async(JSNumber engine, JSNumber desc, JSBigInt request_id);
+  @JS('_filament_texture_is_creation_complete')
+  external JSNumber filament_texture_is_creation_complete(JSNumber texture);
+  @JS('_filament_texture_set_image_async')
+  external JSNumber filament_texture_set_image_async(JSNumber engine, JSNumber texture, JSNumber level, JSNumber xoffset, JSNumber yoffset, JSNumber zoffset, JSNumber width, JSNumber height, JSNumber depth, JSNumber pixel_format, JSNumber pixel_type, JSNumber stride, JSNumber alignment, JSNumber data, JSNumber size, JSNumber cb, JSNumber user, JSBigInt request_id);
+  @JS('_filament_vertex_buffer_create_async')
+  external JSNumber filament_vertex_buffer_create_async(JSNumber engine, JSNumber buffer_count, JSNumber vertex_count, JSNumber attribute_count, JSNumber attributes, JSNumber enable_buffer_objects, JSNumber advanced_skinning, JSBigInt request_id);
+  @JS('_filament_vertex_buffer_is_creation_complete')
+  external JSNumber filament_vertex_buffer_is_creation_complete(JSNumber vb);
+  @JS('_filament_vertex_buffer_set_buffer_at_async')
+  external JSNumber filament_vertex_buffer_set_buffer_at_async(JSNumber engine, JSNumber vb, JSNumber buffer_index, JSNumber data, JSNumber size, JSNumber byte_offset, JSNumber cb, JSNumber user, JSBigInt request_id);
+  @JS('_filament_index_buffer_create_async')
+  external JSNumber filament_index_buffer_create_async(JSNumber engine, JSNumber index_count, JSNumber buffer_type, JSBigInt request_id);
+  @JS('_filament_index_buffer_is_creation_complete')
+  external JSNumber filament_index_buffer_is_creation_complete(JSNumber ib);
+  @JS('_filament_index_buffer_set_buffer_async')
+  external JSNumber filament_index_buffer_set_buffer_async(JSNumber engine, JSNumber ib, JSNumber data, JSNumber size, JSNumber byte_offset, JSNumber cb, JSNumber user, JSBigInt request_id);
   @JS('_filament_ray_tracing_request_extensions')
   external JSNumber filament_ray_tracing_request_extensions();
   @JS('_filament_ray_tracing_clear_extension_request')
@@ -9344,7 +9402,7 @@ _Module get _m => _Module._(FlutterFilamentModule.instance);
 
 /// Registers this file's struct layouts, callback types and native addresses with the web ffi layer.
 void $registerFilamentBindings() {
-  ffi.$registerStruct<filament_engine_config_t>(40, 4, filament_engine_config_t.$at);
+  ffi.$registerStruct<filament_engine_config_t>(44, 4, filament_engine_config_t.$at);
   ffi.$registerStruct<filament_engine_resource_counts_t>(152, 8, filament_engine_resource_counts_t.$at);
   ffi.$registerStruct<filament_dynamic_resolution_options>(24, 4, filament_dynamic_resolution_options.$at);
   ffi.$registerStruct<filament_bloom_options>(56, 4, filament_bloom_options.$at);

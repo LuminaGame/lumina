@@ -3,6 +3,7 @@
  * Licensed under the Apache License, Version 2.0.
  */
 
+import 'package:flutter_filament/src/async_resource.dart';
 import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
 
@@ -34,16 +35,48 @@ class FilamentIndexBuffer {
     required FilamentEngine engine,
     required int indexCount,
     IndexType type = IndexType.ushort,
+  }) =>
+      _create(engine: engine, indexCount: indexCount, type: type);
+
+  /// [create] on the engine's asynchronous path: the future completes with
+  /// the ready buffer (a cancelled creation disposes it and throws). Until
+  /// then only `setBufferAsync` may be called on it.
+  static Future<FilamentIndexBuffer> createAsync({
+    required FilamentEngine engine,
+    required int indexCount,
+    IndexType type = IndexType.ushort,
+  }) async {
+    late final FilamentIndexBuffer ib;
+    final upload = FilamentAsyncUpload.start(engine, (requestId) {
+      ib = _create(engine: engine, indexCount: indexCount, type: type, asyncRequestId: requestId);
+      return asyncCallSync;
+    });
+    if (await upload.done != FilamentAsyncStatus.completed) {
+      ib.dispose();
+      throw StateError('Asynchronous index buffer creation was cancelled');
+    }
+    return ib;
+  }
+
+  /// Whether an asynchronous creation has finished (true for a synchronous one).
+  bool get isCreationComplete {
+    _checkDisposed();
+    return c.filament_index_buffer_is_creation_complete(_ptr);
+  }
+
+  static FilamentIndexBuffer _create({
+    required FilamentEngine engine,
+    required int indexCount,
+    IndexType type = IndexType.ushort,
+    int? asyncRequestId,
   }) {
     if (indexCount <= 0) {
       throw ArgumentError.value(indexCount, 'indexCount', 'Must be greater than 0');
     }
 
-    final ptr = c.filament_index_buffer_create(
-      engine.nativePointer,
-      indexCount,
-      type.value,
-    );
+    final ptr = asyncRequestId == null
+        ? c.filament_index_buffer_create(engine.nativePointer, indexCount, type.value)
+        : c.filament_index_buffer_create_async(engine.nativePointer, indexCount, type.value, asyncRequestId);
 
     if (ptr == ffi.nullptr) {
       throw StateError('Failed to create Filament IndexBuffer');
@@ -116,6 +149,39 @@ class FilamentIndexBuffer {
       callback,
       user,
     );
+  }
+
+  /// [setBuffer] on the engine's asynchronous path: the copy is queued and
+  /// the returned [FilamentAsyncUpload] reports when the indices are on the GPU.
+  FilamentAsyncUpload setBufferAsync(
+    FilamentEngine engine,
+    NativeBuffer data, {
+    int byteOffset = 0,
+    bool autoFree = false,
+  }) {
+    _checkDisposed();
+    if (byteOffset < 0 || byteOffset % 4 != 0) {
+      throw ArgumentError.value(byteOffset, 'byteOffset', 'Must be a non-negative multiple of 4');
+    }
+    if (byteOffset + data.sizeInBytes > byteCapacity) {
+      throw RangeError(
+        'Data range ($byteOffset..${byteOffset + data.sizeInBytes}) exceeds buffer capacity ($byteCapacity)',
+      );
+    }
+    final (user, callback, _) = BufferOwnershipRegistry.instance.register(
+      data,
+      onFree: autoFree ? () => data.free() : null,
+    );
+    return FilamentAsyncUpload.start(engine, (requestId) => c.filament_index_buffer_set_buffer_async(
+          engine.nativePointer,
+          _ptr,
+          data.pointer.cast(),
+          data.sizeInBytes,
+          byteOffset,
+          callback,
+          user,
+          requestId,
+        ));
   }
 
   /// Sets 16-bit unsigned short indices.

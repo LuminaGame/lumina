@@ -8877,6 +8877,174 @@ external void filament_dlss_destroy(ffi.Pointer<ffi.Void> dlss);
 @ffi.Native<ffi.Pointer<ffi.Char> Function()>()
 external ffi.Pointer<ffi.Char> filament_dlss_last_error();
 
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_engine_is_asynchronous_mode_enabled(
+  ffi.Pointer<ffi.Void> engine,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Uint32)>()
+external bool filament_engine_cancel_async_call(
+  ffi.Pointer<ffi.Void> engine,
+  int id,
+);
+
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<FilamentTextureDesc>,
+    ffi.Uint64,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_texture_create_async(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<FilamentTextureDesc> desc,
+  int request_id,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_texture_is_creation_complete(
+  ffi.Pointer<ffi.Void> texture,
+);
+
+@ffi.Native<
+  ffi.Uint32 Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Uint8,
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Int32,
+    ffi.Int32,
+    ffi.Uint32,
+    ffi.Uint8,
+    ffi.Pointer<ffi.Void>,
+    ffi.Size,
+    filament_buffer_free_fn,
+    ffi.Pointer<ffi.Void>,
+    ffi.Uint64,
+  )
+>()
+external int filament_texture_set_image_async(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> texture,
+  int level,
+  int xoffset,
+  int yoffset,
+  int zoffset,
+  int width,
+  int height,
+  int depth,
+  int pixel_format,
+  int pixel_type,
+  int stride,
+  int alignment,
+  ffi.Pointer<ffi.Void> data,
+  int size,
+  filament_buffer_free_fn cb,
+  ffi.Pointer<ffi.Void> user,
+  int request_id,
+);
+
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Uint8,
+    ffi.Uint32,
+    ffi.Int32,
+    ffi.Pointer<FilamentVertexAttributeDesc>,
+    ffi.Bool,
+    ffi.Bool,
+    ffi.Uint64,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_vertex_buffer_create_async(
+  ffi.Pointer<ffi.Void> engine,
+  int buffer_count,
+  int vertex_count,
+  int attribute_count,
+  ffi.Pointer<FilamentVertexAttributeDesc> attributes,
+  bool enable_buffer_objects,
+  bool advanced_skinning,
+  int request_id,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_vertex_buffer_is_creation_complete(
+  ffi.Pointer<ffi.Void> vb,
+);
+
+@ffi.Native<
+  ffi.Uint32 Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Uint8,
+    ffi.Pointer<ffi.Void>,
+    ffi.Size,
+    ffi.Uint32,
+    filament_buffer_free_fn,
+    ffi.Pointer<ffi.Void>,
+    ffi.Uint64,
+  )
+>()
+external int filament_vertex_buffer_set_buffer_at_async(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> vb,
+  int buffer_index,
+  ffi.Pointer<ffi.Void> data,
+  int size,
+  int byte_offset,
+  filament_buffer_free_fn cb,
+  ffi.Pointer<ffi.Void> user,
+  int request_id,
+);
+
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Uint32,
+    ffi.Int32,
+    ffi.Uint64,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_index_buffer_create_async(
+  ffi.Pointer<ffi.Void> engine,
+  int index_count,
+  int buffer_type,
+  int request_id,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_index_buffer_is_creation_complete(
+  ffi.Pointer<ffi.Void> ib,
+);
+
+@ffi.Native<
+  ffi.Uint32 Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Size,
+    ffi.Uint32,
+    filament_buffer_free_fn,
+    ffi.Pointer<ffi.Void>,
+    ffi.Uint64,
+  )
+>()
+external int filament_index_buffer_set_buffer_async(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> ib,
+  ffi.Pointer<ffi.Void> data,
+  int size,
+  int byte_offset,
+  filament_buffer_free_fn cb,
+  ffi.Pointer<ffi.Void> user,
+  int request_id,
+);
+
 @ffi.Native<ffi.Bool Function()>()
 external bool filament_ray_tracing_request_extensions();
 
@@ -10295,6 +10463,9 @@ final class filament_engine_config_t extends ffi.Struct {
 
   @ffi.Int32()
   external int stereoscopic_type;
+
+  @ffi.Int32()
+  external int asynchronous_mode;
 }
 
 /// Live object counts of one engine: Filament's `Engine::get*Count()`,

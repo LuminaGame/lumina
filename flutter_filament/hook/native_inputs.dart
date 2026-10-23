@@ -64,6 +64,7 @@ const windowsFilamentLibs = [
 List<String> nativeSources(String filament) => [
     'src/android_compat.cpp',
     'src/engine_c.cpp',
+    'src/async_resource_c.cpp',
     'src/gpu_c.cpp',
     'src/gpu_engine_c.cpp',
     'src/external_vulkan_c.cpp',

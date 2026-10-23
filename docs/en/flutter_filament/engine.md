@@ -421,6 +421,8 @@ Configuration options for initializing a [FilamentEngine].
 | `materialCacheCapacity` | `int materialCacheCapacity` | Capacity of the LRU cache for material definitions. |
 | `stereoscopicEyeCount` | `int stereoscopicEyeCount` | Number of eyes for stereoscopic rendering. |
 | `stereoscopicType` | `StereoscopicType stereoscopicType` | Type of technique for stereoscopic rendering. |
+| `asynchronousMode` | `FilamentAsynchronousMode asynchronousMode` | Asynchronous resource creation and uploads (`Engine::Config::asynchronousMode`): `threadPreferred` by default, `amortization` (a few jobs per frame on the main thread) or `none`. `FilamentEngine.create` turns on the engine feature `backend.enable_asynchronous_operation` whenever the mode is not `none`; read `FilamentEngine.isAsynchronousModeEnabled` before relying on it (on Vulkan the mode is honoured as amortization). |
+| `withAsynchronousMode` | `EngineConfig withAsynchronousMode(FilamentAsynchronousMode mode)` | This configuration with another asynchronous mode. |
 
 #### `class FilamentEngine`
 
@@ -474,6 +476,9 @@ The main entry point for the Filament rendering engine.  An [FilamentEngine] ins
 | `makeCanvasContextCurrent` | `void makeCanvasContextCurrent()` | Web builds: makes this engine's WebGL context the page's current one. Every engine on a page draws through the one current context, so an engine with a canvas makes its own current before it renders, flushes or is destroyed (`flush`, `flushAndWait`, `dispose` and the web `FilamentWidget` call it; `filament_web_make_context_current`). A no-op without a canvas. |
 | `flush` | `void flush()` | Flushes the current command buffer to the hardware rendering thread without blocking. |
 | `pumpMessageQueues` | `void pumpMessageQueues()` | Pumps the engine's internal message queues, processing pending callbacks and asynchronous events.  Recommended to call once per frame in the main game loop. |
+| `isAsynchronousModeEnabled` | `bool get isAsynchronousModeEnabled` | Whether the engine runs asynchronous resource creation and uploads. When false, every `createAsync` / `setImageAsync` / `setBufferAtAsync` / `setBufferAsync` runs synchronously and completes at once. |
+| `cancelAsyncCall` | `bool cancelAsyncCall(int id)` | Cancels a queued asynchronous call by its Filament id; true when it had not run yet (its completion then reports `FilamentAsyncStatus.canceled`). |
+| `whenIdle` | `Future<void> whenIdle({Duration pollInterval})` | Completes once the GPU executed every command submitted before the call, without blocking the isolate (a fence polled every `pollInterval`): the non-blocking replacement for `flushAndWait` when a caller only needs to order work after the GPU. |
 | `execute` | `void execute()` | Executes work on the calling thread. Only supported in single-threaded/web builds. |
 | `isPaused` | `bool get isPaused` | Whether the rendering thread is paused. |
 | `paused` | `paused(bool val)` | Executes `paused` operation. |

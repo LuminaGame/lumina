@@ -113,6 +113,7 @@ void filament_engine_config_init_default(filament_engine_config_t* out) {
   out->material_cache_capacity = defaultCfg.materialCacheCapacity;
   out->stereoscopic_eye_count = defaultCfg.stereoscopicEyeCount;
   out->stereoscopic_type = static_cast<int32_t>(defaultCfg.stereoscopicType);
+  out->asynchronous_mode = static_cast<int32_t>(defaultCfg.asynchronousMode);
 }
 
 void* filament_engine_create_ex(int backend, int feature_level, bool paused, const filament_engine_config_t* config, const char* const* feature_names, const bool* feature_values, int feature_count) {
@@ -135,6 +136,7 @@ void filament_engine_get_config(void* engine, filament_engine_config_t* out) {
   out->material_cache_capacity = cfg.materialCacheCapacity;
   out->stereoscopic_eye_count = cfg.stereoscopicEyeCount;
   out->stereoscopic_type = static_cast<int32_t>(cfg.stereoscopicType);
+  out->asynchronous_mode = static_cast<int32_t>(cfg.asynchronousMode);
   FFI_CATCH()
 }
 

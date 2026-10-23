@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 
+import 'package:flutter_filament/src/async_resource.dart';
 import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'package:flutter_filament/src/ffi_package_platform.dart';
 
@@ -28,7 +29,7 @@ part 'engine/engine_validity_checks.dart';
 /// and the lifetime of all created resources (renderers, views, scenes, etc.).
 ///
 /// Use [FilamentEngine.create] to instantiate and [dispose] to clean up.
-class FilamentEngine with _EngineValidityChecks {
+class FilamentEngine with _EngineValidityChecks implements FilamentEngineHandle {
   @override
   final ffi.Pointer<ffi.Void> _ptr;
   bool _disposed = false;
@@ -89,18 +90,22 @@ class FilamentEngine with _EngineValidityChecks {
     final List<ffi.Pointer<ffi.Char>> allocatedStrings = [];
 
     try {
-      ffi.Pointer<c.filament_engine_config_t> configPtr = ffi.nullptr;
-      if (config != null) {
-        config._copyToNative(arena);
-        configPtr = arena;
-      }
+      // No config given: Filament's own defaults, plus the asynchronous
+      // resource path (a worker thread where the platform has one).
+      final effectiveConfig = config ?? EngineConfig.defaults().withAsynchronousMode(const EngineConfig().asynchronousMode);
+      effectiveConfig._copyToNative(arena);
+      final ffi.Pointer<c.filament_engine_config_t> configPtr = arena;
+      // The engine honours the asynchronous mode only with this feature flag on.
+      final effectiveFeatures = effectiveConfig.asynchronousMode == FilamentAsynchronousMode.none
+          ? features
+          : {asynchronousOperationFeature: true, ...features};
 
-      final featureCount = features.length;
+      final featureCount = effectiveFeatures.length;
       if (featureCount > 0) {
         featureNamesPtr = calloc<ffi.Pointer<ffi.Char>>(featureCount);
         featureValuesPtr = calloc<ffi.Bool>(featureCount);
         int idx = 0;
-        for (final entry in features.entries) {
+        for (final entry in effectiveFeatures.entries) {
           final strPtr = entry.key.toNativeUtf8().cast<ffi.Char>();
           allocatedStrings.add(strPtr);
           featureNamesPtr[idx] = strPtr;
@@ -182,6 +187,7 @@ class FilamentEngine with _EngineValidityChecks {
   /// The raw native pointer to the Filament Engine.
   ///
   /// Use with caution — this is for advanced interop scenarios.
+  @override
   ffi.Pointer<ffi.Void> get nativePointer {
     _checkDisposed();
     return _ptr;
@@ -204,6 +210,7 @@ class FilamentEngine with _EngineValidityChecks {
         materialCacheCapacity: arena.ref.material_cache_capacity,
         stereoscopicEyeCount: arena.ref.stereoscopic_eye_count,
         stereoscopicType: StereoscopicType.fromValue(arena.ref.stereoscopic_type),
+        asynchronousMode: FilamentAsynchronousMode.fromValue(arena.ref.asynchronous_mode),
       );
     } finally {
       calloc.free(arena);
@@ -396,6 +403,39 @@ class FilamentEngine with _EngineValidityChecks {
   void pumpMessageQueues() {
     _checkDisposed();
     c.filament_engine_pump_message_queues(_ptr);
+  }
+
+  /// Whether the engine runs asynchronous resource creation and uploads
+  /// (`EngineConfig.asynchronousMode` honoured by the platform). When false,
+  /// every `createAsync` / `setImageAsync` / `setBufferAtAsync` runs
+  /// synchronously and completes at once.
+  bool get isAsynchronousModeEnabled {
+    _checkDisposed();
+    return c.filament_engine_is_asynchronous_mode_enabled(_ptr);
+  }
+
+  /// Cancels a queued asynchronous call by its Filament id. True when the
+  /// call had not run yet and was dropped (its completion reports
+  /// [FilamentAsyncStatus.canceled]).
+  bool cancelAsyncCall(int id) {
+    _checkDisposed();
+    if (id == asyncCallSync) return false;
+    return c.filament_engine_cancel_async_call(_ptr, id);
+  }
+
+  /// Completes once the GPU has executed every command submitted before this
+  /// call, without blocking the calling isolate: a fence polled every
+  /// [pollInterval]. The non-blocking replacement for [flushAndWait] when a
+  /// caller only needs to order its work after the GPU.
+  Future<void> whenIdle({Duration pollInterval = const Duration(milliseconds: 2)}) async {
+    _checkDisposed();
+    final fence = createFence();
+    try {
+      flush();
+      await fence.whenSignaled(pollInterval: pollInterval);
+    } finally {
+      fence.dispose();
+    }
   }
 
   /// Executes work on the calling thread. Only supported in single-threaded/web builds.

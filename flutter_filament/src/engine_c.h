@@ -40,6 +40,7 @@ typedef struct filament_engine_config_t {
     uint32_t material_cache_capacity;       // Config::materialCacheCapacity
     uint32_t stereoscopic_eye_count;        // Config::stereoscopicEyeCount
     int32_t  stereoscopic_type;             // Config::StereoscopicType
+    int32_t  asynchronous_mode;             // Config::asynchronousMode (Platform::AsynchronousMode: 0 NONE, 1 THREAD_PREFERRED, 2 AMORTIZATION)
 } filament_engine_config_t;
 
 // Version: the Filament release the wrapper was built against

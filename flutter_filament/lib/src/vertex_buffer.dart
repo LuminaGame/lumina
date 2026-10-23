@@ -3,6 +3,7 @@
  * Licensed under the Apache License, Version 2.0.
  */
 
+import 'package:flutter_filament/src/async_resource.dart';
 import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
 import 'package:flutter_filament/src/ffi_package_platform.dart';
@@ -65,6 +66,70 @@ class FilamentVertexBuffer {
     bool withUv = false,
     bool enableBufferObjects = false,
     bool advancedSkinning = false,
+  }) =>
+      _create(
+        engine: engine,
+        vertexCount: vertexCount,
+        bufferCount: bufferCount,
+        attributes: attributes,
+        withColor: withColor,
+        withUv: withUv,
+        enableBufferObjects: enableBufferObjects,
+        advancedSkinning: advancedSkinning,
+      );
+
+  /// [create] on the engine's asynchronous path: the GPU allocation runs off
+  /// the caller and the future completes with the ready buffer (a cancelled
+  /// creation disposes it and throws). Until then only `setBufferAtAsync`
+  /// may be called on it.
+  static Future<FilamentVertexBuffer> createAsync({
+    required FilamentEngine engine,
+    required int vertexCount,
+    int bufferCount = 1,
+    List<VertexAttributeDesc>? attributes,
+    bool withColor = false,
+    bool withUv = false,
+    bool enableBufferObjects = false,
+    bool advancedSkinning = false,
+  }) async {
+    late final FilamentVertexBuffer vb;
+    final upload = FilamentAsyncUpload.start(engine, (requestId) {
+      vb = _create(
+        engine: engine,
+        vertexCount: vertexCount,
+        bufferCount: bufferCount,
+        attributes: attributes,
+        withColor: withColor,
+        withUv: withUv,
+        enableBufferObjects: enableBufferObjects,
+        advancedSkinning: advancedSkinning,
+        asyncRequestId: requestId,
+      );
+      return asyncCallSync;
+    });
+    if (await upload.done != FilamentAsyncStatus.completed) {
+      vb.dispose();
+      throw StateError('Asynchronous vertex buffer creation was cancelled');
+    }
+    return vb;
+  }
+
+  /// Whether an asynchronous creation has finished (true for a synchronous one).
+  bool get isCreationComplete {
+    _checkDisposed();
+    return c.filament_vertex_buffer_is_creation_complete(_ptr);
+  }
+
+  static FilamentVertexBuffer _create({
+    required FilamentEngine engine,
+    required int vertexCount,
+    int bufferCount = 1,
+    List<VertexAttributeDesc>? attributes,
+    bool withColor = false,
+    bool withUv = false,
+    bool enableBufferObjects = false,
+    bool advancedSkinning = false,
+    int? asyncRequestId,
   }) {
     if (vertexCount <= 0) {
       throw ArgumentError.value(vertexCount, 'vertexCount', 'Must be greater than 0');
@@ -138,15 +203,26 @@ class FilamentVertexBuffer {
         attrArray[i].normalized = a.normalized;
       }
 
-      final ptr = c.filament_vertex_buffer_create(
-        engine.nativePointer,
-        bufferCount,
-        vertexCount,
-        resolvedAttributes.length,
-        attrArray,
-        enableBufferObjects,
-        advancedSkinning,
-      );
+      final ptr = asyncRequestId == null
+          ? c.filament_vertex_buffer_create(
+              engine.nativePointer,
+              bufferCount,
+              vertexCount,
+              resolvedAttributes.length,
+              attrArray,
+              enableBufferObjects,
+              advancedSkinning,
+            )
+          : c.filament_vertex_buffer_create_async(
+              engine.nativePointer,
+              bufferCount,
+              vertexCount,
+              resolvedAttributes.length,
+              attrArray,
+              enableBufferObjects,
+              advancedSkinning,
+              asyncRequestId,
+            );
 
       if (ptr == ffi.nullptr) {
         throw StateError('Failed to create Filament VertexBuffer');
@@ -321,6 +397,48 @@ class FilamentVertexBuffer {
       callback,
       user,
     );
+  }
+
+  /// [setBufferAt] on the engine's asynchronous path: the copy is queued and
+  /// the returned [FilamentAsyncUpload] reports when the data is on the GPU.
+  FilamentAsyncUpload setBufferAtAsync(
+    FilamentEngine engine,
+    int bufferIndex,
+    NativeBuffer data, {
+    int byteOffset = 0,
+    bool autoFree = false,
+  }) {
+    _checkDisposed();
+    if (_enableBufferObjects) {
+      throw StateError('Cannot call setBufferAtAsync when enableBufferObjects is true.');
+    }
+    if (bufferIndex < 0 || bufferIndex >= _bufferCount) {
+      throw RangeError.range(bufferIndex, 0, _bufferCount - 1, 'bufferIndex');
+    }
+    if (byteOffset < 0) {
+      throw ArgumentError.value(byteOffset, 'byteOffset', 'Must be non-negative');
+    }
+    final int capacity = _bufferByteSizes[bufferIndex];
+    if (byteOffset + data.sizeInBytes > capacity) {
+      throw RangeError(
+        'Upload size (${data.sizeInBytes} bytes) at offset $byteOffset exceeds buffer capacity ($capacity bytes).',
+      );
+    }
+    final (user, callback, _) = BufferOwnershipRegistry.instance.register(
+      data,
+      onFree: autoFree ? () => data.free() : null,
+    );
+    return FilamentAsyncUpload.start(engine, (requestId) => c.filament_vertex_buffer_set_buffer_at_async(
+          engine.nativePointer,
+          _ptr,
+          bufferIndex,
+          data.pointer.cast(),
+          data.sizeInBytes,
+          byteOffset,
+          callback,
+          user,
+          requestId,
+        ));
   }
 
   /// Sets a shared [BufferObject] at [bufferIndex].

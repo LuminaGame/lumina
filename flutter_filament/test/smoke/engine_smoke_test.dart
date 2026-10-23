@@ -274,5 +274,194 @@ void main() {
       expect(engine.isDisposed, isTrue);
       expect(FilamentEngineHost.liveEngineCount, 0);
     }, timeout: const Timeout(Duration(minutes: 5)));
+
+    // Streaming through the asynchronous resource path: sixty textured quads
+    // arrive in bursts while the rig keeps rendering. Every quad's vertex
+    // buffer, index buffer and texture are created and filled with the async
+    // API and its renderable is added only when its upload group completed,
+    // so a half-uploaded object is never drawn. Measured: how many frames each
+    // object took to become visible, and that the renderer skipped none.
+    test('engine: asynchronous uploads keep the frame', () async {
+      SmokeArtifacts.resetRecordedAssets();
+      const name = 'engine: asynchronous uploads keep the frame';
+      final vulkan = FilamentGpu.listVulkanDevices().isNotEmpty;
+      final rig = SmokeRig.create(width: smokeVideoWidth, height: smokeVideoHeight, backend: vulkan ? FilamentBackend.vulkan : null);
+      final engine = rig.engine;
+      smokeLog('asynchronous mode on ${engine.gpuName.isEmpty ? engine.backend : engine.gpuName}: ${engine.isAsynchronousModeEnabled}');
+      rig.camera.setProjection(fovDegrees: 50, aspect: smokeVideoWidth / smokeVideoHeight, near: 0.1, far: 100);
+      rig.camera.lookAt(eyeX: 0, eyeY: 0, eyeZ: 14, centerX: 0, centerY: 0, centerZ: 0);
+      final material = buildUnlitMaterial(engine, textured: true);
+
+      const total = 60;
+      const perBurst = 10;
+      const burstEvery = 24; // frames
+      const columns = 10;
+      final frames = smokeVideoFrames();
+      SmokeArtifacts.checkVideoDuration(name, frames, smokeVideoFps);
+
+      final pending = <int, _StreamedQuad>{};
+      final visibleAtFrame = <int, int>{};
+      final startedAtFrame = <int, int>{};
+      final objects = <_StreamedQuad>[];
+      final instances = <FilamentMaterialInstance>[];
+      var started = 0;
+
+      void startBurst(int frame) {
+        for (var i = 0; i < perBurst && started < total; i++, started++) {
+          final id = started;
+          final quad = _StreamedQuad.start(engine, id);
+          pending[id] = quad;
+          startedAtFrame[id] = frame;
+          objects.add(quad);
+        }
+      }
+
+      // The async completions arrive while frames render; the continuation
+      // runs on the Dart event loop, so the loop below yields between frames.
+      final pngs = <Uint8List>[];
+      Uint8List? middle;
+      final frameMs = <int>[];
+      final tm = FilamentTransformManager(engine);
+      Future<void> run() async {
+        for (var f = 0; f < frames; f++) {
+          if (f % burstEvery == 0 && started < total) startBurst(f);
+          await Future<void>.delayed(Duration.zero);
+          // Objects whose group completed this frame become renderables.
+          for (final id in pending.keys.toList()) {
+            final q = pending[id]!;
+            if (!q.allDone) continue;
+            pending.remove(id);
+            if (!q.allCompleted) continue;
+            final mi = material.createInstance()
+              ..setFloat3('baseColor', 1, 1, 1)
+              ..setTexture('tex', q.texture, sampler: const TextureSampler(filterMin: SamplerMinFilter.linear, filterMag: SamplerMagFilter.linear));
+            instances.add(mi);
+            final col = id % columns, row = id ~/ columns;
+            final e = engine.createEntity();
+            RenderableBuilder(1)
+              ..boundingBox(-1, -1, -1, 1, 1, 1)
+              ..culling(false)
+              ..material(0, mi)
+              ..geometry(0, PrimitiveType.triangles, q.vb, ib: q.ib)
+              ..build(engine, e);
+            tm.create(e);
+            tm.setTransform(e, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, (col - columns / 2 + 0.5) * 1.3, (2.5 - row) * 1.3, 0, 1]);
+            rig.scene.addEntity(e);
+            rig.entities.add(e);
+            visibleAtFrame[id] = f;
+          }
+          final clock = Stopwatch()..start();
+          final px = rig.renderFrame(warmup: 0);
+          frameMs.add(clock.elapsedMilliseconds);
+          final png = SmokeArtifacts.encodePng(smokeVideoWidth, smokeVideoHeight, px);
+          if (f == frames - 1) {
+            middle = png;
+            expect(countForegroundPixels(px, smokeVideoWidth), greaterThan(smokeVideoWidth * smokeVideoHeight ~/ 20),
+                reason: 'the streamed quads are on screen');
+          }
+          pngs.add(png);
+        }
+      }
+
+      await run();
+
+      final latencies = [for (final id in visibleAtFrame.keys) visibleAtFrame[id]! - startedAtFrame[id]!]..sort();
+      final median = latencies.isEmpty ? -1 : latencies[latencies.length ~/ 2];
+      final p90 = latencies.isEmpty ? -1 : latencies[(latencies.length * 9) ~/ 10];
+      smokeLog('async streaming: ${visibleAtFrame.length}/$total visible, time-to-visible median $median frames, '
+          'p90 $p90, max ${latencies.isEmpty ? -1 : latencies.last}; frame ms median ${(frameMs..sort())[frameMs.length ~/ 2]}, max ${frameMs.last}');
+      expect(visibleAtFrame.length, total, reason: 'every object became visible');
+      expect(median, lessThanOrEqualTo(engine.isAsynchronousModeEnabled ? 12 : 3),
+          reason: 'amortized: a few jobs per frame, ten objects per burst');
+      expect(frameMs.last, lessThan(250), reason: 'no frame stalled on an upload');
+
+      SmokeArtifacts.saveVideoFromPngFrames(name, pngs, fps: smokeVideoFps);
+      SmokeArtifacts.saveScreenshot(name, middle!);
+
+      rig.releaseEntities();
+      for (final mi in instances) {
+        mi.dispose();
+      }
+      material.dispose();
+      for (final q in objects) {
+        q.dispose();
+      }
+      rig.dispose();
+    }, timeout: const Timeout(Duration(minutes: 5)));
   });
+}
+
+
+/// One streamed object: its three resources created and filled through the
+/// asynchronous API, each with its own upload; `allDone` once every upload
+/// reported, `allCompleted` when none was cancelled.
+class _StreamedQuad {
+  _StreamedQuad._(this.vb, this.ib, this.texture, this.uploads);
+
+  final FilamentVertexBuffer vb;
+  final FilamentIndexBuffer ib;
+  final FilamentTexture texture;
+  final List<FilamentAsyncUpload> uploads;
+  final List<FilamentAsyncStatus?> _results = [];
+
+  static _StreamedQuad start(FilamentEngine engine, int id) {
+    // The three resources are allocated synchronously (cheap) and every fill
+    // goes through the asynchronous path, each with its own upload.
+    final vb = FilamentVertexBuffer.create(
+      engine: engine,
+      vertexCount: 4,
+      bufferCount: 2,
+      attributes: const [
+        VertexAttributeDesc(attribute: VertexAttribute.position, bufferIndex: 0, type: AttributeType.float3, byteOffset: 0, byteStride: 12),
+        VertexAttributeDesc(attribute: VertexAttribute.uv0, bufferIndex: 1, type: AttributeType.float2, byteOffset: 0, byteStride: 8),
+      ],
+    );
+    final ib = FilamentIndexBuffer.create(engine: engine, indexCount: 6, type: IndexType.ushort);
+    final texture = FilamentTexture.create2D(engine: engine, width: 64, height: 64, format: TextureFormat.rgba8, levels: 1);
+    final uploads = <FilamentAsyncUpload>[];
+    const s = 0.55;
+    uploads.add(vb.setBufferAtAsync(engine, 0, NativeBuffer.fromTypedData(Float32List.fromList([-s, -s, 0, s, -s, 0, s, s, 0, -s, s, 0])), autoFree: true));
+    uploads.add(vb.setBufferAtAsync(engine, 1, NativeBuffer.fromTypedData(Float32List.fromList([0, 1, 1, 1, 1, 0, 0, 0])), autoFree: true));
+    uploads.add(ib.setBufferAsync(engine, NativeBuffer.fromTypedData(Uint16List.fromList([0, 1, 2, 0, 2, 3])), autoFree: true));
+    // A distinct solid colour per object, so the frame proves which arrived.
+    final pixels = Uint8List(64 * 64 * 4);
+    final hue = (id * 37) % 360;
+    final (r, g, b) = _hsv(hue.toDouble());
+    for (var i = 0; i < pixels.length; i += 4) {
+      pixels[i] = r;
+      pixels[i + 1] = g;
+      pixels[i + 2] = b;
+      pixels[i + 3] = 255;
+    }
+    uploads.add(texture.setImageAsync(pixelData: pixels, width: 64, height: 64));
+    final quad = _StreamedQuad._(vb, ib, texture, uploads);
+    for (final u in uploads) {
+      quad._results.add(null);
+      final index = quad._results.length - 1;
+      u.done.then((status) => quad._results[index] = status);
+    }
+    return quad;
+  }
+
+  bool get allDone => _results.every((r) => r != null);
+  bool get allCompleted => _results.every((r) => r == FilamentAsyncStatus.completed);
+
+  void dispose() {
+    texture.dispose();
+    ib.dispose();
+    vb.dispose();
+  }
+
+  static (int, int, int) _hsv(double h) {
+    final x = (1 - ((h / 60) % 2 - 1).abs());
+    final (double r, double g, double b) = switch ((h ~/ 60) % 6) {
+      0 => (1, x, 0),
+      1 => (x, 1, 0),
+      2 => (0, 1, x),
+      3 => (0, x, 1),
+      4 => (x, 0, 1),
+      _ => (1, 0, x),
+    };
+    return ((60 + r * 195).round(), (60 + g * 195).round(), (60 + b * 195).round());
+  }
 }

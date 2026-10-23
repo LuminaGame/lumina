@@ -339,6 +339,9 @@ A buffer holding index data defining triangle or line primitives.
 | `indexCount` | `int get indexCount` | Number of indices this buffer can hold. |
 | `type` | `IndexType get type` | The element type of the indices (ushort or uint). |
 | `byteCapacity` | `int get byteCapacity` | Total capacity in bytes for this IndexBuffer. |
+| `createAsync` | `static Future<FilamentIndexBuffer> createAsync({required FilamentEngine engine, required int indexCount, IndexType type})` | Motorun asenkron yolunda `create`; future hazır tamponla tamamlanır (iptal edilen oluşturma tamponu yok eder ve fırlatır). |
+| `isCreationComplete` | `bool get isCreationComplete` | Asenkron oluşturmanın bitip bitmediği (senkron oluşturmada true). |
+| `setBufferAsync` | `FilamentAsyncUpload setBufferAsync(FilamentEngine engine, NativeBuffer data, {int byteOffset, bool autoFree})` | Asenkron yolda kuyruğa alınan `setBuffer`; `FilamentAsyncUpload` indeksler GPU'ya varınca bildirir. |
 | `setUint16Data` | `void setUint16Data(Uint16List data)` | Sets 16-bit short index data (backward-compatible convenience). |
 | `setUint32Data` | `void setUint32Data(Uint32List data)` | Sets 32-bit int index data (backward-compatible convenience). |
 | `dispose` | `void dispose()` | Destroys this IndexBuffer. |
@@ -703,6 +706,9 @@ A buffer holding vertex data (positions, normals, UVs, colors, etc.).
 | `bufferCount` | `int get bufferCount` | Number of buffer slots. |
 | `enableBufferObjects` | `bool get enableBufferObjects` | Whether buffer object mode is enabled. |
 | `attributes` | `List<VertexAttributeDesc> get attributes` | The attribute descriptions for this vertex buffer. |
+| `createAsync` | `static Future<FilamentVertexBuffer> createAsync({required FilamentEngine engine, required int vertexCount, int bufferCount, List<VertexAttributeDesc>? attributes, bool withColor, bool withUv, bool enableBufferObjects, bool advancedSkinning})` | Motorun asenkron yolunda `create`; future hazır tamponla tamamlanır (iptal edilen oluşturma tamponu yok eder ve fırlatır). |
+| `isCreationComplete` | `bool get isCreationComplete` | Asenkron oluşturmanın bitip bitmediği (senkron oluşturmada true). |
+| `setBufferAtAsync` | `FilamentAsyncUpload setBufferAtAsync(FilamentEngine engine, int bufferIndex, NativeBuffer data, {int byteOffset, bool autoFree})` | Asenkron yolda kuyruğa alınan `setBufferAt`; `FilamentAsyncUpload` veri GPU'ya varınca bildirir. |
 | `dispose` | `void dispose()` | Destroys this VertexBuffer. |
 | `isDisposed` | `bool get isDisposed` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 

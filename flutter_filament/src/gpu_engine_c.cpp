@@ -379,6 +379,7 @@ void fillEngineConfig(Engine::Config& cfg, const filament_engine_config_t& confi
     cfg.materialCacheCapacity = config.material_cache_capacity;
     cfg.stereoscopicEyeCount = static_cast<uint8_t>(config.stereoscopic_eye_count);
     cfg.stereoscopicType = static_cast<backend::StereoscopicType>(config.stereoscopic_type);
+    cfg.asynchronousMode = static_cast<backend::Platform::AsynchronousMode>(config.asynchronous_mode);
 }
 
 }  // namespace
