@@ -243,6 +243,8 @@ mixin _EditorImport on _EditorViewModelState {
     if (!options.autoOrganize) {
       final dir = Directory('$projectDirPath/$target')..createSync(recursive: true);
       ContentFolders.writeMarker(dir.path);
+      // A new folder: the cached folder walk no longer lists every folder.
+      _sourceFolderCache = null;
       _showRecentlyModified = false;
       _activeCollection = null;
       selectedFolder = target;
@@ -268,8 +270,23 @@ mixin _EditorImport on _EditorViewModelState {
   }
 
   /// Puts a landed file's assets on the Content Browser without a rescan.
+  /// A file that landed in a folder the cached folder walk does not know
+  /// (a mirrored subfolder the import just created) drops that cache, so
+  /// the folder tiles and the sources tree show it.
   void _onImportedAssets(List<RealAssetInfo> assets) {
     if (_disposed || assets.isEmpty) return;
+    final known = _sourceFolderCache?.$2;
+    if (known != null) {
+      for (final a in assets) {
+        final rel = a.relativePath.replaceAll(r'\', '/');
+        final slash = rel.lastIndexOf('/');
+        final folder = slash < 0 ? 'contents' : rel.substring(0, slash);
+        if (!known.contains(folder)) {
+          _sourceFolderCache = null;
+          break;
+        }
+      }
+    }
     final byPath = {for (final a in assets) a.lmasPath ?? a.relativePath: a};
     _realAssets = [
       for (final a in _realAssets)
