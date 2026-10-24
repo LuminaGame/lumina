@@ -38,6 +38,19 @@ void main() {
     File('${dir.path}/android/app/build.gradle.kts')
       ..createSync(recursive: true)
       ..writeAsStringSync('android {\n    defaultConfig {\n        applicationId = "com.example.device_game"\n    }\n}\n');
+    // The manifest `flutter create` writes: Play on Device prepares the app from it.
+    File('${dir.path}/android/app/src/main/AndroidManifest.xml')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n'
+          '    <application android:label="device_game">\n'
+          '        <activity android:name=".MainActivity" android:exported="true">\n'
+          '            <intent-filter>\n'
+          '                <action android:name="android.intent.action.MAIN"/>\n'
+          '                <category android:name="android.intent.category.LAUNCHER"/>\n'
+          '            </intent-filter>\n'
+          '        </activity>\n'
+          '    </application>\n'
+          '</manifest>\n');
     final vm = EditorViewModel(initialProject: project, projectLocation: '${temp.path}/Projects');
     await vm.ensureDefaultLevelAssets();
     return vm;
@@ -161,7 +174,8 @@ void main() {
     final cmds = standIn.commands;
     expect(cmds, contains('flutter build apk --debug --target-platform android-arm64'));
     expect(cmds.any((c) => c.startsWith('adb -s 0a1b2c3 install -r ') && c.endsWith('app-debug.apk')), isTrue);
-    expect(cmds, contains('adb -s 0a1b2c3 shell monkey -p com.example.device_game -c android.intent.category.LAUNCHER 1'));
+    // The app id the project's packaging settings give it (the preparation writes it into the app).
+    expect(cmds, contains('adb -s 0a1b2c3 shell monkey -p com.lumina.devicegame -c android.intent.category.LAUNCHER 1'));
     expect(find.byKey(const ValueKey('play_on_device_status')), findsOneWidget);
     expect(vm.isPlaying, isFalse, reason: 'Play on Device does not start Play In Editor');
 
@@ -173,7 +187,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('toolbar_stop')));
     await pumpUntil(tester, () => !vm.androidRunner!.isActive, const Duration(seconds: 20));
     await tester.pump();
-    expect(standIn.commands, contains('adb -s 0a1b2c3 shell am force-stop com.example.device_game'));
+    expect(standIn.commands, contains('adb -s 0a1b2c3 shell am force-stop com.lumina.devicegame'));
     expect(find.byKey(const ValueKey('play_on_device_status')), findsNothing);
 
     await openPlayModes(tester, vm);
