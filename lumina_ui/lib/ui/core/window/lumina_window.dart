@@ -114,7 +114,9 @@ class LuminaWindow extends ChangeNotifier with WindowListener {
 
   Future<void> minimize() => _guard(_wm.minimize);
 
-  /// Maximizes or restores, from the window's real state.
+  /// Maximizes or restores, from the window's real state. The state is read
+  /// back afterwards: the plugin's maximize event is the usual signal, but a
+  /// window manager may apply the change without sending it.
   Future<void> toggleMaximize() => _guard(() async {
         if (await _wm.isMaximized()) {
           await _wm.unmaximize();
@@ -122,13 +124,16 @@ class LuminaWindow extends ChangeNotifier with WindowListener {
           await _rememberBounds();
           await _wm.maximize();
         }
+        await _sync();
       });
 
-  /// Enters or leaves fullscreen, from the window's real state.
+  /// Enters or leaves fullscreen, from the window's real state (read back
+  /// afterwards, as for [toggleMaximize]).
   Future<void> toggleFullScreen() => _guard(() async {
         final full = await _wm.isFullScreen();
         if (!full) await _rememberBounds();
         await _wm.setFullScreen(!full);
+        await _sync();
       });
 
   Future<void> startDragging() => _guard(_wm.startDragging);
