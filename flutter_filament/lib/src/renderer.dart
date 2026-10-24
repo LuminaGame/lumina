@@ -11,6 +11,7 @@ import 'package:vector_math/vector_math_64.dart';
 
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/gltf_loader.dart' show FilamentAssetLoader;
+import 'package:flutter_filament/src/pixel_read.dart';
 import 'package:flutter_filament/src/render_target.dart';
 import 'package:flutter_filament/src/swap_chain.dart';
 import 'package:flutter_filament/src/texture.dart';
@@ -349,10 +350,11 @@ class FilamentRenderer {
   }
 
   /// [readPixels] without blocking the calling isolate: the readback is
-  /// queued and the pixels are copied into [outPixels] once the GPU wrote
-  /// them (a fence polled from the event loop, see
-  /// [FilamentEngine.whenIdle]). Call between [beginFrame] and [endFrame]
-  /// like [readPixels]; the future completes after [endFrame].
+  /// queued and the pixels are copied into [outPixels] once Filament handed
+  /// the read's buffer back (its callback, polled from the event loop; on
+  /// Vulkan the copy into the buffer runs after the GPU is done). Call
+  /// between [beginFrame] and [endFrame] like [readPixels]; the future
+  /// completes after [endFrame].
   Future<void> readPixelsAsync({
     required int x,
     required int y,
@@ -363,9 +365,9 @@ class FilamentRenderer {
     _checkDisposed();
     final ptr = calloc<ffi.Uint8>(outPixels.length);
     try {
-      c.filament_renderer_read_pixels(
-          _ptr, _engine.nativePointer, x, y, width, height, ptr.cast(), ffi.nullptr, ffi.nullptr);
-      await _engine.whenIdle();
+      final (callback, user, token) = FilamentPixelReads.begin();
+      c.filament_renderer_read_pixels(_ptr, _engine.nativePointer, x, y, width, height, ptr.cast(), callback, user);
+      await FilamentPixelReads.wait(_engine, token);
       outPixels.setAll(0, ptr.asTypedList(outPixels.length));
     } finally {
       calloc.free(ptr);
@@ -390,7 +392,8 @@ class FilamentRenderer {
   }
 
   /// Reads back pixels from the specified [renderTarget] without blocking
-  /// the calling isolate (the GPU is awaited through [FilamentEngine.whenIdle]).
+  /// the calling isolate: it completes once Filament handed the read's
+  /// buffer back, as [readPixelsAsync] does.
   ///
   /// Origin (0,0) is at the bottom-left of the render target.
   Future<Uint8List> readPixelsFromRenderTarget(
@@ -409,6 +412,7 @@ class FilamentRenderer {
     final completer = Completer<Uint8List>();
 
     try {
+      final (callback, user, token) = FilamentPixelReads.begin();
       c.filament_renderer_read_pixels_render_target(
         _ptr,
         renderTarget.nativePointer,
@@ -420,11 +424,11 @@ class FilamentRenderer {
         type.value,
         bufferPtr.cast(),
         totalBytes,
-        ffi.nullptr,
-        ffi.nullptr,
+        callback,
+        user,
       );
 
-      await _engine.whenIdle();
+      await FilamentPixelReads.wait(_engine, token);
       final result = Uint8List.fromList(bufferPtr.asTypedList(totalBytes));
       completer.complete(result);
     } catch (e, st) {

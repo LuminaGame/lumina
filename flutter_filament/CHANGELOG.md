@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `FilamentRenderer.readPixelsAsync` and `readPixelsFromRenderTarget` complete once Filament hands the read's buffer
+  back, not when a fence signals: on Vulkan the copy into the buffer runs on a worker thread after the GPU, so the
+  buffer was freed while it was still being written (the editor crashed rendering thumbnails after an import).
 - `FilamentWidget`'s status placeholder (shown until the first frame) scales down in a small view instead of
   overflowing it.
 - `FilamentStallAudit` (`lib/src/stall_audit.dart`): named sections of engine work on the calling isolate, reported

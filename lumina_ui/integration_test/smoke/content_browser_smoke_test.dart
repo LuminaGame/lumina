@@ -196,6 +196,9 @@ void main() {
       'Props/Barrels/fuel_barrel_red.glb',
       'Props/AC_units/ac_unit_a_300x300.glb',
       'Props/Banana Bunch/banana_bunch_medium.glb',
+      // An FBX writes its materials before its mesh: each of them is rendered
+      // right after the import, while the viewport draws.
+      'FBX/StaticMeshes/SM_Casino_Chair.FBX',
     ];
     for (final rel in imports) {
       if (!File('${SmokeArtifacts.testAssetsDir.path}/$rel').existsSync()) {
