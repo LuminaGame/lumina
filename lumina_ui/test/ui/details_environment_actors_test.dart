@@ -17,6 +17,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/environment_lighti
 import 'package:lumina_ui/ui/features/sub_editors/views/environment_lighting_sub_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
+import '../helpers/temp_project.dart';
 
 /// 05 — the placeable environment actors: the
 /// Exponential Height Fog, the Post Process Volume and the Local Fog Volume.
@@ -25,8 +26,8 @@ import 'package:vector_math/vector_math_64.dart' show Vector3;
 void main() {
   late Directory tempDir;
   setUp(() => tempDir = Directory.systemTemp.createTempSync('lumina_env_actors_'));
-  tearDown(() {
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+  tearDown(() async {
+    if (tempDir.existsSync()) await deleteTempProject(tempDir);
   });
 
   EditorViewModel vm() => EditorViewModel(

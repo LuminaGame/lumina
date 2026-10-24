@@ -11,6 +11,7 @@ import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 import '../helpers/blueprint_test_project.dart';
 import '../helpers/scaffold_game_project.dart';
+import '../helpers/temp_project.dart';
 
 /// Collision presets in Play-In-Editor, on a real Third Person project:
 /// collision presets authored in Blueprints (and a placement's level
@@ -27,7 +28,7 @@ void main() {
     root = Directory.systemTemp.createTempSync('lumina_bp10_pie_');
     dir = await scaffoldGameProject(root, name: 'collision_play', widgetLibrary: 'flutter');
   });
-  tearDownAll(() => root.deleteSync(recursive: true));
+  tearDownAll(() => deleteTempProject(root));
   tearDown(() => BlueprintPieDebugger.instance.clear());
 
   LuminaProject manifest() =>

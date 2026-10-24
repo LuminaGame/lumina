@@ -11,6 +11,7 @@ import 'package:vector_math/vector_math_64.dart' show Quaternion, Vector3;
 
 import '../helpers/blueprint_test_project.dart';
 import '../helpers/scaffold_game_project.dart';
+import '../helpers/temp_project.dart';
 
 /// Physics in Play-In-Editor, on a real Third Person project: a
 /// simulating BP_Chair placed 150 cm above the ground falls and rests with
@@ -53,7 +54,7 @@ void main() {
   });
   tearDownAll(() {
     LuminaBlueprintComponents.meshPhysicsResolver = null;
-    root.deleteSync(recursive: true);
+    return deleteTempProject(root);
   });
   tearDown(() => BlueprintPieDebugger.instance.clear());
 
