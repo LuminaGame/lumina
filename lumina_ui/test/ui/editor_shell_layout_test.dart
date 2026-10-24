@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/gestures.dart' show kMiddleMouseButton, PointerDeviceKind;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
@@ -72,42 +73,41 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       
       expect(viewModel.openTabs.length, 2);
-      expect(find.text('Material Editor Editor'), findsWidgets);
-      
-      // Make it dirty
+      expect(find.descendant(of: find.byKey(const ValueKey('workspace_tab_1')), matching: find.text('Material Editor Editor')),
+          findsOneWidget);
+
+      // Make it dirty: the typed tab shows the unsaved dot.
       viewModel.openTabs[1].isDirty = true;
+      viewModel.notifyListeners();
       await tester.pump(const Duration(seconds: 1));
-      
-      expect(find.text('Material Editor Editor*'), findsWidgets);
-      
-      // Tap the X inside the dirty tab's header row (not any other close icon)
-      final tabRow = find.ancestor(
-        of: find.text('Material Editor Editor*').first,
-        matching: find.byType(Row),
-      ).first;
-      await tester.tap(find.descendant(of: tabRow, matching: find.byIcon(LucideIcons.x)).first);
+      expect(find.descendant(of: find.byKey(const ValueKey('workspace_tab_1')), matching: find.byKey(const ValueKey('workspace_tab_unsaved_dot'))),
+          findsOneWidget);
+
+      // Under the pointer the dot turns into the cross; it asks to save.
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(tester.getCenter(find.byKey(const ValueKey('workspace_tab_1'))));
+      await tester.pump();
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('workspace_tab_1')), matching: find.byKey(const ValueKey('workspace_tab_close'))));
       await tester.pump(const Duration(seconds: 1));
-      
+
       expect(find.text('Save Changes?'), findsWidgets);
-      
+
       // Discard
       await tester.tap(find.text('Discard'));
       await tester.pump(const Duration(seconds: 1));
-      
+
       expect(viewModel.openTabs.length, 1);
-      
-      // Open another
+
+      // Open another; a middle click on its tab closes it.
       viewModel.openSubEditorTab('Blueprint Editor');
       await tester.pump(const Duration(seconds: 1));
-      
-      // Middle click to close
-      // The title also appears inside the sub-editor body; the 9px bold text is the tab header.
-      final tabFinder = find.byWidgetPredicate(
-        (w) => w is Text && w.data == 'Blueprint Editor Editor' && w.style?.fontSize == 9,
-      );
-      await tester.tap(tabFinder, buttons: 4);
+      final middle = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('workspace_tab_1'))),
+          kind: PointerDeviceKind.mouse, buttons: kMiddleMouseButton);
+      await middle.up();
       await tester.pump(const Duration(seconds: 1));
-      
+
       expect(viewModel.openTabs.length, 1);
     });
   });

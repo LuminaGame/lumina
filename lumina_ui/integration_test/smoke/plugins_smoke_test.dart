@@ -374,16 +374,26 @@ void main() {
       await settle(tester);
       final volume = vm.actors.firstWhere((a) => a.type == PcgTypes.volumeActor);
       expect(vm.selectedActorIds, [volume.id]);
-      expect(find.text('PCG'), findsWidgets, reason: 'the plugin Details section for PcgVolume');
       await rec.hold(const Duration(seconds: 1));
 
       // The Details panel sits under the Outliner and is a
       // lazy list: bring the plugin section's controls into view first.
       Future<void> reveal(String key) async {
+        // The panel's own vertical list (the sections hold fields and
+        // pickers that scroll too).
         await tester.scrollUntilVisible(find.byKey(Key(key)), 60,
-            scrollable: find.descendant(of: find.byType(DetailsWidget), matching: find.byType(Scrollable)).first);
+            scrollable: find
+                .descendant(
+                    of: find.byType(DetailsWidget),
+                    matching: find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down))
+                .first);
         await settle(tester);
       }
+      await reveal('pcg_graph_select');
+      // The plugin's Details section for the PcgVolume, its own section label first.
+      expect(find.byWidgetPredicate((w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('details_plugin_section_')),
+          findsOneWidget, reason: 'the plugin Details section for PcgVolume');
+      expect(find.text('PCG VOLUME'), findsOneWidget);
 
       await reveal('pcg_generate_button');
       await tester.tap(find.byKey(const Key('pcg_generate_button')));
