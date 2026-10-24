@@ -220,6 +220,12 @@ mixin _EditorActorSpawning on _EditorViewModelState {
   /// A stream of mesh loads is running (the stat strip counts it).
   bool get meshesLoading => _meshStreamRunning && _meshesLoaded < _meshesToLoad;
 
+  /// Actor mesh loads still reading or parsing. Each holds its file open
+  /// until it lands, also after the editor closed (the stream then takes no
+  /// new actor, but the loads under way finish).
+  int get meshLoadsInFlight => _meshLoadsInFlight;
+  int _meshLoadsInFlight = 0;
+
   /// Loads the meshes the current level's actors still lack, streamed:
   /// nearest to the camera first, [meshLoadConcurrency] at a time.
   Future<void> loadLevelMeshes({bool reframeWhenDone = false}) =>
@@ -249,11 +255,13 @@ mixin _EditorActorSpawning on _EditorViewModelState {
       while (queue.isNotEmpty && !_disposed) {
         final actor = queue.removeFirst();
         meshLoadOrder.add(actor.id);
+        _meshLoadsInFlight++;
         try {
           await _loadActorMeshData(actor);
         } catch (e) {
           _logger.log('Mesh of actor "${actor.name}" did not load: $e', level: 'warning', source: 'EditorViewModel');
         } finally {
+          _meshLoadsInFlight--;
           _meshesLoaded++;
           _meshDataArrived();
         }

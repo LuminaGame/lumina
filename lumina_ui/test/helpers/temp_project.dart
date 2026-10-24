@@ -16,6 +16,21 @@ Future<void> drainRealIo(WidgetTester tester, {int rounds = 20}) async {
   }
 }
 
+/// Drives a widget test's async file IO until [done] holds (or [timeout]).
+///
+/// [drainRealIo] runs a fixed number of rounds; a big level's mesh stream can
+/// still be reading when they are over, and once the test body has ended
+/// nothing pumps again, so each read keeps its file open. Pass what says the
+/// work has landed, e.g. `vm.meshLoadsInFlight == 0`.
+Future<void> drainRealIoUntil(WidgetTester tester, bool Function() done, {Duration timeout = const Duration(seconds: 20)}) async {
+  final clock = Stopwatch()..start();
+  while (!done() && clock.elapsed < timeout) {
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    await tester.pump();
+  }
+  await drainRealIo(tester);
+}
+
 /// Deletes a test's temp project once Windows lets go of it.
 ///
 /// Source control runs git probes with the project folder as their working

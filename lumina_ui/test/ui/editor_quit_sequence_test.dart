@@ -107,11 +107,13 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    late EditorViewModel vm;
+    // The level's 440 meshes are still streaming in when a test ends: drain
+    // until the loads under way have landed and let go of their files.
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox());
-      await drainRealIo(tester);
+      await drainRealIoUntil(tester, () => vm.meshLoadsInFlight == 0);
     });
-    late EditorViewModel vm;
     await tester.runAsync(() async {
       vm = EditorViewModel(
         initialProject: const LuminaProject(projectName: 'QuitGame', activeLevel: 'contents/levels/L_Main.lmas'),
