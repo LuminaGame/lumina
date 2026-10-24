@@ -394,6 +394,11 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   String? _contentBrowserPrimaryAsset;
 
   late final PluginRegistryService pluginRegistry;
+
+  /// Whether [pluginRegistry] exists and has read the plugins: discovery
+  /// is real disk I/O after the editor opens, and the Plugins tab waits for it.
+  bool _pluginRegistryReady = false;
+  bool get isPluginRegistryReady => _pluginRegistryReady;
   bool _pluginRestartRequired = false;
 
   final Map<String, String> _pluginContentRoots = {};

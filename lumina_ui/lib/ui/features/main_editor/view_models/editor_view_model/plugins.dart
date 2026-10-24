@@ -46,7 +46,9 @@ mixin _EditorPlugins on _EditorViewModelState {
     );
 
     await pluginRegistry.initialize(projectDirPath);
+    _pluginRegistryReady = true;
     _updatePluginState();
+    if (!_disposed) notifyListeners();
   }
 
   void _updatePluginState() {

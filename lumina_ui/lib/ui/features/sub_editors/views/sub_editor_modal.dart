@@ -253,6 +253,17 @@ class _SubEditorDispatcher extends StatelessWidget {
     switch (assetType) {
       case 'plugins':
         if (editorViewModel == null) return const Center(child: Text('Missing EditorViewModel'));
+        // Plugin discovery reads the disk after the editor opens: a tab
+        // opened before it finished shows that it is still reading.
+        if (!editorViewModel!.isPluginRegistryReady) {
+          return const Center(
+            key: ValueKey('plugins_tab_loading'),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [CircularProgressIndicator(), SizedBox(height: 12), Text('Reading the plugins…')],
+            ),
+          );
+        }
         final cached = bindings.pluginManager;
         if (cached != null && identical(cached.registryService, editorViewModel!.pluginRegistry)) {
           cached
