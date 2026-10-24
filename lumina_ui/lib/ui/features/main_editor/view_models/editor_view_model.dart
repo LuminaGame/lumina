@@ -616,6 +616,8 @@ class EditorViewModel extends _EditorViewModelState
     _disposeEditorPanels();
     removeListener(panelsController.refresh);
     panelsController.dispose();
+    _frameStatsDisposed = true;
+    frameTimeListener = null;
     _frameStatsRevision.dispose();
     _disposed = true;
     _buildManagerVm?.dispose();

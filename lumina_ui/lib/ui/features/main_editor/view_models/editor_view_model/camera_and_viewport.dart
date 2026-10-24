@@ -105,6 +105,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
   void Function(Duration cpu, Duration frame)? frameTimeListener;
 
   void reportFrameTime(Duration cpu, Duration frame) {
+    if (_frameStatsDisposed) return;
     frameTimeListener?.call(cpu, frame);
     final currentFps = frame.inMicroseconds > 0
         ? 1000000.0 / frame.inMicroseconds

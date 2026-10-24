@@ -98,6 +98,10 @@ abstract class _EditorViewModelState extends ChangeNotifier {
 
   final ValueNotifier<int> _frameStatsRevision = ValueNotifier<int>(0);
 
+  /// Set by `dispose` before the notifiers go: a viewport frame that is
+  /// still in flight then reports into nothing.
+  bool _frameStatsDisposed = false;
+
   bool isFlyNavigating = false;
 
   // Background Asset Import State & Live Progress
