@@ -301,7 +301,7 @@ void main() {
         for (var y = 0; y < math.min(48, decoded.height); y++) {
           for (var x = (decoded.width * 0.35).round(); x < (decoded.width * 0.65).round(); x++) {
             final p = decoded.getPixel(x, y);
-            if ((p.r - 0xFB).abs() < 12 && (p.g - 0x7C).abs() < 12 && p.b < 24) return true;
+            if ((p.r - _primary.r).abs() < 12 && (p.g - _primary.g).abs() < 12 && (p.b - _primary.b).abs() < 24) return true;
           }
         }
         return false;
@@ -338,3 +338,10 @@ void main() {
     });
   });
 }
+
+/// The theme's primary colour in 8-bit channels: the Play banner's fill.
+final ({int r, int g, int b}) _primary = (
+  r: (EditorColors.primary.toARGB32() >> 16) & 0xFF,
+  g: (EditorColors.primary.toARGB32() >> 8) & 0xFF,
+  b: EditorColors.primary.toARGB32() & 0xFF,
+);

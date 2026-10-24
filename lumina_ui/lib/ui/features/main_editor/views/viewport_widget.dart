@@ -362,8 +362,10 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                       _buildPieBanner(),
 
                     // The chrome's top row: pills and tool column at the
-                    // left, stats and quick controls at the right.
-                    _buildCameraHeader(),
+                    // left, stats and quick controls at the right. Not in
+                    // Play: the game's own widgets take that space and its
+                    // clicks (the toolbar's Stop ends Play).
+                    if (!widget.viewModel.isPlaying) _buildCameraHeader(),
 
                     // Bottom Left Live World Coordinate Info
                     _buildCoordinateBar(),
