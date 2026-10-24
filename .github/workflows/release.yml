@@ -3,8 +3,8 @@
 # launch, and the native installers, then publishes all of them as the GitHub
 # release of the tag.
 #
-#   check ──┬── filament (windows, linux, linux-arm64) ──┬── filament-release ──┐
-#           │                                           └── studio (same three) ─┤
+#   check ──┬── filament (windows, linux, linux-arm64, android) ──┬── filament-release ──┐
+#           │                                                    └── studio (desktop three) ─┤
 #           ├── web (flutter_filament WebAssembly module) ─────────────────┤
 #           └── installers (setup.exe; .deb + .rpm) ───────────────────────┴── release
 #
@@ -26,6 +26,12 @@
 # writing to it at once. The Lumina release carries no Filament: its notes
 # link the Filament release, and the editor downloads from there (falling
 # back to its own tag, which is where releases up to v0.0.1-dev.6 put it).
+# The android leg builds the Android static libraries (arm64-v8a, x86_64,
+# NDK 28) that games and Quest builds link.
+#
+# workflow_dispatch with filament_only (no tag) runs only check, filament and
+# filament-release, at the commit the run was started on: it completes a
+# Filament release that lacks an archive without building Lumina Studio.
 #
 # The Flutter SDK is pinned in FLUTTER_VERSION below: the version the
 # workspace is developed and tested with (the pubspecs only constrain the Dart
@@ -69,15 +75,22 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tag to build and publish (e.g. v0.1.0)
-        required: true
+        description: Existing tag to build and publish (e.g. v0.1.0); not used with filament_only
+        required: false
         type: string
+      filament_only:
+        description: >
+          Only build and complete the filament-<VERSION> release, from the
+          commit this run was started on (no Lumina Studio release)
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ inputs.tag || github.ref_name }}
+  group: release-${{ inputs.filament_only && 'filament' || inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -99,6 +112,7 @@ jobs:
     steps:
       - name: Resolve the tag
         id: tag
+        if: ${{ !inputs.filament_only }}
         env:
           INPUT_TAG: ${{ inputs.tag }}
         run: |
@@ -109,9 +123,11 @@ jobs:
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
+      # filament_only builds the Filament of the commit the run was started
+      # on: the same VERSION and patches give the same Filament build.
       - uses: actions/checkout@v5
         with:
-          ref: refs/tags/${{ steps.tag.outputs.tag }}
+          ref: ${{ inputs.filament_only && github.sha || format('refs/tags/{0}', steps.tag.outputs.tag) }}
           path: lumina
           persist-credentials: false
 
@@ -138,6 +154,7 @@ jobs:
 
       - name: Tag matches lumina_ui version
         id: version
+        if: ${{ !inputs.filament_only }}
         run: dart lumina/tool/release/release_info.dart version --tag "${{ steps.tag.outputs.tag }}" --github-output
 
       - uses: ./lumina/.github/actions/checkout-siblings
@@ -172,6 +189,14 @@ jobs:
             runner: ubuntu-24.04-arm
             os: linux
             arch: arm64
+          # The Android static libraries (arm64-v8a, x86_64) for games and
+          # Quest builds: the same checkout built with NDK 28 after the
+          # desktop host tools; only the Android archive is uploaded.
+          - platform: android
+            runner: ubuntu-24.04
+            os: linux
+            arch: x64
+            android: true
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
     env:
@@ -213,12 +238,13 @@ jobs:
         with:
           fetch: 'false'
           save: 'true'
+          android: ${{ matrix.android && 'true' || 'false' }}
 
       - if: steps.published.outputs.published != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: filament-${{ matrix.platform }}
-          path: lumina/build/filament-prebuilt/filament-*
+          path: ${{ matrix.android && 'lumina/build/filament-prebuilt/filament-*-android.tar.gz*' || 'lumina/build/filament-prebuilt/filament-*' }}
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
@@ -289,6 +315,7 @@ jobs:
   studio:
     name: Lumina Studio (${{ matrix.platform }})
     needs: [check, filament]
+    if: ${{ !inputs.filament_only }}
     strategy:
       fail-fast: false
       matrix:
@@ -471,6 +498,7 @@ jobs:
   web:
     name: flutter_filament web module
     needs: check
+    if: ${{ !inputs.filament_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
@@ -539,6 +567,7 @@ jobs:
   installers:
     name: Installers (${{ matrix.platform }})
     needs: check
+    if: ${{ !inputs.filament_only }}
     strategy:
       fail-fast: false
       matrix:
@@ -656,6 +685,7 @@ jobs:
   release:
     name: Publish the release
     needs: [check, filament-release, studio, web, installers]
+    if: ${{ !inputs.filament_only }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:

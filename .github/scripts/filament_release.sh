@@ -8,7 +8,7 @@
 #       Prints the assets of <tag> that are not complete yet, one per line:
 #       both files of every archive/sidecar pair that is not fully uploaded
 #       (all of them when the release does not exist). Default platforms:
-#       windows, linux (x64) and linux-arm64. Exit 1 when GitHub cannot be asked.
+#       windows, linux (x64), linux-arm64 and android. Exit 1 when GitHub cannot be asked.
 #   filament_release.sh notes <version> <sha> <owner/repo>
 #       Prints the release notes: version, upstream tag, commit, patches.
 #   filament_release.sh publish <tag> <version> <sha> <dir>
@@ -24,12 +24,14 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 
-# The platform keys: windows, linux and macos are x64; linux-arm64 and macos-arm64 are arm64.
+# The platform keys: windows, linux and macos are x64; linux-arm64 and macos-arm64 are arm64;
+# android holds the arm64-v8a and x86_64 static libraries.
 archive_name() {
   case "$1" in
     windows) echo "filament-$2-windows-x64.zip" ;;
     linux | macos) echo "filament-$2-$1-x64.tar.gz" ;;
     linux-arm64 | macos-arm64) echo "filament-$2-$1.tar.gz" ;;
+    android) echo "filament-$2-android.tar.gz" ;;
     *) echo "filament_release.sh: unknown platform $1" >&2; exit 64 ;;
   esac
 }
@@ -60,7 +62,7 @@ missing() {
   local tag="$1" version="$2"
   shift 2
   local oses=("$@") have="" rc=0 os a
-  [ ${#oses[@]} -gt 0 ] || oses=(windows linux linux-arm64)
+  [ ${#oses[@]} -gt 0 ] || oses=(windows linux linux-arm64 android)
   have="$(release_assets "$tag")" || rc=$?
   if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ]; then return "$rc"; fi
   for os in "${oses[@]}"; do
@@ -104,6 +106,7 @@ Details: [third_party/filament/README.md](https://github.com/$repo/blob/$sha/thi
 | \`$(archive_name windows "$version")\` | Windows x64 (MSVC, static CRT) |
 | \`$(archive_name linux "$version")\` | Linux x64 (clang, bundled libc++) |
 | \`$(archive_name linux-arm64 "$version")\` | Linux arm64 (clang, bundled libc++) |
+| \`$(archive_name android "$version")\` | Android arm64-v8a and x86_64 (NDK 28; games and Quest builds) |
 
 Each archive holds one folder that works as the hooks' \`filament_dir\`, with a \`lumina-filament.json\` describing the build, and has a \`.sha256\` sidecar.
 EOF
