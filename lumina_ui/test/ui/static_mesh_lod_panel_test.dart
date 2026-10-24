@@ -5,6 +5,7 @@ import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/static_mesh_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/static_mesh_sub_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import '../helpers/island_expectations.dart';
 
 void main() {
   late Directory tempDir;
@@ -55,6 +56,15 @@ void main() {
     // Verify LOD tab
     expect(find.text('LODs (1)'), findsOneWidget);
     expect(find.textContaining('Forced LOD'), findsOneWidget);
+
+    // The workspace's islands: the LODs over the mesh stats, the viewport,
+    // the details.
+    expectIslands(tester, {
+      'static_mesh_island_lods': 'LODs (1)',
+      'static_mesh_island_stats': 'MESH STATS',
+      'static_mesh_island_viewport': null,
+      'static_mesh_island_details': 'DETAILS',
+    });
 
     // Switch to LODs tab
     await tester.tap(find.text('LODs (1)'));

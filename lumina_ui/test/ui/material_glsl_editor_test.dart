@@ -143,6 +143,11 @@ fragment {
       assetPath: 'contents/materials/M_Error.lmas',
       initialAsset: asset,
     );
+    // An editor-sized window: the compiler log island is wide enough for its rows.
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
       ShadcnApp(

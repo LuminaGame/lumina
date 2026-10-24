@@ -1,6 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_offscreen_frame_source.dart';
@@ -148,72 +149,75 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
             children: [
               // 1. Top Toolbar
               _buildToolbar(isDirty),
-              const Divider(height: 1),
 
-              // 2. Main Middle Workspace: Left Outliner + Center (Viewport / Curves)
+              // 2. The workspace: islands on the ground. Above, the track
+              // outliner, the viewport / curves island and the key details;
+              // below, the transport over the multi-track timeline.
               Expanded(
-                flex: 5,
-                child: ResizablePanel.horizontal(
-                  children: [
-                    // Left Track Outliner
-                    ResizablePane(
-                      initialSize: 280,
-                      minSize: 230,
-                      child: Container(
-                        color: EditorColors.cardHeader,
-                        child: SequencerTrackTreeWidget(
-                          viewModel: _viewModel,
-                          levelActors: widget.levelActors,
-                        ),
-                      ),
-                    ),
-
-                    // Center Panel: Viewport / Curves Tabs
-                    ResizablePane.flex(
-                      child: Container(
-                        color: EditorColors.background,
-                        child: Column(
+                child: EditorIslandGround(
+                  child: ResizablePanel.vertical(
+                    dividerBuilder: EditorIslandDividers.grip,
+                    children: [
+                      ResizablePane.flex(
+                        child: ResizablePanel.horizontal(
+                          dividerBuilder: EditorIslandDividers.gap,
                           children: [
-                            _buildCenterTabsHeader(),
-                            Expanded(
-                              child: _activeTabIndex == 0
-                                  ? _buildViewport()
-                                  : SequencerCurveEditorWidget(viewModel: _viewModel),
+                            ResizablePane(
+                              initialSize: 280,
+                              minSize: 230,
+                              child: EditorIsland(
+                                key: const ValueKey('seq_island_tracks'),
+                                child: SequencerTrackTreeWidget(
+                                  viewModel: _viewModel,
+                                  levelActors: widget.levelActors,
+                                ),
+                              ),
+                            ),
+                            ResizablePane.flex(
+                              child: EditorIsland(
+                                key: const ValueKey('seq_island_viewport'),
+                                color: EditorColors.viewportBackdrop,
+                                header: EditorIslandTabHeader(
+                                  keyPrefix: 'seq_center',
+                                  tabs: const ['3D Viewport', 'Curves & Tangents'],
+                                  active: _activeTabIndex,
+                                  onSelect: (i) => setState(() => _activeTabIndex = i),
+                                ),
+                                child: _activeTabIndex == 0
+                                    ? _buildViewport()
+                                    : SequencerCurveEditorWidget(viewModel: _viewModel),
+                              ),
+                            ),
+                            ResizablePane(
+                              initialSize: 270,
+                              minSize: 220,
+                              child: EditorIsland(
+                                key: const ValueKey('seq_island_key_details'),
+                                child: SequencerKeyDetailsPanel(
+                                  key: const ValueKey('seq_key_panel'),
+                                  viewModel: _viewModel,
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-
-                    // Right: the selected key's frame, values and interpolation
-                    ResizablePane(
-                      initialSize: 270,
-                      minSize: 220,
-                      child: Container(
-                        color: EditorColors.card,
-                        child: SequencerKeyDetailsPanel(
-                          key: const ValueKey('seq_key_panel'),
-                          viewModel: _viewModel,
+                      ResizablePane(
+                        initialSize: 320,
+                        minSize: 160,
+                        child: EditorIsland(
+                          key: const ValueKey('seq_island_timeline'),
+                          child: Column(
+                            children: [
+                              // 3. Transport bar (play/pause/stop, keyframe jumps, loop, range, time format)
+                              _buildTransportBar(),
+                              // 4. The multi-track timeline canvas
+                              Expanded(child: SequencerTimelineWidget(viewModel: _viewModel)),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const Divider(height: 1),
-
-              // 3. Transport bar (play/pause/stop, keyframe jumps, loop, range, time format)
-              _buildTransportBar(),
-              const Divider(height: 1),
-
-              // 4. Bottom Multi-Track Timeline Canvas
-              Expanded(
-                flex: 4,
-                child: Container(
-                  color: EditorColors.card,
-                  child: SequencerTimelineWidget(
-                    viewModel: _viewModel,
+                    ],
                   ),
                 ),
               ),
@@ -458,44 +462,6 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
     );
   }
 
-  Widget _buildCenterTabsHeader() {
-    return Container(
-      height: 32,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      color: EditorColors.cardHeader,
-      child: Row(
-        children: [
-          _buildTabButton('3D Viewport', 0, LucideIcons.box),
-          const SizedBox(width: 4),
-          _buildTabButton('Curves & Tangents', 1, LucideIcons.spline),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabButton(String title, int index, IconData icon) {
-    final isActive = _activeTabIndex == index;
-    return GhostButton(
-      size: ButtonSize.small,
-      onPressed: () => setState(() => _activeTabIndex = index),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 11, color: isActive ? Colors.indigo : EditorColors.mutedForeground),
-          const SizedBox(width: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 9.5,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              color: isActive ? Colors.indigo : EditorColors.foreground,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _transportButton({required IconData icon, required VoidCallback? onPressed, required String tooltip, Color? color, Key? key}) {
     return Tooltip(
       tooltip: (_) => TooltipContainer(child: Text(tooltip, style: const TextStyle(fontSize: 9))),
@@ -512,9 +478,9 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
     final vm = _viewModel;
     final previewing = vm.isPreviewingLevel;
     return Container(
-      height: 34,
+      height: EditorIslandStyle.headerHeight,
       padding: const EdgeInsets.symmetric(horizontal: 8),
-      color: EditorColors.card,
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: EditorColors.border))),
       child: Row(
         children: [
           _transportButton(

@@ -4,71 +4,19 @@ part of '../animation_sub_editor.dart';
 mixin _AnimationLeftSidebar on _AnimationSubEditorStateBase {
 
   Widget _buildLeftSidebar() {
-    return Column(
-      children: [
-        // Tabs Header
-        Container(
-          padding: const EdgeInsets.all(6),
-          color: EditorColors.card,
-          child: Row(
-            children: [
-              Expanded(
-                child: GhostButton(
-                  size: ButtonSize.small,
-                  onPressed: () => setState(() => _activeLeftTab = 0),
-                  child: Text(
-                    'Properties',
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeLeftTab == 0 ? FontWeight.bold : FontWeight.normal,
-                      color: _activeLeftTab == 0 ? Colors.orange : EditorColors.mutedForeground,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 2),
-              Expanded(
-                child: GhostButton(
-                  size: ButtonSize.small,
-                  onPressed: () => setState(() => _activeLeftTab = 1),
-                  child: Text(
-                    'Bone Tracks',
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeLeftTab == 1 ? FontWeight.bold : FontWeight.normal,
-                      color: _activeLeftTab == 1 ? Colors.purple : EditorColors.mutedForeground,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 2),
-              Expanded(
-                child: GhostButton(
-                  size: ButtonSize.small,
-                  onPressed: () => setState(() => _activeLeftTab = 2),
-                  child: Text(
-                    'Notifies (${_viewModel.notifies.length})',
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeLeftTab == 2 ? FontWeight.bold : FontWeight.normal,
-                      color: _activeLeftTab == 2 ? Colors.amber : EditorColors.mutedForeground,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-
-        Expanded(
-          child: _activeLeftTab == 0
-              ? _buildAssetPropertiesPanel()
-              : _activeLeftTab == 1
-                  ? _buildBoneTracksPanel()
-                  : _buildNotifiesPanel(),
-        ),
-      ],
+    return EditorIsland(
+      key: const ValueKey('anim_island_left'),
+      header: EditorIslandTabHeader(
+        keyPrefix: 'anim_left',
+        tabs: ['Properties', 'Bone Tracks', 'Notifies (${_viewModel.notifies.length})'],
+        active: _activeLeftTab,
+        onSelect: (i) => setState(() => _activeLeftTab = i),
+      ),
+      child: _activeLeftTab == 0
+          ? _buildAssetPropertiesPanel()
+          : _activeLeftTab == 1
+              ? _buildBoneTracksPanel()
+              : _buildNotifiesPanel(),
     );
   }
 

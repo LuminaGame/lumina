@@ -15,6 +15,7 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 
 /// The editor viewport runs tickers for as long as it is on screen (fly
 /// camera, procedural sky), so `pumpAndSettle` never settles with it mounted.
@@ -351,8 +352,9 @@ void main() {
       // is on disk when the drag ends.
       final detailsBefore = tester.getRect(find.byType(DetailsWidget)).height;
       final outlinerRight = tester.getRect(find.byType(OutlinerWidget)).right;
+      // The grip between the Outliner and Details islands.
       final leftSplitter = find
-          .byType(VerticalResizableDragger)
+          .byKey(const ValueKey('island_grip'))
           .evaluate()
           .map((e) => tester.getCenter(find.byElementPredicate((c) => identical(c, e))))
           .firstWhere((c) => c.dx <= outlinerRight + 1);
@@ -364,9 +366,13 @@ void main() {
 
       // Drag the left column's splitter right: the column widens.
       final columnBefore = tester.getRect(find.byType(OutlinerWidget)).width;
-      final columnSplitter = tester.getCenter(find.byElementPredicate((e) =>
-        // The workspace splitter, not the Content Browser's own.
-        e.widget is HorizontalResizableDragger && e.findAncestorWidgetOfExactType<ContentBrowserWidget>() == null));
+      // The gutter right of the left column (not the Content Browser's own splitter).
+      final columnSplitter = find
+          .byKey(const ValueKey('island_gap'))
+          .evaluate()
+          .where((e) => e.findAncestorWidgetOfExactType<ContentBrowserWidget>() == null)
+          .map((e) => tester.getCenter(find.byElementPredicate((c) => identical(c, e))))
+          .firstWhere((c) => (c.dx - outlinerRight).abs() < EditorIslandStyle.gap + 2);
       await rec.drag(columnSplitter, columnSplitter + const Offset(100, 0));
       await settle(tester);
       expect(vm.layoutState.outlinerWidth, closeTo(columnBefore + 100, 25));
@@ -690,7 +696,7 @@ void main() {
         await tester.tap(find.text(editor.commands.byId('file.openLevel')!.label).last);
         await settle(tester);
         await rec.hold(const Duration(milliseconds: 800));
-        await tester.tap(find.text('L_Other.lmas'));
+        await tester.tap(find.text('L_Other'));
         await settle(tester);
       }
 
@@ -725,7 +731,7 @@ void main() {
       await settle(tester);
       await tester.tap(find.text(editor.commands.byId('file.openLevel')!.label).last);
       await settle(tester);
-      await tester.tap(find.text('L_Main.lmas'));
+      await tester.tap(find.text('L_Main').last);
       await settle(tester, frames: 30);
       expect(find.byKey(const ValueKey('unsaved_level_prompt')), findsNothing);
       expect(editor.project.activeLevel, 'contents/levels/L_Main.lmas');

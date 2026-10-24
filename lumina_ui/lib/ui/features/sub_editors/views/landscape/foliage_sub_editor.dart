@@ -3,7 +3,9 @@ import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUnits, RealAss
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/core/services/asset_picker_catalog.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/landscape_brush.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/viewport_ray.dart';
@@ -107,21 +109,57 @@ class _LandscapeFoliageSubEditorState extends State<LandscapeFoliageSubEditor> {
     return Column(
       children: [
         _toolbar(),
+        // Islands on the ground, resizable: the mode island (Manage /
+        // Sculpt / Foliage tabs in its header), the viewport, the foliage.
         Expanded(
-          child: Row(
-            // The side panels shrink-wrap their scroll views; without stretch
-            // the Row centred them vertically.
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(width: 270, child: _leftPanel()),
-              Expanded(child: _viewport()),
-              SizedBox(width: 270, child: _foliagePanel()),
-            ],
+          child: EditorIslandGround(
+            child: ResizablePanel.horizontal(
+              dividerBuilder: EditorIslandDividers.gap,
+              children: [
+                ResizablePane(
+                  initialSize: 270,
+                  minSize: 200,
+                  child: EditorIsland(
+                    key: const ValueKey('landscape_island_tools'),
+                    header: EditorIslandTabHeader(
+                      tabs: [for (final t in _modeTabs.values) t],
+                      tabKeys: {for (final (i, t) in _modeTabs.keys.indexed) i: ValueKey('landscape_tab_${t.name}')},
+                      active: _modeTabs.keys.toList().indexOf(_vm.tab),
+                      onSelect: (i) => _vm.setTab(_modeTabs.keys.elementAt(i)),
+                    ),
+                    child: _leftPanel(),
+                  ),
+                ),
+                ResizablePane.flex(
+                  child: EditorIsland(
+                    key: const ValueKey('landscape_island_viewport'),
+                    color: EditorColors.viewportBackdrop,
+                    child: _viewport(),
+                  ),
+                ),
+                ResizablePane(
+                  initialSize: 270,
+                  minSize: 200,
+                  child: EditorIsland(
+                    key: const ValueKey('landscape_island_foliage'),
+                    header: const EditorIslandHeader(title: 'Foliage'),
+                    child: _foliagePanel(),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
+
+  /// The editor's modes, as the tool island's header tabs.
+  static const Map<LandscapeEditorTab, String> _modeTabs = {
+    LandscapeEditorTab.manage: 'Manage',
+    LandscapeEditorTab.sculpt: 'Sculpt',
+    LandscapeEditorTab.foliage: 'Foliage',
+  };
 
   // --- Toolbar ---------------------------------------------------------------
 
@@ -153,21 +191,6 @@ class _LandscapeFoliageSubEditorState extends State<LandscapeFoliageSubEditor> {
             ),
           ],
           const Spacer(),
-          for (final entry in const {
-            LandscapeEditorTab.manage: 'Manage',
-            LandscapeEditorTab.sculpt: 'Sculpt',
-            LandscapeEditorTab.foliage: 'Foliage',
-          }.entries)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Button(
-                key: ValueKey('landscape_tab_${entry.key.name}'),
-                style: _vm.tab == entry.key ? const ButtonStyle.primary() : const ButtonStyle.ghost(),
-                onPressed: () => _vm.setTab(entry.key),
-                child: Text(entry.value, style: const TextStyle(fontSize: 9)),
-              ),
-            ),
-          const SizedBox(width: 10),
           GhostButton(
             key: const ValueKey('landscape_undo'),
             onPressed: _vm.canUndo ? _vm.undo : null,

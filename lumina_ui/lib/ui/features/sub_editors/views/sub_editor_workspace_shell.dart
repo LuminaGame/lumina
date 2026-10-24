@@ -2,6 +2,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_content_drawer.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/content_browser_widget.dart';
@@ -134,22 +135,30 @@ class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
       return _buildDroppableChild(widget.child);
     }
 
+    // Pinned: the Content Browser is an island under the sub-editor's own
+    // islands, split from them by the grip, on the same ground.
     if (_pinned) {
-      return ResizablePanel.vertical(
-        draggerBuilder: (context) => const VerticalResizableDragger(),
-        children: [
-          ResizablePane.flex(
-            key: const ValueKey('sub_editor_main_pane'),
-            child: _buildDroppableChild(widget.child),
-          ),
-          ResizablePane(
-            key: const ValueKey('sub_editor_bottom_pane'),
-            initialSize: _bottomHeight,
-            minSize: 120,
-            onSizeChangeEnd: (size) => setState(() => _bottomHeight = size),
-            child: _buildBottomPanel(pinned: true),
-          ),
-        ],
+      return Container(
+        color: EditorColors.background,
+        child: ResizablePanel.vertical(
+          dividerBuilder: editorIslandGroundGrip,
+          children: [
+            ResizablePane.flex(
+              key: const ValueKey('sub_editor_main_pane'),
+              child: _buildDroppableChild(widget.child),
+            ),
+            ResizablePane(
+              key: const ValueKey('sub_editor_bottom_pane'),
+              initialSize: _bottomHeight,
+              minSize: 120,
+              onSizeChangeEnd: (size) => setState(() => _bottomHeight = size),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(EditorIslandStyle.gap, 0, EditorIslandStyle.gap, EditorIslandStyle.gap),
+                child: EditorIsland(key: const ValueKey('sub_editor_bottom_island'), child: _buildBottomPanel(pinned: true)),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -159,24 +168,27 @@ class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
         Positioned.fill(
           child: _buildDroppableChild(widget.child),
         ),
+        // Unpinned and open: the drawer floats as an island over the
+        // workspace's bottom, inside the ground's gutter.
         if (_drawerOpen)
           Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
+            left: EditorIslandStyle.gap,
+            right: EditorIslandStyle.gap,
+            bottom: EditorIslandStyle.gap,
             height: _bottomHeight.clamp(140.0, 500.0),
             child: DecoratedBox(
-              decoration: const BoxDecoration(
-                boxShadow: [
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(EditorIslandStyle.radius),
+                boxShadow: const [
                   BoxShadow(
-                    // A scrim over the workspace: black at 27%, not a theme surface.
+                    // A drop shadow: black at 27%, not a theme surface.
                     color: Color(0x44000000),
-                    blurRadius: 10,
-                    offset: Offset(0, -3),
+                    blurRadius: 14,
+                    offset: Offset(0, -2),
                   ),
                 ],
               ),
-              child: _buildBottomPanel(pinned: false),
+              child: EditorIsland(key: const ValueKey('sub_editor_bottom_island'), child: _buildBottomPanel(pinned: false)),
             ),
           ),
         // In a tab the status bar's button opens it; elsewhere this one.
@@ -247,39 +259,13 @@ class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
   }
 
   Widget _buildBottomPanel({required bool pinned}) {
-    return Container(
-      color: EditorColors.card,
-      child: Column(
+    return Column(
         children: [
-          Container(
-            height: 26,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            color: EditorColors.sidebar,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                EditorTabStyle.stripBottomLine(),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      height: 22,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                      decoration: EditorTabStyle.decoration(active: true, content: EditorColors.rail),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(LucideIcons.folder, size: 11, color: EditorColors.primary),
-                          SizedBox(width: 5),
-                          Text(
-                            'Content Browser',
-                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: EditorColors.foreground),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
+          // The island header: the title, then pin (and close for the drawer).
+          EditorIslandHeader(
+            title: 'Content Browser',
+            leading: const Icon(LucideIcons.folder, size: 12, color: EditorColors.primary),
+            actions: [
                     Tooltip(
                       tooltip: (context) => TooltipContainer(
                         child: Text(pinned ? 'Unpin: turn into a Content Drawer' : 'Pin to the layout'),
@@ -305,10 +291,7 @@ class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
                           child: const Icon(LucideIcons.x, size: 11, color: EditorColors.mutedForeground),
                         ),
                       ),
-                  ],
-                ),
-              ],
-            ),
+            ],
           ),
           Expanded(
             child: ContentBrowserWidget(
@@ -316,7 +299,6 @@ class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
             ),
           ),
         ],
-      ),
     );
   }
 }

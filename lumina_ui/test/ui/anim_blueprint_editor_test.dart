@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/component_tree.dart';
 import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_compile_status.dart';
@@ -291,7 +292,8 @@ void main() {
     final vm = BlueprintEditorViewModel(assetPath: bpPath);
     await tester.runAsync(vm.load);
     await pump(tester, BlueprintSubEditor(assetName: 'BP_AnimHero', assetPath: bpPath, viewModel: vm));
-    await tester.tap(find.text('Mesh'));
+    // The component tree's row (My Blueprint, shown beside it, lists Mesh too).
+    await tester.tap(find.descendant(of: find.byType(BlueprintComponentTree), matching: find.text('Mesh')));
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.byKey(const ValueKey('anim_class_select')));

@@ -2,6 +2,7 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
 
 /// The Sequencer's Key panel (docked on the right): the selected key's
@@ -24,18 +25,17 @@ class SequencerKeyDetailsPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // The island header: the title, then the key's actions.
         Container(
-          height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          color: EditorColors.cardHeader,
+          height: EditorIslandStyle.headerHeight,
+          padding: const EdgeInsets.only(left: 12, right: 8),
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: EditorColors.border))),
           child: Row(
             children: [
-              const Icon(LucideIcons.keyRound, size: 12, color: EditorColors.warning),
-              const SizedBox(width: 6),
               Text(
                 vm.selectedKeys.length > 1 ? 'KEY (${vm.selectedKeys.length} SELECTED)' : 'KEY',
                 key: const ValueKey('seq_key_panel_title'),
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.warning),
+                style: EditorIslandHeader.titleStyle,
               ),
               const Spacer(),
               if (key != null) ...[

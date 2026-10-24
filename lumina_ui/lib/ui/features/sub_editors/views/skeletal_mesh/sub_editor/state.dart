@@ -5,7 +5,7 @@ abstract class _SkeletalMeshSubEditorStateBase extends State<SkeletalMeshSubEdit
   late final SkeletalMeshEditorViewModel _viewModel;
   late final bool _ownsViewModel;
   final Set<int> _expandedNodeIndices = {};
-  int _activeLeftTab = 0; // 0 = Skeleton Tree, 1 = Morph Targets, 2 = RigLogic (DNA)
+  int _activeLeftTab = 0; // the lower left island: 2 = RigLogic (DNA), anything else = Morph Targets
   String _dnaControlSearchFilter = '';
 
   // --- Implemented by the domain mixins or [_SkeletalMeshSubEditorState]. ---

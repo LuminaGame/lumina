@@ -37,36 +37,6 @@ mixin _SkeletalMeshToolbar on _SkeletalMeshSubEditorStateBase {
           ),
           const Spacer(),
 
-          // Show Bones Toggle
-          OutlineButton(
-            size: ButtonSize.small,
-            onPressed: _viewModel.toggleShowBones,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(LucideIcons.bone, size: 12, color: _viewModel.showBones ? Colors.purple : EditorColors.mutedForeground),
-                const SizedBox(width: 4),
-                Text('Show Bones', style: TextStyle(fontSize: 9.5, color: _viewModel.showBones ? Colors.purple : EditorColors.mutedForeground)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 6),
-
-          // Display Sockets Toggle
-          OutlineButton(
-            size: ButtonSize.small,
-            onPressed: _viewModel.toggleDisplaySockets,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(LucideIcons.crosshair, size: 12, color: _viewModel.displaySockets ? Colors.amber : EditorColors.mutedForeground),
-                const SizedBox(width: 4),
-                Text('Display Sockets', style: TextStyle(fontSize: 9.5, color: _viewModel.displaySockets ? Colors.amber : EditorColors.mutedForeground)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 6),
-
           // RigLogic DNA Button
           OutlineButton(
             size: ButtonSize.small,
@@ -91,27 +61,6 @@ mixin _SkeletalMeshToolbar on _SkeletalMeshSubEditorStateBase {
           ),
           const SizedBox(width: 6),
 
-          // Skin Weight Heatmap Toggle
-          OutlineButton(
-            size: ButtonSize.small,
-            onPressed: _viewModel.toggleHeatmap,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(LucideIcons.flame, size: 12, color: _viewModel.heatmapEnabled ? Colors.orange : EditorColors.mutedForeground),
-                const SizedBox(width: 4),
-                Text(
-                  'Skin Weight Heatmap',
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: _viewModel.heatmapEnabled ? FontWeight.bold : FontWeight.normal,
-                    color: _viewModel.heatmapEnabled ? Colors.orange : EditorColors.mutedForeground,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
 
           // Add Socket Button
           OutlineButton(

@@ -9,6 +9,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/skeletal_mesh_edit
 import 'package:lumina_ui/ui/features/sub_editors/views/skeletal_mesh/skeletal_mesh_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import '../helpers/island_expectations.dart';
 
 void main() {
   late Directory tempDir;
@@ -153,6 +154,12 @@ void main() {
     final vm = SkeletalMeshEditorViewModel(assetPath: assetFile.path, initialAsset: asset);
     await tester.runAsync(() => vm.load());
 
+    // An editor-sized window: the viewport's Show menu opens inside it.
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       ShadcnApp(
         theme: luminaEditorTheme(),
@@ -168,6 +175,14 @@ void main() {
 
     // Verify Toolbar stats overlay
     expect(find.text('Active Morph Targets: 0'), findsOneWidget);
+
+    // The skeleton tree over the morphs, the viewport, the details.
+    expectIslands(tester, {
+      'skeletal_mesh_island_skeleton': 'SKELETON TREE',
+      'skeletal_mesh_island_morphs': 'Morphs (1)',
+      'skeletal_mesh_island_viewport': null,
+      'skeletal_mesh_island_details': 'DETAILS',
+    });
 
     // Switch to Morphs tab in Left Panel
     await tester.tap(find.text('Morphs (1)'));
@@ -194,9 +209,15 @@ void main() {
     final viewport = tester.widget<SubEditor3DViewport>(find.byType(SubEditor3DViewport));
     expect(viewport.morphWeights?['smile'], equals(0.85));
 
-    // Toggle Skin Weight Heatmap button in toolbar
-    await tester.tap(find.text('Skin Weight Heatmap'));
-    await tester.pump();
+    // Show · Weights turns the skin weight heatmap on.
+    await tester.tap(find.byKey(const ValueKey('sub_viewport_show')));
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await tester.tap(find.byKey(const ValueKey('sub_viewport_show_weights')));
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
     expect(vm.heatmapEnabled, isTrue);
 
     // Inspect Vertex 0 via ViewModel / UI

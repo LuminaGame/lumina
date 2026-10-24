@@ -15,22 +15,11 @@ mixin _DopeSheetTopHeader on _AnimationDopeSheetWidgetStateBase {
     final isZoomedIn = vm.timelineZoom >= 1.8;
 
     return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      color: EditorColors.card,
+      height: EditorIslandStyle.headerHeight,
+      padding: const EdgeInsets.only(left: 12, right: 8),
       child: Row(
         children: [
-          const Icon(LucideIcons.listTree, size: 15, color: EditorColors.primary),
-          const SizedBox(width: 6),
-          const Text(
-            'DOPE SHEET',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-              letterSpacing: 0.5,
-              color: EditorColors.foreground,
-            ),
-          ),
+          Text('DOPE SHEET', style: EditorIslandHeader.titleStyle),
           const SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

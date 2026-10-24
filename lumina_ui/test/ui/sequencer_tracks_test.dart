@@ -7,6 +7,7 @@ import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/sequencer_sub_
 import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/timeline_widget.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import '../helpers/island_expectations.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -147,6 +148,15 @@ void main() {
       ),
     );
     await tester.pump();
+
+    // The track outliner, the viewport / curves, the key details; the
+    // transport over the timeline below.
+    expectIslands(tester, {
+      'seq_island_tracks': 'TRACK OUTLINER',
+      'seq_island_viewport': '3D Viewport',
+      'seq_island_key_details': 'KEY',
+      'seq_island_timeline': null,
+    });
 
     // Verify hardcoded fake track names are absent
     expect(find.text('CineCameraActor_1'), findsNothing);

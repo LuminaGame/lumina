@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/pose_search_database_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/pose_search/pose_search_clip_tree.dart';
@@ -70,14 +71,14 @@ class PoseSearchDatabaseSubEditorState extends State<PoseSearchDatabaseSubEditor
                 _toolbar(),
                 const Divider(height: 1),
                 Expanded(
-                  child: ResizablePanel.horizontal(
-                    draggerBuilder: (context) => const HorizontalResizableDragger(),
+                  child: EditorIslandGround(child: ResizablePanel.horizontal(
+                    dividerBuilder: EditorIslandDividers.gap,
                     children: [
-                      ResizablePane(initialSize: 280, minSize: 180, child: PoseSearchClipTree(viewModel: _vm)),
-                      ResizablePane.flex(child: PoseSearchDatabaseClipList(viewModel: _vm)),
-                      ResizablePane(initialSize: 300, minSize: 200, child: PoseSearchDetailsPanel(viewModel: _vm)),
+                      ResizablePane(initialSize: 280, minSize: 180, child: EditorIsland(key: const ValueKey('pose_search_island_clip_tree'), child: PoseSearchClipTree(viewModel: _vm))),
+                      ResizablePane.flex(child: EditorIsland(key: const ValueKey('pose_search_island_clips'), child: PoseSearchDatabaseClipList(viewModel: _vm))),
+                      ResizablePane(initialSize: 300, minSize: 200, child: EditorIsland(key: const ValueKey('pose_search_island_details'), child: PoseSearchDetailsPanel(viewModel: _vm))),
                     ],
-                  ),
+                  )),
                 ),
               ],
             ),

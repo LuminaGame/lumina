@@ -8,7 +8,7 @@ Concepts", artboard 3 · Aurora). It lands in four stages that each ship on thei
 | 1 · Tokens, type and chrome | the Obsidian ramp and amber accent, Manrope + JetBrains Mono, the 48 px menu bar with the Prism L lockup and the editor's own window controls, the typed workspace tabs | shipped |
 | 2 · Islands and the Content Drawer | every docked panel as an island (fill, 1 px border, 12 px radius, 8 px gutters, 36 px uppercase header), splitter grips, selection rows that start at their indent, the slide-up Content Drawer | shipped |
 | 3 · Viewport chrome | the pill row (Perspective, view mode, snap, angle snap, World, Show), the vertical tool column, stats pills, the MiniAI prompt pill | shipped (without the MiniAI prompt pill) |
-| 4 · Sub-editors | Material, Blueprint, Sequencer, Static Mesh, Skeletal Mesh, Animation, Landscape, UMG, Plugins, Project Settings and Build Manager on the stage 1–3 components | planned |
+| 4 · Sub-editors | Material, Blueprint, Sequencer, Static Mesh, Skeletal Mesh, Animation, Landscape, UMG, Plugins, Project Settings and Build Manager on the stage 1–3 components | shipped (the toolbar rows stay) |
 
 Themes stay data: the ramp and accent are the defaults of the Lumina Dark theme (`EditorThemeData.luminaDark`), so a
 custom theme JSON still overrides any token (see [Editor themes](core.md)).
@@ -127,13 +127,53 @@ sockets, so its Show menu lists none.
 Not yet in the chrome: the MiniAI prompt pill. MiniAI's ✦ AI button in the toolbar's plugin slot opens its panel; a
 prompt field in the viewport needs a plugin slot that hands typed text to a plugin.
 
+## Sub-editors (stage 4)
+
+Every sub-editor lays its panes out as islands on the ground, with the stage 1–3 components only:
+`EditorIslandGround` (the `background` fill with the 8 px gutter), `EditorIsland` per pane, `EditorIslandDividers.gap`
+beside islands and `.grip` between stacked ones, so every pane keeps resizing. Three more pieces live in
+`lib/ui/core/widgets/editor_island.dart`: `EditorIslandTabHeader` (an island header whose tabs switch the island's view:
+the active tab bold on a `muted` chip; a narrow island shortens the labels instead of scrolling one away;
+`tabKeys`/`keyPrefix` key the tabs), `EditorIslandSectionLabel` (an upper-case 10 px section label inside an island, with
+an optional trailing widget) and `editorIslandGroundGrip` (the grip under a pane that brings its own gutter).
+
+| Editor | Islands |
+|---|---|
+| Static Mesh | LODs / Hierarchy over Mesh stats · viewport · Details |
+| Skeletal Mesh | Skeleton tree (bone and socket counts, + socket) over Morphs / RigLogic · viewport (Show · Bones, Weights, Sockets) · Details |
+| Animation | Properties / Bone Tracks / Notifies · viewport with the frame card and the transport bar along its bottom, over the Dope sheet · Key details / Curves / BlendSpace / Pose |
+| Material | Preview over Material settings · GLSL Source / Node Graph over the Compiler log · Parameters & uniforms |
+| Blueprint | Components over My Blueprint · the graph tabs and canvas over the compiler results · Details |
+| Sequencer | Track outliner · 3D Viewport / Curves · Key details; the transport over the timeline below |
+| UMG | Palette over Hierarchy · designer · Details |
+| Landscape | Manage / Sculpt / Foliage tabs heading the tool island · viewport · Foliage |
+| Texture, Particle, Physics Asset, Blend Space, Anim Blueprint, Blueprint Interface, Pose Search, Cloth, Garment | each pane an island |
+| Plugins | categories · plugin list · details |
+| Project Settings | category list (resizable now, was a fixed 220 px) · the category's settings with the save footer |
+| Build Manager | Build steps · Build log · Packaging (resizable now, were fixed widths) |
+
+The Skeletal Mesh editor's Show Bones, Display Sockets and Skin Weight Heatmap toolbar buttons moved into the viewport's
+`Show` menu (Bones, Weights, Sockets). The overlay boxes of the Static Mesh, Skeletal Mesh and Physics Asset viewports
+sit bottom-left on the pill surface (the pill row and the tool column own the top-left); the Animation frame card sits
+under the pill row beside the tool column and the root motion toggle is a pill under Reset View. The Material editor
+keeps its settings under the preview and the parameters at the right (the arrangement its preview task set), on islands.
+
+The sub-editor shell docks the Content Browser as an island under the workspace (the grip between) and floats the
+unpinned drawer as an island over the workspace's bottom. The plugin right dock is an island too, and a plugin's tab or
+asset editor is framed on one island on the ground by the host.
+
+Not in stage 4: the sub-editors keep their toolbar row (the artboards put the actions at the right of the tab bar);
+plugins get no island widgets of their own through `lumina_editor_api` yet (the host frames their panels and tabs).
+
 ## Verification
 
 `test/ui/theme_aurora_tokens_test.dart`, `test/ui/menu_bar_aurora_test.dart` and `test/ui/typed_tab_bar_test.dart`
-cover stage 1, `test/ui/editor_island_test.dart` and `test/ui/content_drawer_test.dart` stage 2, `test/ui/viewport_pills_test.dart` and `test/ui/sub_viewport_pills_test.dart` stage 3; the smoke scenario "Design System Smoke: aurora design language"
+cover stage 1, `test/ui/editor_island_test.dart` and `test/ui/content_drawer_test.dart` stage 2, `test/ui/viewport_pills_test.dart` and `test/ui/sub_viewport_pills_test.dart` stage 3, and each sub-editor's own widget test finds its islands and headers (`test/helpers/island_expectations.dart`) for stage 4; the smoke scenario "Design System Smoke: aurora design language"
 (`integration_test/smoke/design_system_smoke_test.dart`) imports a barrel and the mannequin into a real project, opens
 the Static Mesh and Skeletal Mesh editors as typed tabs, measures the rail, the command field, the chip and the tab
 underlines in screenshots, and records the tab switches with the viewport orbiting. "Design System Smoke: aurora islands
 and content drawer" places a barrel, an AC unit and a banana bunch, measures the ground, the island fill, border, grip
 and rounded corner, the Outliner selection at its indent and the drawer bar, opens the drawer over the viewport (322 px,
-the viewport island unchanged), opens the Output Log from the bar, and pins the panel, on video.
+the viewport island unchanged), opens the Output Log from the bar, and pins the panel, on video. "Design System Smoke:
+aurora sub-editors" imports a barrel, the mannequin and an idle clip, opens the eleven editors as tabs, checks their
+islands, measures the island fill and the ground beside it in each, and orbits the 3D viewports on video.

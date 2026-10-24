@@ -13,6 +13,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 import '../helpers/flutter_build_stand_in.dart';
+import '../helpers/island_expectations.dart';
 
 /// Widget + view-model
 /// scenarios over a real temp project.
@@ -65,6 +66,12 @@ void main() {
       ),
     ));
     await tester.pump();
+    // The steps, the log, the packaging settings: three islands.
+    expectIslands(tester, {
+      'build_manager_island_steps': 'BUILD STEPS',
+      'build_manager_island_log': 'BUILD LOG',
+      'build_manager_island_settings': 'PACKAGING',
+    });
   }
 
   testWidgets('during a run exactly one step is running, finished steps show durations, no fabricated worker gauge', (tester) async {

@@ -14,6 +14,7 @@ import 'package:lumina_ui/ui/core/property_editors/lumina_transform_widget.dart'
 import 'package:lumina_ui/ui/core/property_editors/vector_row.dart';
 import 'package:lumina_ui/ui/core/input/text_input_focus.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_graph_ref.dart';
@@ -132,7 +133,6 @@ class BlueprintSubEditorState extends _BlueprintSubEditorStateBase
           initialAsset: widget.asset,
         );
     widget.onBind?.call(_viewModel, _viewModel.save, () => _viewModel.isDirty);
-    if (_isLevel || _isWidget) _activeLeftTab = 1;
 
     BlueprintNavigation.instance.addListener(_takeNavigation);
     BlueprintPieDebugger.instance.addListener(_syncDebugger);
@@ -191,87 +191,92 @@ class BlueprintSubEditorState extends _BlueprintSubEditorStateBase
             color: EditorColors.background,
             child: Column(
               children: [
-                if (!_isWidget) ...[
-                  _toolbar(isDirty),
-                  const Divider(height: 1),
-                ],
+                if (!_isWidget) _toolbar(isDirty),
+                // The workspace: islands on the ground. Left, the components
+                // over My Blueprint; centre, the graph tabs and canvas over
+                // the compiler results; right, the details.
                 Expanded(
-                  child: ResizablePanel.horizontal(
-                    children: [
-                      ResizablePane(
-                        initialSize: 250,
-                        minSize: 200,
-                        child: Container(
-                          color: EditorColors.cardHeader,
-                          child: Column(
-                            children: [
-                              Container(
-                                height: 30,
-                                color: EditorColors.card,
-                                child: Row(
+                  child: EditorIslandGround(
+                    child: ResizablePanel.horizontal(
+                      dividerBuilder: EditorIslandDividers.gap,
+                      children: [
+                        ResizablePane(
+                          initialSize: 250,
+                          minSize: 200,
+                          child: _isLevel || _isWidget
+                              ? _myBlueprintIsland()
+                              : ResizablePanel.vertical(
+                                  dividerBuilder: EditorIslandDividers.grip,
                                   children: [
-                                    if (!_isLevel && !_isWidget) _buildLeftTabBtn(0, 'Components'),
-                                    _buildLeftTabBtn(1, 'My Blueprint'),
+                                    ResizablePane(
+                                      initialSize: 230,
+                                      minSize: 120,
+                                      child: EditorIsland(
+                                        key: const ValueKey('blueprint_island_components'),
+                                        child: BlueprintComponentTree(viewModel: _viewModel),
+                                      ),
+                                    ),
+                                    ResizablePane.flex(child: _myBlueprintIsland()),
                                   ],
                                 ),
+                        ),
+                        ResizablePane.flex(
+                          child: ResizablePanel.vertical(
+                            dividerBuilder: EditorIslandDividers.grip,
+                            children: [
+                              ResizablePane.flex(
+                                child: EditorIsland(
+                                  key: const ValueKey('blueprint_island_graph'),
+                                  color: EditorColors.graphCanvas,
+                                  header: Container(
+                                    height: EditorIslandStyle.headerHeight,
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                    decoration: const BoxDecoration(
+                                      color: EditorColors.sidebar,
+                                      border: Border(bottom: BorderSide(color: EditorColors.border)),
+                                    ),
+                                    child: ListView(
+                                      scrollDirection: Axis.horizontal,
+                                      children: [
+                                        _buildGraphTabBtn(BlueprintGraphRef.eventGraph, LucideIcons.gitFork),
+                                        if (!_isLevel && !_isWidget) ...[
+                                          _buildViewportTabBtn(),
+                                          _buildGraphTabBtn(BlueprintGraphRef.constructionScript, LucideIcons.wrench),
+                                        ],
+                                        for (final g in _viewModel.graphs)
+                                          if (g.isFunction || g.isMacro)
+                                            _buildGraphTabBtn(g, g.isFunction ? LucideIcons.squareFunction : LucideIcons.boxes),
+                                        if (_viewModel.activeGraph.isTimeline)
+                                          _buildGraphTabBtn(_viewModel.activeGraph, LucideIcons.chartLine,
+                                              label: 'Timeline: ${_viewModel.timelineNode(_viewModel.activeGraph.name!)?.title ?? ''}'),
+                                      ],
+                                    ),
+                                  ),
+                                  child: _buildCenter(),
+                                ),
                               ),
-                              const Divider(height: 1),
-                              Expanded(
-                                child: _activeLeftTab == 0 && !_isLevel && !_isWidget
-                                    ? BlueprintComponentTree(viewModel: _viewModel)
-                                    : _buildMyBlueprintView(),
+                              ResizablePane(
+                                initialSize: 150,
+                                minSize: 80,
+                                child: EditorIsland(
+                                  key: const ValueKey('blueprint_island_results'),
+                                  child: _bottomPanel(),
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                      ResizablePane.flex(
-                        child: Column(
-                          children: [
-                            // The active graph tab joins
-                            // the canvas under it (no divider, no bottom edge).
-                            Container(
-                              height: 30,
-                              color: EditorColors.sidebar,
-                              padding: const EdgeInsets.only(left: 8, right: 8, top: 4),
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  EditorTabStyle.stripBottomLine(),
-                                  ListView(
-                                scrollDirection: Axis.horizontal,
-                                children: [
-                                  _buildGraphTabBtn(BlueprintGraphRef.eventGraph, LucideIcons.gitFork),
-                                  if (!_isLevel && !_isWidget) ...[
-                                    _buildViewportTabBtn(),
-                                    _buildGraphTabBtn(BlueprintGraphRef.constructionScript, LucideIcons.wrench),
-                                  ],
-                                  for (final g in _viewModel.graphs)
-                                    if (g.isFunction || g.isMacro)
-                                      _buildGraphTabBtn(g, g.isFunction ? LucideIcons.squareFunction : LucideIcons.boxes),
-                                  if (_viewModel.activeGraph.isTimeline)
-                                    _buildGraphTabBtn(_viewModel.activeGraph, LucideIcons.chartLine,
-                                        label: 'Timeline: ${_viewModel.timelineNode(_viewModel.activeGraph.name!)?.title ?? ''}'),
-                                ],
-                              ),
-                                ],
-                              ),
-                            ),
-                            Expanded(child: _buildCenter()),
-                            const Divider(height: 1),
-                            SizedBox(height: 150, child: _bottomPanel()),
-                          ],
+                        ResizablePane(
+                          initialSize: 290,
+                          minSize: 230,
+                          child: EditorIsland(
+                            key: const ValueKey('blueprint_island_details'),
+                            header: const EditorIslandHeader(title: 'Details'),
+                            child: _buildRightPanel(),
+                          ),
                         ),
-                      ),
-                      ResizablePane(
-                        initialSize: 290,
-                        minSize: 230,
-                        child: Container(
-                          color: EditorColors.cardHeader,
-                          child: _buildRightPanel(),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],

@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blend_space_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/pin_literal_editor.dart';
@@ -82,11 +83,12 @@ class BlendSpaceSubEditorState extends State<BlendSpaceSubEditor> {
               _toolbar(),
               const Divider(height: 1),
               Expanded(
-                child: ResizablePanel.horizontal(
+                child: EditorIslandGround(child: ResizablePanel.horizontal(
+                  dividerBuilder: EditorIslandDividers.gap,
                   children: [
-                    ResizablePane(initialSize: 220, minSize: 180, child: _clipList()),
+                    ResizablePane(initialSize: 220, minSize: 180, child: EditorIsland(key: const ValueKey('blend_space_island_clips'), child: _clipList())),
                     ResizablePane.flex(
-                      child: Column(
+                      child: EditorIsland(key: const ValueKey('blend_space_island_grid'), child: Column(
                         children: [
                           SizedBox(
                             height: 280,
@@ -132,11 +134,11 @@ class BlendSpaceSubEditorState extends State<BlendSpaceSubEditor> {
                             ),
                           ),
                         ],
-                      ),
+                      )),
                     ),
-                    ResizablePane(initialSize: 270, minSize: 220, child: _details()),
+                    ResizablePane(initialSize: 270, minSize: 220, child: EditorIsland(key: const ValueKey('blend_space_island_details'), child: _details())),
                   ],
-                ),
+                )),
               ),
             ],
           ),
@@ -190,7 +192,6 @@ class BlendSpaceSubEditorState extends State<BlendSpaceSubEditor> {
 
   Widget _clipList() {
     return Container(
-      color: EditorColors.cardHeader,
       padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

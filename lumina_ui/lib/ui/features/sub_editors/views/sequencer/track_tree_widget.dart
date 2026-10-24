@@ -1,6 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
@@ -36,46 +37,26 @@ class _SequencerTrackTreeWidgetState extends State<SequencerTrackTreeWidget> {
 
     return Column(
       children: [
-        // Outliner Header with Add Track Button
-        Container(
-          padding: const EdgeInsets.all(8),
-          color: EditorColors.card,
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  const Icon(LucideIcons.listTree, size: 12, color: Colors.indigo),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'TRACK OUTLINER',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.indigo),
-                  ),
-                  const Spacer(),
-                  OutlineButton(
-                    size: ButtonSize.small,
-                    onPressed: () => _openAddTrackDialog(context),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(LucideIcons.plus, size: 10),
-                        SizedBox(width: 4),
-                        Text('+ Track', style: TextStyle(fontSize: 9)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                placeholder: const Text('Filter tracks...', style: TextStyle(fontSize: 9.5)),
-                onChanged: (val) {
-                  setState(() => _filterText = val);
-                },
-              ),
-            ],
+        // The island header with + Track, then the filter.
+        EditorIslandHeader(
+          title: 'Track outliner',
+          actions: [
+            OutlineButton(
+              size: ButtonSize.small,
+              onPressed: () => _openAddTrackDialog(context),
+              child: const Text('+ Track', style: TextStyle(fontSize: 9)),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+          child: TextField(
+            placeholder: const Text('Filter tracks...', style: TextStyle(fontSize: 9.5)),
+            onChanged: (val) {
+              setState(() => _filterText = val);
+            },
           ),
         ),
-        const Divider(height: 1),
 
         // Track Tree List
         Expanded(

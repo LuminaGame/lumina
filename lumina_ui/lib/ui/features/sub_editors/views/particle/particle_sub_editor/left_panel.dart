@@ -5,8 +5,7 @@ mixin _ParticleSubEditorLeftPanel on _ParticleSubEditorStateBase {
   // ------------------------------------------------------------- left panel
 
   Widget _leftPanel() {
-    return Container(
-      color: EditorColors.card,
+    return SizedBox.expand(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

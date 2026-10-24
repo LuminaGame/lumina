@@ -7,6 +7,6 @@ abstract class _StaticMeshSubEditorStateBase extends State<StaticMeshSubEditor> 
 
   final GlobalKey _collisionBtnKey = GlobalKey();
   final GlobalKey _forcedLodBtnKey = GlobalKey();
-  int _activeLeftTab = 0; // 0: Stats, 1: LODs, 2: Hierarchy
+  int _activeLeftTab = 0; // 0: LODs, 1: Hierarchy
   GlbNode? _selectedNode;
 }

@@ -8,108 +8,28 @@ mixin _AnimationKeyframeDetails on _AnimationSubEditorStateBase {
     final vm = _viewModel;
     final selectedKey = vm.selectedKeyframeDetails;
 
-    return Column(
-      children: [
-        // Tabs Header
-        Container(
-          padding: const EdgeInsets.all(6),
-          color: EditorColors.card,
-          child: Row(
-            children: [
-              Expanded(
-                child: GhostButton(
-                  size: ButtonSize.small,
-                  onPressed: () => setState(() => _activeRightTab = 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        LucideIcons.keyRound,
-                        size: 11,
-                        color: _activeRightTab == 0 ? EditorColors.warning : EditorColors.mutedForeground,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          selectedKey != null ? 'Key: ${selectedKey.targetName}' : 'Key Details',
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: _activeRightTab == 0 ? FontWeight.bold : FontWeight.normal,
-                            color: _activeRightTab == 0 ? EditorColors.warning : EditorColors.mutedForeground,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 2),
-              Expanded(
-                child: GhostButton(
-                  size: ButtonSize.small,
-                  onPressed: () => setState(() => _activeRightTab = 1),
-                  child: Text(
-                    'Curves (${vm.curves.length})',
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeRightTab == 1 ? FontWeight.bold : FontWeight.normal,
-                      color: _activeRightTab == 1 ? Colors.cyan : EditorColors.mutedForeground,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 2),
-              Expanded(
-                child: GhostButton(
-                  size: ButtonSize.small,
-                  onPressed: () => setState(() => _activeRightTab = 2),
-                  child: Text(
-                    'BlendSpace',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeRightTab == 2 ? FontWeight.bold : FontWeight.normal,
-                      color: _activeRightTab == 2 ? Colors.green : EditorColors.mutedForeground,
-                    ),
-                  ),
-                ),
-              ),
-              // Posing and cycle tools of a sequence authored here.
-              if (vm.isAuthored) ...[
-                const SizedBox(width: 2),
-                Expanded(
-                  child: GhostButton(
-                    key: const ValueKey('anim_right_tab_pose'),
-                    size: ButtonSize.small,
-                    onPressed: () => setState(() => _activeRightTab = 3),
-                    child: Text(
-                      'Pose',
-                      style: TextStyle(
-                        fontSize: 9.5,
-                        fontWeight: _activeRightTab == 3 ? FontWeight.bold : FontWeight.normal,
-                        color: _activeRightTab == 3 ? Colors.pink : EditorColors.mutedForeground,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-
-        Expanded(
-          child: _activeRightTab == 0
+    return EditorIsland(
+      key: const ValueKey('anim_island_right'),
+      header: EditorIslandTabHeader(
+        keyPrefix: 'anim_right',
+        tabs: [
+          selectedKey != null ? 'Key: ${selectedKey.targetName}' : 'Key Details',
+          'Curves (${vm.curves.length})',
+          'BlendSpace',
+          // Posing and cycle tools of a sequence authored here.
+          if (vm.isAuthored) 'Pose',
+        ],
+        tabKeys: const {3: ValueKey('anim_right_tab_pose')},
+        active: _activeRightTab == 3 && !vm.isAuthored ? 2 : _activeRightTab,
+        onSelect: (i) => setState(() => _activeRightTab = i),
+      ),
+      child: _activeRightTab == 0
               ? _buildKeyframeDetailsPanel()
               : _activeRightTab == 1
                   ? _buildCurvesPanel()
                   : _activeRightTab == 3 && vm.isAuthored
                       ? _buildPoseToolsPanel()
                       : _buildBlendSpacePanel(),
-        ),
-      ],
     );
   }
 

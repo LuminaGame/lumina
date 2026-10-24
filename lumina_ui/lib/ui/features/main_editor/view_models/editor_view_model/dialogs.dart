@@ -27,7 +27,9 @@ mixin _EditorDialogs on _EditorViewModelState {
             itemCount: levelFiles.length,
             itemBuilder: (context, index) {
               final levelPath = levelFiles[index];
-              final levelName = levelPath.split('/').last;
+              // The level's name, without the .lmas extension.
+              final fileName = levelPath.split('/').last;
+              final levelName = fileName.endsWith('.lmas') ? fileName.substring(0, fileName.length - 5) : fileName;
               return GhostButton(
                 child: Text(levelName),
                 onPressed: () async {

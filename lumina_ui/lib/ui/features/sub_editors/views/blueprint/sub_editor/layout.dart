@@ -81,8 +81,7 @@ mixin _BlueprintSubEditorLayout on _BlueprintSubEditorStateBase {
       children: [
         Expanded(
           flex: 3,
-          child: Container(
-            color: EditorColors.background,
+          child: Padding(
             padding: const EdgeInsets.all(8),
             child: BlueprintCompilerResults(
               status: _viewModel.compileStatus,
@@ -95,8 +94,7 @@ mixin _BlueprintSubEditorLayout on _BlueprintSubEditorStateBase {
         const VerticalDivider(width: 1),
         Expanded(
           flex: 2,
-          child: Container(
-            color: EditorColors.background,
+          child: Padding(
             padding: const EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,26 +180,12 @@ mixin _BlueprintSubEditorLayout on _BlueprintSubEditorStateBase {
     return _buildDetailsInspector();
   }
 
-  Widget _buildLeftTabBtn(int index, String label) {
-    final active = _activeLeftTab == index;
-    return Expanded(
-      child: Clickable(
-        onPressed: () => setState(() => _activeLeftTab = index),
-        child: Container(
-          color: active ? EditorColors.cardHeader : Colors.transparent,
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: active ? FontWeight.bold : FontWeight.normal,
-              color: active ? EditorColors.primary : EditorColors.mutedForeground,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  /// My Blueprint on its island: graphs, functions, macros, variables.
+  Widget _myBlueprintIsland() => EditorIsland(
+        key: const ValueKey('blueprint_island_my_blueprint'),
+        header: const EditorIslandHeader(title: 'My Blueprint'),
+        child: _buildMyBlueprintView(),
+      );
 
   Widget _buildViewportTabBtn() => _centerTab(LucideIcons.box, '3D Viewport', _showViewport, () => setState(() => _showViewport = true));
 
@@ -212,22 +196,25 @@ mixin _BlueprintSubEditorLayout on _BlueprintSubEditorStateBase {
     return Clickable(
       key: key,
       onPressed: onTap,
+      // An island header tab: the active one bold on a muted chip.
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        margin: const EdgeInsets.only(right: 4),
+        margin: const EdgeInsets.only(right: 2),
         alignment: Alignment.center,
-        // Both the graph canvases and the preview sit on the graph grey.
-        decoration: EditorTabStyle.decoration(active: active, content: EditorColors.graphCanvas),
+        decoration: BoxDecoration(
+          color: active ? EditorColors.muted : Colors.transparent,
+          borderRadius: BorderRadius.circular(EditorIslandStyle.rowRadius),
+        ),
         child: Row(
           children: [
             Icon(icon, size: 12, color: active ? EditorColors.primary : EditorColors.mutedForeground),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: active ? FontWeight.bold : FontWeight.normal,
-                color: active ? EditorColors.primary : EditorColors.foreground,
+              style: EditorTypography.ui(
+                fontSize: EditorTypography.bodySize,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                color: active ? EditorColors.foreground : EditorColors.mutedForeground,
               ),
             ),
           ],

@@ -2,6 +2,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/glsl_editor_widget.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/graph_view.dart';
@@ -210,11 +211,11 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
               ],
             ),
           ),
-          const Divider(height: 1),
-
-          // Main Center Workspace Split
+          // The workspace: islands on the ground.
           Expanded(
+            child: EditorIslandGround(
             child: ResizablePanel.horizontal(
+              dividerBuilder: EditorIslandDividers.gap,
               children: [
                 // Left Pane: 3D preview above the material settings
                 ResizablePane(
@@ -225,26 +226,21 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
 
                 // Center Pane: GLSL Editor & Compiler Log Panel
                 ResizablePane.flex(
-                  child: Column(
+                  child: ResizablePanel.vertical(
+                    dividerBuilder: EditorIslandDividers.grip,
                     children: [
-                      // Top: Tabs (GLSL Source vs Node Graph) & Inspector
-                      Expanded(
-                        child: Column(
-                          children: [
-                            Container(
-                              height: 32,
-                              color: EditorColors.cardHeader,
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: Row(
-                                children: [
-                                  _buildSubTabHeader(0, LucideIcons.code, 'GLSL Source (.mat)'),
-                                  _buildSubTabHeader(1, LucideIcons.gitFork, 'Node Graph'),
-                                ],
-                              ),
-                            ),
-                            const Divider(height: 1),
-                            Expanded(
-                              child: _activeCenterTab == 0
+                      // The source: the node graph or the GLSL code.
+                      ResizablePane.flex(
+                        child: EditorIsland(
+                          key: const ValueKey('material_island_graph'),
+                          color: EditorColors.viewportBackdrop,
+                          header: EditorIslandTabHeader(
+                            keyPrefix: 'material_center',
+                            tabs: const ['GLSL Source (.mat)', 'Node Graph'],
+                            active: _activeCenterTab,
+                            onSelect: (i) => setState(() => _activeCenterTab = i),
+                          ),
+                          child: _activeCenterTab == 0
                                   ? MaterialGlslEditorWidget(
                                       key: _editorKey,
                                       viewModel: vm,
@@ -252,36 +248,23 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
                                       focusNode: _codeFocusNode,
                                     )
                                   : MaterialGraphView(viewModel: vm),
-                            ),
-                          ],
                         ),
                       ),
 
-                      const Divider(height: 1),
-
-                      // Bottom: Compiler Log Panel
-                      SizedBox(
-                        height: 160,
-                        child: Container(
-                          color: theme.colorScheme.card,
+                      // The compiler log under it.
+                      ResizablePane(
+                        initialSize: 160,
+                        minSize: 80,
+                        child: EditorIsland(
+                          key: const ValueKey('material_island_compiler_log'),
+                          header: EditorIslandHeader(
+                            title: 'Compiler log',
+                            leading: const Icon(LucideIcons.terminal, size: 12, color: EditorColors.mutedForeground),
+                            trailingInfo: vm.compiledBytes == null ? null : '${vm.compiledBytes!.length} bytes · ${vm.elapsedMs} ms',
+                          ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                color: EditorColors.cardHeader,
-                                child: Row(
-                                  children: [
-                                    const Icon(LucideIcons.terminal, size: 12, color: EditorColors.mutedForeground),
-                                    const SizedBox(width: 6),
-                                    const Text('COMPILER LOG', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: EditorColors.mutedForeground)),
-                                    const SizedBox(width: 8),
-                                    if (vm.compiledBytes != null)
-                                      Text('${vm.compiledBytes!.length} bytes · ${vm.elapsedMs}ms', style: const TextStyle(fontSize: 10)).muted(),
-                                  ],
-                                ),
-                              ),
-                              const Divider(height: 1),
                               if (hasErrors)
                                 Container(
                                   padding: const EdgeInsets.all(6),
@@ -378,6 +361,7 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
                 ),
               ],
             ),
+            ),
           ),
         ],
       ),
@@ -391,34 +375,5 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _viewModel.graph.editor.focusNode(nodeId);
     });
-  }
-
-  Widget _buildSubTabHeader(int index, IconData icon, String label) {
-    final active = _activeCenterTab == index;
-    return Clickable(
-      onPressed: () => setState(() => _activeCenterTab = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        margin: const EdgeInsets.only(right: 4),
-        decoration: BoxDecoration(
-          color: active ? EditorColors.primary.withValues(alpha: 0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 12, color: active ? EditorColors.primary : EditorColors.mutedForeground),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: active ? FontWeight.bold : FontWeight.normal,
-                color: active ? EditorColors.primary : EditorColors.foreground,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

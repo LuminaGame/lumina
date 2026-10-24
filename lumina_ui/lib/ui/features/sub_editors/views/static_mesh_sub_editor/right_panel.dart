@@ -8,29 +8,10 @@ mixin _StaticMeshSubEditorRightPanel on _StaticMeshSubEditorStateBase {
       padding: const EdgeInsets.all(12),
       children: [
         // 1. Material Slots Accordion
-        Row(
-          children: [
-            const Icon(LucideIcons.palette, size: 12, color: EditorColors.primary),
-            const SizedBox(width: 6),
-            Text('MATERIAL SLOTS (${vm.materialSlots.length})',
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.primary)),
-          ],
-        ),
-        const SizedBox(height: 8),
+        EditorIslandSectionLabel('Material slots (${vm.materialSlots.length})', padding: const EdgeInsets.only(bottom: 6)),
         ...vm.materialSlots.map((slot) => _buildMaterialSlotRow(slot)),
-        const SizedBox(height: 16),
-        const Divider(height: 1),
-        const SizedBox(height: 12),
-
-        // 2. Collision Settings Accordion
-        const Row(
-          children: [
-            Icon(LucideIcons.shield, size: 12, color: Colors.amber),
-            SizedBox(width: 6),
-            Text('COLLISION SETTINGS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber)),
-          ],
-        ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
+        const EditorIslandSectionLabel('Collision settings'),
         const Text('Collision Complexity', style: TextStyle(fontSize: 9.5, color: EditorColors.mutedForeground)),
         const SizedBox(height: 4),
         Select<String>(
@@ -63,21 +44,9 @@ mixin _StaticMeshSubEditorRightPanel on _StaticMeshSubEditorStateBase {
           ),
         ],
         const SizedBox(height: 8),
-        Text('Generated Shapes: ${vm.collisionShapes.length}',
-            style: const TextStyle(fontSize: 10, color: EditorColors.foreground)),
-        const SizedBox(height: 16),
-        const Divider(height: 1),
-        const SizedBox(height: 12),
-
-        // 3. Physics Settings Accordion
-        const Row(
-          children: [
-            Icon(LucideIcons.activity, size: 12, color: Colors.green),
-            SizedBox(width: 6),
-            Text('PHYSICS PROPERTIES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green)),
-          ],
-        ),
-        const SizedBox(height: 8),
+        Text('Generated Shapes: ${vm.collisionShapes.length}', style: const TextStyle(fontSize: 10, color: EditorColors.foreground)),
+        const SizedBox(height: 4),
+        const EditorIslandSectionLabel('Physics properties'),
         const Text('Mass (Kg)', style: TextStyle(fontSize: 9.5, color: EditorColors.mutedForeground)),
         const SizedBox(height: 4),
         SyncedTextField(
@@ -116,28 +85,22 @@ mixin _StaticMeshSubEditorRightPanel on _StaticMeshSubEditorStateBase {
                 ),
               ),
               const SizedBox(width: 6),
-              Text('Element ${slot.index} (${slot.slotName})',
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
+              Text(
+                'Element ${slot.index} (${slot.slotName})',
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground),
+              ),
               const Spacer(),
               // Highlight Button
               GhostButton(
                 size: ButtonSize.small,
                 onPressed: () => _viewModel.highlightMaterial(slot.index, !slot.isHighlighted),
-                child: Icon(
-                  LucideIcons.sparkles,
-                  size: 11,
-                  color: slot.isHighlighted ? Colors.amber : EditorColors.mutedForeground,
-                ),
+                child: Icon(LucideIcons.sparkles, size: 11, color: slot.isHighlighted ? Colors.amber : EditorColors.mutedForeground),
               ),
               // Isolate Button
               GhostButton(
                 size: ButtonSize.small,
                 onPressed: () => _viewModel.isolateMaterial(slot.index, !slot.isIsolated),
-                child: Icon(
-                  LucideIcons.eyeOff,
-                  size: 11,
-                  color: slot.isIsolated ? Colors.cyan : EditorColors.mutedForeground,
-                ),
+                child: Icon(LucideIcons.eyeOff, size: 11, color: slot.isIsolated ? Colors.cyan : EditorColors.mutedForeground),
               ),
             ],
           ),
@@ -145,10 +108,7 @@ mixin _StaticMeshSubEditorRightPanel on _StaticMeshSubEditorStateBase {
           if (_viewModel.availableMaterials.isEmpty)
             Text(
               isBound ? slot.assignedMaterialPath! : '— unbound — (no materials in this project yet)',
-              style: TextStyle(
-                fontSize: 9,
-                color: isBound ? Colors.cyan : EditorColors.mutedForeground,
-              ),
+              style: TextStyle(fontSize: 9, color: isBound ? Colors.cyan : EditorColors.mutedForeground),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             )
@@ -162,11 +122,7 @@ mixin _StaticMeshSubEditorRightPanel on _StaticMeshSubEditorStateBase {
               onSelected: (asset) {
                 final path = asset.lmasPath;
                 if (path == null) return;
-                _viewModel.assignMaterial(
-                  slot.index,
-                  materialAssetPath: path,
-                  materialAssetId: asset.assetId ?? asset.fileName,
-                );
+                _viewModel.assignMaterial(slot.index, materialAssetPath: path, materialAssetId: asset.assetId ?? asset.fileName);
               },
               onCleared: () => _viewModel.clearMaterial(slot.index),
             ),

@@ -62,6 +62,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/cloth_settings_edi
 import 'package:lumina_ui/ui/features/sub_editors/views/garment/garment.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/garment_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/theme_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 
 export 'package:lumina_ui/ui/features/sub_editors/views/material/material_sub_editor.dart';
 export 'package:lumina_ui/ui/features/sub_editors/views/material/material.dart';
@@ -241,14 +242,16 @@ class _SubEditorDispatcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final customTab = editorViewModel?.extensionRegistry.findTab(assetType);
+    // A plugin's tab and a plugin asset type's editor sit on one island on
+    // the ground, as the built-in editors' panes.
     if (customTab != null) {
-      return customTab.builder(context);
+      return _pluginIsland(customTab.builder(context));
     }
 
     // A plugin asset type's own editor (its
     // registerAssetType.editorFactory), by its customTypeId.
     if (assetType.startsWith(PluginExtensionRegistry.pluginAssetCategoryPrefix)) {
-      return _buildPluginAssetEditor(context, assetType.substring(PluginExtensionRegistry.pluginAssetCategoryPrefix.length));
+      return _pluginIsland(_buildPluginAssetEditor(context, assetType.substring(PluginExtensionRegistry.pluginAssetCategoryPrefix.length)));
     }
     switch (assetType) {
       case 'plugins':
@@ -645,3 +648,8 @@ void showSubEditorModal(BuildContext context, String assetType, String assetName
     },
   );
 }
+
+/// A plugin's tab or asset editor on one island on the ground, as the
+/// built-in editors' panes.
+Widget _pluginIsland(Widget content) =>
+    EditorIslandGround(child: EditorIsland(key: const ValueKey('plugin_workspace_island'), child: content));

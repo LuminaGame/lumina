@@ -1,6 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 
@@ -25,24 +26,12 @@ class _MaterialParameterPanelState extends State<MaterialParameterPanel> {
       animation: widget.viewModel,
       builder: (context, _) {
         final vm = widget.viewModel;
-        return Container(
-          color: EditorColors.card,
+        return EditorIsland(
+          key: const ValueKey('material_island_parameters'),
+          header: EditorIslandHeader(title: 'Parameters & uniforms', trailingInfo: '${vm.parameters.length}'),
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             children: [
-              // Parameters Section Header
-              Row(
-                children: [
-                  const Icon(LucideIcons.variable, size: 14, color: EditorColors.mutedForeground),
-                  const SizedBox(width: 8),
-                  const Text('PARAMETERS & UNIFORMS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
-                  const Spacer(),
-                  OutlineBadge(
-                    child: Text('${vm.parameters.length}'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
 
               if (vm.parameters.isEmpty)
                 Container(

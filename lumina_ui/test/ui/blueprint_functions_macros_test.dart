@@ -253,7 +253,7 @@ void main() {
       home: Scaffold(child: BlueprintSubEditor(assetName: 'BP_Health', assetPath: vm.assetPath, viewModel: vm, showPreviewViewport: false)),
     ));
     await tester.pump();
-    await tester.tap(find.text('My Blueprint'));
+    // My Blueprint is an island of its own: always shown.
     await tester.pump();
     expect(find.text('FUNCTIONS'), findsOneWidget);
     expect(find.text('MACROS'), findsOneWidget);

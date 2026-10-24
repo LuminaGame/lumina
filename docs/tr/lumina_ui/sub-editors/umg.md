@@ -230,7 +230,7 @@ Virgülle ayrılmış metinle kaydedilmiş widget belgeleri taşınmış olarak 
 
 ### `class UMGWidgetSubEditor`
 
-UMG designer: Palette | Hierarchy tabs on the left, the live designer canvas (or the generated-source Graph view) in the center and the slot/appearance/events inspector on the right — all bound to one [UmgEditorViewModel] over a real WIDGET `.lmas`.
+UMG designer: the Palette island over the Hierarchy island on the left (the grip between), the live designer canvas (or the generated-source Graph view) in the center and the slot/appearance/events inspector on the Details island at the right — all bound to one [UmgEditorViewModel] over a real WIDGET `.lmas`.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 

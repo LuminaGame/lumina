@@ -7,6 +7,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_vi
 import 'package:lumina_ui/ui/features/sub_editors/views/material/material.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import '../helpers/island_expectations.dart';
 
 const _source = '''material {
     name : "M_Pane",
@@ -82,6 +83,16 @@ void main() {
     expect(find.descendant(of: find.byType(MaterialParameterPanel), matching: find.text('MATERIAL SETTINGS')),
         findsNothing);
     expect(find.text('MATERIAL SETTINGS'), findsOneWidget);
+
+    // The preview over the settings, the source over the compiler log, the
+    // parameters.
+    expectIslands(tester, {
+      'material_island_preview': 'PREVIEW',
+      'material_island_settings': 'MATERIAL SETTINGS',
+      'material_island_graph': 'Node Graph',
+      'material_island_compiler_log': 'COMPILER LOG',
+      'material_island_parameters': 'PARAMETERS & UNIFORMS',
+    });
 
     // No shading / projection / shape HUD over the preview.
     var viewport = tester.widget<SubEditor3DViewport>(find.byType(SubEditor3DViewport));

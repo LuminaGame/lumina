@@ -115,18 +115,22 @@ mixin _AnimationToolbarTimeline on _AnimationSubEditorStateBase {
     );
   }
 
-  Widget _buildBottomTimelinePanel() {
+  /// The dope sheet, on the island under the viewport.
+  Widget _buildBottomTimelinePanel() => AnimationDopeSheetWidget(viewModel: _viewModel);
+
+  /// The transport bar along the viewport island's bottom: play, step,
+  /// loop, speed and the timecode.
+  Widget _buildTransportBar() {
     final vm = _viewModel;
 
     return Container(
-      color: EditorColors.cardHeader,
-      child: Column(
-        children: [
-          // Row 1: Transport Controls & Speed Selector
-          Container(
-            height: 38,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            color: EditorColors.card,
+            key: const ValueKey('anim_transport_bar'),
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: const BoxDecoration(
+              color: EditorColors.sidebar,
+              border: Border(top: BorderSide(color: EditorColors.border)),
+            ),
             child: Row(
               children: [
                 // Play / Pause Button
@@ -215,11 +219,7 @@ mixin _AnimationToolbarTimeline on _AnimationSubEditorStateBase {
                 // Timecode & Frame Indicator
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: EditorColors.background,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: EditorColors.border),
-                  ),
+                  decoration: ViewportPillStyle.decoration(),
                   child: Text(
                     '${vm.formattedTime} / ${vm.formattedTotalTime}  [Frame ${vm.currentFrame} / ${vm.totalFrames}]',
                     style: const TextStyle(fontSize: 9.5, fontFamily: EditorTypography.monoFamily, fontWeight: FontWeight.bold, color: Colors.cyan),
@@ -227,17 +227,6 @@ mixin _AnimationToolbarTimeline on _AnimationSubEditorStateBase {
                 ),
               ],
             ),
-          ),
-          const Divider(height: 1),
-
-          // Multi-Track Dope Sheet Widget
-          Expanded(
-            child: AnimationDopeSheetWidget(
-              viewModel: vm,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

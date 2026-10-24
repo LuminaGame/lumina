@@ -226,7 +226,7 @@ The Movie Render Queue dialog: configure an offscreen PNG-sequence export, then 
 
 ### `class SequencerSubEditor`
 
-The Sequencer editor: toolbar (FPS, length, **Auto Key** toggle, **Key** button, time readout, Render Movie, Save), the track outliner on the left, the 3D Viewport / Curves tabs in the middle, the Key panel (`SequencerKeyDetailsPanel`) on the right, the transport bar and the timeline below. With an `editorViewModel` it binds the sequence to the level (track clicks select the level actor), reads Auto Key from `EditorPreferences.sequencerAutoKey` and writes it back, and installs `SequencerViewModel.handleLevelTransformEdits` as the level's `actorTransformEditHandler` until it closes, so transform edits of the animated actors made in the level viewport or Details are keyed in the sequence.
+The Sequencer editor: toolbar (FPS, length, **Auto Key** toggle, **Key** button, time readout, Render Movie, Save), then islands on the ground: the track outliner on the left, the 3D Viewport / Curves tabs in the middle island's header, the Key panel (`SequencerKeyDetailsPanel`) on the right, and below them, past the grip, one island with the transport bar over the timeline. With an `editorViewModel` it binds the sequence to the level (track clicks select the level actor), reads Auto Key from `EditorPreferences.sequencerAutoKey` and writes it back, and installs `SequencerViewModel.handleLevelTransformEdits` as the level's `actorTransformEditHandler` until it closes, so transform edits of the animated actors made in the level viewport or Details are keyed in the sequence.
 
 **Functions, Methods & Accessors:**
 

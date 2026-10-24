@@ -3,6 +3,7 @@ import 'dart:isolate';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/material_settings_section.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
@@ -11,7 +12,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// The Material Editor's left column: the 3D preview (a primitive, or a
 /// project mesh with the material on one of its slots) above the material
-/// settings, split by a draggable divider.
+/// settings, two islands split by the grip.
 class MaterialPreviewPane extends StatefulWidget {
   final MaterialEditorViewModel viewModel;
 
@@ -155,31 +156,29 @@ class _MaterialPreviewPaneState extends State<MaterialPreviewPane> {
   @override
   Widget build(BuildContext context) {
     return ResizablePanel.vertical(
-      draggerBuilder: (_) => const VerticalResizableDragger(),
+      dividerBuilder: EditorIslandDividers.grip,
       children: [
         ResizablePane.flex(
           minSize: 200,
-          child: Container(
+          child: EditorIsland(
+            key: const ValueKey('material_island_preview'),
+            header: EditorIslandHeader(
+              title: 'Preview',
+              actions: [
+                const Text('Grid', style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
+                const SizedBox(width: 6),
+                Switch(
+                  key: const ValueKey('material_preview_grid'),
+                  value: _gridEnabled,
+                  onChanged: (val) => setState(() => _gridEnabled = val),
+                ),
+              ],
+            ),
+            child: Padding(
             padding: const EdgeInsets.all(12),
-            color: EditorColors.background,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    const Text('3D PREVIEW MESH',
-                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: EditorColors.mutedForeground)),
-                    const Spacer(),
-                    const Text('Grid', style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
-                    const SizedBox(width: 6),
-                    Switch(
-                      key: const ValueKey('material_preview_grid'),
-                      value: _gridEnabled,
-                      onChanged: (val) => setState(() => _gridEnabled = val),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
                 Wrap(
                   spacing: 4,
                   runSpacing: 4,
@@ -200,6 +199,7 @@ class _MaterialPreviewPaneState extends State<MaterialPreviewPane> {
                 Expanded(child: _viewport()),
               ],
             ),
+          ),
           ),
         ),
         ResizablePane(

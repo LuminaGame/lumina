@@ -7,6 +7,8 @@ import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
+import 'package:lumina_ui/ui/core/widgets/viewport_pills.dart' show ViewportPillStyle;
 import 'package:lumina_ui/ui/features/sub_editors/models/physics_asset_document.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/physics_preview_scene.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';

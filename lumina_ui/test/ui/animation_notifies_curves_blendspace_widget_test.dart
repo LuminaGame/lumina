@@ -63,8 +63,8 @@ void main() {
     );
     await tester.pump();
 
-    // 1. Root Motion Toggle in Viewport Top-Right
-    expect(find.text('Enable Root Motion'), findsOneWidget);
+    // 1. The root motion pill in the viewport, top-right
+    expect(find.text('Root motion'), findsOneWidget);
     vm.setRootMotion(true);
     await tester.pump();
     expect(vm.enableRootMotion, isTrue);

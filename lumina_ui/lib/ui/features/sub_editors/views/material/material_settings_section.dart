@@ -1,5 +1,6 @@
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -16,20 +17,12 @@ class MaterialSettingsSection extends StatelessWidget {
       animation: viewModel,
       builder: (context, _) {
         final vm = viewModel;
-        return Container(
-          color: EditorColors.card,
+        return EditorIsland(
+          key: const ValueKey('material_island_settings'),
+          header: const EditorIslandHeader(title: 'Material settings'),
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             children: [
-              // Header
-              const Row(
-                children: [
-                  Icon(LucideIcons.slidersHorizontal, size: 14, color: EditorColors.mutedForeground),
-                  SizedBox(width: 8),
-                  Text('MATERIAL SETTINGS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
-                ],
-              ),
-              const SizedBox(height: 12),
 
               // Material Domain
               _buildSettingRow(

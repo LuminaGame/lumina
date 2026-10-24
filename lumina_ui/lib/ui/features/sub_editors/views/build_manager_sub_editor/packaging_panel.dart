@@ -5,8 +5,7 @@ extension _BuildManagerPackagingPanel on _BuildManagerSubEditorState {
   // --- right: packaging -----------------------------------------------------
 
   Widget _rightPanel() {
-    return Container(
-      color: EditorColors.cardHeader,
+    return Padding(
       padding: const EdgeInsets.all(8),
       // Plain sections, all open: an Accordion keeps only one item expanded,
       // which hid Build Configuration and Output (and Launch in Browser).

@@ -56,6 +56,10 @@ void main() {
     );
     addTearDown(vm.dispose);
     await tester.runAsync(vm.load);
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(ShadcnApp(
       theme: luminaEditorTheme(),
       home: Scaffold(child: SizedBox(width: 1200, height: 1600, child: ProjectSettingsSubEditor(assetName: 'Project Settings', viewModel: vm))),

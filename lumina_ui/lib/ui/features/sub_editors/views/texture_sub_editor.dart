@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/texture_editor_view_model.dart';
 
@@ -112,21 +113,19 @@ class _TextureSubEditorState extends _TextureSubEditorStateBase
 
               // 2. Main 3-Panel Workspace
               Expanded(
-                child: ResizablePanel.horizontal(
+                child: EditorIslandGround(child: ResizablePanel.horizontal(
+                  dividerBuilder: EditorIslandDividers.gap,
                   children: [
                     // Left Panel: Metadata & Channel Isolation & MIP Selection
                     ResizablePane(
                       initialSize: 260,
                       minSize: 220,
-                      child: Container(
-                        color: EditorColors.cardHeader,
-                        child: _buildLeftSidebar(),
-                      ),
+                      child: EditorIsland(key: const ValueKey('texture_island_left'), child: _buildLeftSidebar()),
                     ),
 
                     // Center Panel: Zoom/Pan Canvas with Pixel Inspector Bar
                     ResizablePane.flex(
-                      child: Column(
+                      child: EditorIsland(key: const ValueKey('texture_island_canvas'), color: EditorColors.viewportBackdrop, child: Column(
                         children: [
                           Expanded(
                             child: _buildCanvas(),
@@ -134,20 +133,17 @@ class _TextureSubEditorState extends _TextureSubEditorStateBase
                           const Divider(height: 1),
                           _buildPixelInspectorBar(),
                         ],
-                      ),
+                      )),
                     ),
 
                     // Right Panel: Compression, MipGen, and Sampler Settings
                     ResizablePane(
                       initialSize: 290,
                       minSize: 240,
-                      child: Container(
-                        color: EditorColors.cardHeader,
-                        child: _buildRightSidebar(),
-                      ),
+                      child: EditorIsland(key: const ValueKey('texture_island_right'), child: _buildRightSidebar()),
                     ),
                   ],
-                ),
+                )),
               ),
             ],
           ),

@@ -5,6 +5,7 @@ import 'package:lumina_editor_api/lumina_editor_api.dart' show ProjectSettingsSe
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_rasterizer.dart';
@@ -146,16 +147,30 @@ class _ProjectSettingsSubEditorState extends _ProjectSettingsSubEditorStateBase
               ? const Center(child: CircularProgressIndicator())
               : !_vm.hasProject
                   ? _buildLoadError()
-                  : Row(
-                      children: [
-                        _buildNav(),
-                        const VerticalDivider(width: 1),
-                        Expanded(child: _buildCategoryBody()),
-                      ],
+                  // Islands on the ground: the category list (resizable) and
+                  // the category's settings with the save footer under them.
+                  : EditorIslandGround(
+                      child: ResizablePanel.horizontal(
+                        dividerBuilder: EditorIslandDividers.gap,
+                        children: [
+                          ResizablePane(
+                            initialSize: 240,
+                            minSize: 180,
+                            child: EditorIsland(key: const ValueKey('project_settings_island_nav'), child: _buildNav()),
+                          ),
+                          ResizablePane.flex(
+                            child: EditorIsland(
+                              key: const ValueKey('project_settings_island_body'),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [Expanded(child: _buildCategoryBody()), _buildFooter()],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
         ),
-        const Divider(height: 1),
-        _buildFooter(),
       ],
     );
   }

@@ -5,6 +5,7 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
@@ -148,12 +149,39 @@ class _BuildManagerSubEditorState extends State<BuildManagerSubEditor> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final narrow = constraints.maxWidth < 900;
-              return Row(
-                children: [
-                  SizedBox(width: narrow ? 210 : 250, child: _leftPanel()),
-                  Expanded(child: _centerPanel()),
-                  SizedBox(width: narrow ? 220 : 260, child: _rightPanel()),
-                ],
+              // Islands on the ground, resizable: the steps, the log, the
+              // packaging settings.
+              return EditorIslandGround(
+                child: ResizablePanel.horizontal(
+                  dividerBuilder: EditorIslandDividers.gap,
+                  children: [
+                    ResizablePane(
+                      initialSize: narrow ? 210 : 250,
+                      minSize: 180,
+                      child: EditorIsland(
+                        key: const ValueKey('build_manager_island_steps'),
+                        header: const EditorIslandHeader(title: 'Build steps'),
+                        child: _leftPanel(),
+                      ),
+                    ),
+                    ResizablePane.flex(
+                      child: EditorIsland(
+                        key: const ValueKey('build_manager_island_log'),
+                        header: const EditorIslandHeader(title: 'Build log'),
+                        child: _centerPanel(),
+                      ),
+                    ),
+                    ResizablePane(
+                      initialSize: narrow ? 220 : 260,
+                      minSize: 200,
+                      child: EditorIsland(
+                        key: const ValueKey('build_manager_island_settings'),
+                        header: const EditorIslandHeader(title: 'Packaging'),
+                        child: _rightPanel(),
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -197,14 +225,11 @@ class _BuildManagerSubEditorState extends State<BuildManagerSubEditor> {
   ];
 
   Widget _leftPanel() {
-    return Container(
-      color: EditorColors.cardHeader,
+    return Padding(
       padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Build Steps', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.primary)),
-          const SizedBox(height: 8),
           for (final kind in _assetSteps) _stepRow(kind),
           const Divider(),
           _stepRow(BuildStepKind.cookAndPackage, checkable: false),
@@ -302,8 +327,7 @@ class _BuildManagerSubEditorState extends State<BuildManagerSubEditor> {
   Widget _centerPanel() {
     final lines = _vm.logLines;
     final counter = _vm.currentStep != null ? _vm.stepState(_vm.currentStep!).progressLabel : _lastProgressLabel();
-    return Container(
-      color: EditorColors.background,
+    return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,8 +378,8 @@ class _BuildManagerSubEditorState extends State<BuildManagerSubEditor> {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(4),
+                color: EditorColors.rail,
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: EditorColors.border),
               ),
               child: lines.isEmpty

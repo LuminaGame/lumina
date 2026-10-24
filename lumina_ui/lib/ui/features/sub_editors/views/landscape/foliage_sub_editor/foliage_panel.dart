@@ -7,8 +7,7 @@ extension _LandscapeFoliagePanel on _LandscapeFoliageSubEditorState {
   Widget _foliagePanel() {
     final layers = _vm.data.layers;
     final palette = _vm.meshPalette;
-    return Container(
-      color: EditorColors.cardHeader,
+    return Padding(
       padding: const EdgeInsets.all(8),
       // One scroll view for the whole panel: the brush, the layer rules and the
       // palette together are taller than a laptop screen.
@@ -138,7 +137,7 @@ extension _LandscapeFoliagePanel on _LandscapeFoliageSubEditorState {
             const Icon(LucideIcons.trees, size: 12),
             const SizedBox(width: 6),
             Expanded(
-              child: Text(asset.fileName, style: const TextStyle(fontSize: 9), overflow: TextOverflow.ellipsis),
+              child: Text(AssetPickerCatalog.defaultLabel(asset), style: const TextStyle(fontSize: 9), overflow: TextOverflow.ellipsis),
             ),
           ],
         ),

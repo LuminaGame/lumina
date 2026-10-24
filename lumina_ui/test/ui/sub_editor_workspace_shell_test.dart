@@ -6,6 +6,7 @@ import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_workspace_shell.dart';
+import '../helpers/island_expectations.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -107,7 +108,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Content Browser is now visible in the drawer
-      expect(find.text('Content Browser'), findsOneWidget);
+      expect(find.text('CONTENT BROWSER'), findsOneWidget);
       expect(find.byKey(const ValueKey('sub_editor_bottom_panel_pin')), findsOneWidget);
       expect(find.byKey(const ValueKey('sub_editor_bottom_drawer_close')), findsOneWidget);
 
@@ -151,6 +152,8 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('sub_editor_bottom_panel_pin')));
       await tester.pumpAndSettle();
 
+      // Docked, the Content Browser is an island under the workspace.
+      expectIslands(tester, {'sub_editor_bottom_island': 'CONTENT BROWSER'});
       // Now docked in a resizable pane
       expect(find.byWidgetPredicate((w) => w is ResizablePane && w.key == const ValueKey('sub_editor_bottom_pane')), findsOneWidget);
       expect(find.byKey(const ValueKey('sub_editor_content_drawer_btn')), findsNothing);
@@ -183,7 +186,7 @@ void main() {
       // Starts docked in a resizable pane
       expect(find.byWidgetPredicate((w) => w is ResizablePane && w.key == const ValueKey('sub_editor_bottom_pane')), findsOneWidget);
       expect(find.byKey(const ValueKey('sub_editor_content_drawer_btn')), findsNothing);
-      expect(find.text('Content Browser'), findsOneWidget);
+      expect(find.text('CONTENT BROWSER'), findsOneWidget);
     });
 
     testWidgets('contentDroppable: true accepts asset drops', (tester) async {

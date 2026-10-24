@@ -1,11 +1,8 @@
 part of '../blueprint_sub_editor.dart';
 
-/// Tab and graph navigation, selection collapse, debugger sync, compile,
+/// Graph navigation, selection collapse, debugger sync, compile,
 /// diagnostic jumps and the close/save prompt.
 mixin _BlueprintSubEditorNavigation on _BlueprintSubEditorStateBase {
-
-  /// Shows a left-panel tab (0 Components, 1 My Blueprint).
-  void showLeftTab(int index) => setState(() => _activeLeftTab = index);
 
   /// Shows [ref]'s graph (or Timeline) tab in the centre.
   @override

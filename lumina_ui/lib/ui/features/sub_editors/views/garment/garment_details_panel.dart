@@ -5,8 +5,7 @@ part of 'garment_sub_editor.dart';
 mixin _GarmentDetailsPanel on _GarmentEditorBase {
   Widget detailsPanel() {
     final doc = vm.doc;
-    return Container(
-      color: EditorColors.sidebar,
+    return SizedBox.expand(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

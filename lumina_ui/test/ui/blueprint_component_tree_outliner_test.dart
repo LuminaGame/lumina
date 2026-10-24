@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/component_tree.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -116,9 +117,9 @@ void main() {
   testWidgets('the header and rows use the World Outliner\'s measurements', (tester) async {
     await pumpTree(tester);
     final heading = tester.widget<Text>(find.text('COMPONENTS'));
-    expect(heading.style, EditorTypography.panelHeading);
-    final header = find.ancestor(of: find.text('COMPONENTS'), matching: find.byType(Container)).first;
-    expect(tester.getSize(header).height, EditorDensity.panelHeaderHeight);
+    expect(heading.style, EditorIslandHeader.titleStyle);
+    final header = find.ancestor(of: find.text('COMPONENTS'), matching: find.byType(EditorIslandHeader));
+    expect(tester.getSize(header).height, EditorIslandStyle.headerHeight);
     expect(tester.getSize(row('body')).height, EditorDensity.rowHeight);
     expect(find.byKey(const ValueKey('add_component_button')), findsOneWidget);
     expect(find.text('Add'), findsOneWidget);

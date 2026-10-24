@@ -131,7 +131,7 @@ void main() {
     }
 
     // --- My Blueprint: the LookSensitivity variable -------------------------
-    await tester.tap(find.text('My Blueprint'));
+    // My Blueprint is an island of its own: always shown.
     await settle();
     await rec.hold(const Duration(milliseconds: 300));
     await tester.tap(find.byKey(const ValueKey('var_add')));
@@ -783,7 +783,7 @@ void applyDamage(LuminaActor self, double amount) {
     // The HUD rows below the template graph in view for the variable drop.
     state().frameCanvasPoint(Offset(300, baseY + 420));
     await settle(2);
-    await tester.tap(find.text('My Blueprint'));
+    // My Blueprint is an island of its own: always shown.
     await settle();
     await rec.hold(const Duration(milliseconds: 500));
     expect(find.byKey(const ValueKey('component_row_CameraBoom')), findsOneWidget);
@@ -912,7 +912,7 @@ void applyDamage(LuminaActor self, double amount) {
     await rec.hold(const Duration(milliseconds: 600));
 
     // --- My Blueprint: + New Function, its input typed in Details ---------
-    await tester.tap(find.text('My Blueprint'));
+    // My Blueprint is an island of its own: always shown.
     await settle();
     await tester.tap(find.byKey(const ValueKey('fn_add')));
     await settle();

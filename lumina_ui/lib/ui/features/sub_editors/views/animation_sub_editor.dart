@@ -3,6 +3,8 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
+import 'package:lumina_ui/ui/core/widgets/viewport_pills.dart' show ViewportPillStyle;
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/property_editors/lumina_transform_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
@@ -194,44 +196,45 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
               children: [
                 // 1. Top Toolbar
                 _buildToolbar(isDirty),
-                const Divider(height: 1),
 
-                // 2. Main Workspace (Left Sidebar + Center 3D Viewport + Right Panels)
+                // 2. The workspace: islands on the ground.
                 Expanded(
+                  child: EditorIslandGround(
                   child: ResizablePanel.horizontal(
+                    dividerBuilder: EditorIslandDividers.gap,
                     children: [
                       // Left Panel: Asset Properties & Skeleton Bone Tracks & Notifies
                       ResizablePane(
                         initialSize: 280,
                         minSize: 220,
-                        child: Container(
-                          color: EditorColors.cardHeader,
-                          child: _buildLeftSidebar(),
-                        ),
+                        child: _buildLeftSidebar(),
                       ),
 
                       // Center Panel: 3D Viewport + Bottom Timeline Transport (vertically resizable)
                       ResizablePane.flex(
                         child: ResizablePanel.vertical(
                           key: const ValueKey('anim_center_vertical_panel'),
-                          draggerBuilder: (context) => const VerticalResizableDragger(),
+                          dividerBuilder: EditorIslandDividers.grip,
                           children: [
                             // 3D Viewport with Live Stats Overlay & Root Motion Switch
                             ResizablePane.flex(
-                              child: Stack(
+                              child: EditorIsland(
+                                key: const ValueKey('anim_island_viewport'),
+                                color: EditorColors.viewportBackdrop,
+                                child: Column(
+                                children: [
+                                Expanded(
+                                child: Stack(
                                 children: [
                                   _buildViewport(),
-                                  // Top-Left Stats Overlay HUD
+                                  // The frame card under the pill row, beside the
+                                  // tool column.
                                   Positioned(
-                                    top: 12,
-                                    left: 12,
+                                    top: ViewportPillStyle.inset * 2 + ViewportPillStyle.height,
+                                    left: ViewportPillStyle.inset * 2 + ViewportPillStyle.toolButton + 8,
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: EditorColors.card.withValues(alpha: 0.85),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: EditorColors.border),
-                                      ),
+                                      decoration: ViewportPillStyle.decoration(),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
@@ -296,24 +299,18 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
                                       child: _onionSkinHud(),
                                     ),
 
-                                  // Top-Right Root Motion Toggle HUD
+                                  // The root motion pill, under Reset View.
                                   Positioned(
-                                    top: 12,
-                                    right: 12,
+                                    top: ViewportPillStyle.inset * 2 + ViewportPillStyle.height,
+                                    right: ViewportPillStyle.inset,
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: EditorColors.card.withValues(alpha: 0.85),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: EditorColors.border),
-                                      ),
+                                      height: ViewportPillStyle.height,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                                      decoration: ViewportPillStyle.decoration(highlighted: _viewModel.enableRootMotion),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Text(
-                                            'Enable Root Motion',
-                                            style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: EditorColors.foreground),
-                                          ),
+                                          Text('Root motion', style: ViewportPillStyle.label()),
                                           const SizedBox(width: 8),
                                           Switch(
                                             value: _viewModel.enableRootMotion,
@@ -325,14 +322,22 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
                                   ),
                                 ],
                               ),
+                              ),
+                              _buildTransportBar(),
+                                ],
+                              ),
+                              ),
                             ),
 
-                            // Bottom Transport Timeline Panel
+                            // The dope sheet on its island.
                             ResizablePane(
                               initialSize: _bottomTimelineHeight,
                               minSize: 120,
                               onSizeChangeEnd: (size) => setState(() => _bottomTimelineHeight = size),
-                              child: _buildBottomTimelinePanel(),
+                              child: EditorIsland(
+                                key: const ValueKey('anim_island_timeline'),
+                                child: _buildBottomTimelinePanel(),
+                              ),
                             ),
                           ],
                         ),
@@ -342,12 +347,10 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
                       ResizablePane(
                         initialSize: 320,
                         minSize: 260,
-                        child: Container(
-                          color: EditorColors.cardHeader,
-                          child: _buildRightSidebar(),
-                        ),
+                        child: _buildRightSidebar(),
                       ),
                     ],
+                  ),
                   ),
                 ),
               ],

@@ -5,6 +5,8 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
+import 'package:lumina_ui/ui/core/widgets/viewport_pills.dart' show ViewportPillStyle, ViewportShowItem;
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/synced_text_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
@@ -156,32 +158,28 @@ class _SkeletalMeshSubEditorState extends _SkeletalMeshSubEditorStateBase
           );
         }
 
-        return Container(
-          color: EditorColors.background,
-          child: Column(
-            children: [
-              // Top Toolbar
-              _buildToolbar(isDirty),
-              const Divider(height: 1),
-
-              // Main Workspace Splitter
-              Expanded(
+        return Column(
+          children: [
+            _buildToolbar(isDirty),
+            // The workspace: islands on the ground. Left, the skeleton tree
+            // over the morph targets / RigLogic; centre, the viewport;
+            // right, the details.
+            Expanded(
+              child: EditorIslandGround(
                 child: ResizablePanel.horizontal(
+                  dividerBuilder: EditorIslandDividers.gap,
                   children: [
-                    // 1. Left Panel: Skeleton Tree & Morph Targets
                     ResizablePane(
                       initialSize: 300,
                       minSize: 240,
-                      child: Container(
-                        color: EditorColors.cardHeader,
-                        child: _buildLeftSidebar(),
-                      ),
+                      child: _buildLeftSidebar(),
                     ),
-
-                    // 2. Center Panel: 3D Viewport with Skeleton Stats Overlay
                     ResizablePane.flex(
-                      child: Stack(
-                        children: [
+                      child: EditorIsland(
+                        key: const ValueKey('skeletal_mesh_island_viewport'),
+                        color: EditorColors.viewportBackdrop,
+                        child: Stack(
+                          children: [
                           SubEditor3DViewport(
                             title: 'Skeletal Mesh & Rig Viewport',
                             glbMesh: effectiveMesh,
@@ -200,18 +198,22 @@ class _SkeletalMeshSubEditorState extends _SkeletalMeshSubEditorStateBase
                             sectionMaterialOverrides: _viewModel.slotCompiledMaterials,
                             showSkinWeightHeatmap: _viewModel.heatmapEnabled,
                             skinWeightHeatmapBone: _viewModel.selectedBone?.index,
+                            // Bones, skin weights and sockets, toggled from Show.
+                            showItems: [
+                              ViewportShowItem(label: 'Bones', value: _viewModel.showBones, onChanged: (_) => _viewModel.toggleShowBones()),
+                              ViewportShowItem(label: 'Weights', value: _viewModel.heatmapEnabled, onChanged: _viewModel.setHeatmapEnabled),
+                              ViewportShowItem(
+                                  label: 'Sockets', value: _viewModel.displaySockets, onChanged: (_) => _viewModel.toggleDisplaySockets()),
+                            ],
                           ),
-                          // Top-Left Stats Overlay
+                          // The stats box, bottom-left above the stats strip: the pill row
+                          // and the tool column own the top-left.
                           Positioned(
-                            top: 48,
+                            bottom: 40,
                             left: 12,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: EditorColors.card.withValues(alpha: 0.85),
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: EditorColors.border),
-                              ),
+                              decoration: ViewportPillStyle.decoration(),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
@@ -266,24 +268,24 @@ class _SkeletalMeshSubEditorState extends _SkeletalMeshSubEditorStateBase
                               ),
                             ),
                           ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-
-                    // 3. Right Panel: Socket, Bone & Skin Weight Inspector
                     ResizablePane(
                       initialSize: 300,
                       minSize: 240,
-                      child: Container(
-                        color: EditorColors.cardHeader,
+                      child: EditorIsland(
+                        key: const ValueKey('skeletal_mesh_island_details'),
+                        header: const EditorIslandHeader(title: 'Details'),
                         child: _buildRightInspectorPanel(),
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );

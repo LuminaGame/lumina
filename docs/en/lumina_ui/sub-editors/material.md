@@ -213,7 +213,7 @@ The material header's settings, shown under the Material editor's 3D preview: Do
 
 ### `class MaterialPreviewPane`
 
-The Material editor's left column: the 3D preview above [MaterialSettingsSection], split by a draggable divider (`ResizablePanel.vertical`; the settings pane starts at 190 px, minimum 120). The preview shows the compiled material on a Sphere, Cube, Cylinder or Plane, or on a project mesh (Custom), with a Grid toggle; it hides the viewport's own toolbar and shape selector.
+The Material editor's left column: the Preview island above the Material settings island ([MaterialSettingsSection]), split by the grip (`ResizablePanel.vertical` with `EditorIslandDividers.grip`; the settings island starts at 190 px, minimum 120). The preview shows the compiled material on a Sphere, Cube, Cylinder or Plane, or on a project mesh (Custom), with a Grid toggle; it hides the viewport's own toolbar and shape selector.
 
 Custom scans the project's mesh assets (static and skeletal) on a background isolate and offers them in an asset picker. The picked mesh is loaded from disk (a newer pick wins over an older load still running); when it has more than one material slot, a **Material slot** select chooses which slot wears the edited material, and the other sections keep the mesh's own materials.
 

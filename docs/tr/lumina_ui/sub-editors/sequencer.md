@@ -226,7 +226,7 @@ The Movie Render Queue dialog: configure an offscreen PNG-sequence export, then 
 
 ### `class SequencerSubEditor`
 
-Sequencer editörü: araç çubuğu (FPS, uzunluk, **Auto Key** anahtarı, **Key** düğmesi, zaman göstergesi, Render Movie, Save), solda track outliner, ortada 3D Viewport / Curves sekmeleri, sağda Key paneli (`SequencerKeyDetailsPanel`), altta transport çubuğu ve timeline. Bir `editorViewModel` ile sekansı level'a bağlar (track tıklamaları level aktörünü seçer), Auto Key'i `EditorPreferences.sequencerAutoKey` içinden okur ve geri yazar, kapanana kadar `SequencerViewModel.handleLevelTransformEdits` metodunu level'ın `actorTransformEditHandler`'ı olarak kurar; böylece canlandırılan aktörlerin level viewport'ta ya da Details'te yapılan dönüşüm düzenlemeleri sekansta key'lenir.
+Sequencer editörü: araç çubuğu (FPS, uzunluk, **Auto Key** anahtarı, **Key** düğmesi, zaman göstergesi, Render Movie, Save), ardından zemin üzerinde adalar: solda track outliner, ortadaki adanın başlığında 3D Viewport / Curves sekmeleri, sağda Key paneli (`SequencerKeyDetailsPanel`), altlarında da tutamacın ötesinde transport çubuğu ve timeline'ı tutan tek bir ada. Bir `editorViewModel` ile sekansı level'a bağlar (track tıklamaları level aktörünü seçer), Auto Key'i `EditorPreferences.sequencerAutoKey` içinden okur ve geri yazar, kapanana kadar `SequencerViewModel.handleLevelTransformEdits` metodunu level'ın `actorTransformEditHandler`'ı olarak kurar; böylece canlandırılan aktörlerin level viewport'ta ya da Details'te yapılan dönüşüm düzenlemeleri sekansta key'lenir.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 

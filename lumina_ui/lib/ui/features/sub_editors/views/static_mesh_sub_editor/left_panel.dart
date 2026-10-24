@@ -2,45 +2,12 @@ part of '../static_mesh_sub_editor.dart';
 
 /// The left panel: mesh stats, LOD settings and the node hierarchy.
 mixin _StaticMeshSubEditorLeftPanel on _StaticMeshSubEditorStateBase {
-  Widget _buildLeftTabBtn(int index, String label) {
-    final isActive = _activeLeftTab == index;
-    return Clickable(
-      onPressed: () => setState(() => _activeLeftTab = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isActive ? EditorColors.primary : Colors.transparent,
-              width: 2,
-            ),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 9.5,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            color: isActive ? EditorColors.primary : EditorColors.mutedForeground,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildStatsPanel() {
     final vm = _viewModel;
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        const Row(
-          children: [
-            Icon(LucideIcons.chartColumn, size: 12, color: Colors.cyan),
-            SizedBox(width: 6),
-            Text('MESH STATISTICS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.cyan)),
-          ],
-        ),
-        const SizedBox(height: 10),
+        const EditorIslandSectionLabel('Mesh statistics', padding: EdgeInsets.only(bottom: 6)),
         _buildStatRow('Triangles', '${vm.triangleCount}'),
         _buildStatRow('Vertices', '${vm.vertexCount}'),
         _buildStatRow('UV Channels', '${vm.uvChannelsCount}'),
@@ -50,18 +17,7 @@ mixin _StaticMeshSubEditorLeftPanel on _StaticMeshSubEditorStateBase {
           // cm, W × D × H along X × Y × Z.
           '${vm.boundsWidth.toStringAsFixed(1)} × ${vm.boundsDepth.toStringAsFixed(1)} × ${vm.boundsHeight.toStringAsFixed(1)} cm',
         ),
-        const SizedBox(height: 16),
-        const Divider(height: 1),
-        const SizedBox(height: 12),
-
-        const Row(
-          children: [
-            Icon(LucideIcons.ruler, size: 12, color: EditorColors.mutedForeground),
-            SizedBox(width: 6),
-            Text('BOUNDING BOX EXTENTS', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: EditorColors.mutedForeground)),
-          ],
-        ),
-        const SizedBox(height: 8),
+        const EditorIslandSectionLabel('Bounding box extents'),
         _buildStatRow('Min Bounds (cm)', '[${vm.minBounds.map((e) => e.toStringAsFixed(1)).join(', ')}]'),
         _buildStatRow('Max Bounds (cm)', '[${vm.maxBounds.map((e) => e.toStringAsFixed(1)).join(', ')}]'),
       ],
@@ -74,29 +30,21 @@ mixin _StaticMeshSubEditorLeftPanel on _StaticMeshSubEditorStateBase {
       padding: const EdgeInsets.all(12),
       children: [
         // LOD Global Settings
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Row(
+        EditorIslandSectionLabel(
+          'LOD settings',
+          padding: const EdgeInsets.only(bottom: 6),
+          trailing: OutlineButton(
+            size: ButtonSize.small,
+            onPressed: vm.lods.length < 4 ? () => vm.addLod() : null,
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(LucideIcons.layers, size: 12, color: Colors.cyan),
-                SizedBox(width: 6),
-                Text('LOD SETTINGS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.cyan)),
+                Icon(LucideIcons.plus, size: 10),
+                SizedBox(width: 4),
+                Text('Add LOD', style: TextStyle(fontSize: 9.5)),
               ],
             ),
-            OutlineButton(
-              size: ButtonSize.small,
-              onPressed: vm.lods.length < 4 ? () => vm.addLod() : null,
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(LucideIcons.plus, size: 10),
-                  SizedBox(width: 4),
-                  Text('Add LOD', style: TextStyle(fontSize: 9.5)),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
         const SizedBox(height: 12),
 
@@ -128,10 +76,7 @@ mixin _StaticMeshSubEditorLeftPanel on _StaticMeshSubEditorStateBase {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text('Auto Compute Distances', style: TextStyle(fontSize: 9.5, color: EditorColors.foreground)),
-            Switch(
-              value: vm.autoComputeLodDistances,
-              onChanged: (val) => vm.setAutoComputeLodDistances(val),
-            ),
+            Switch(value: vm.autoComputeLodDistances, onChanged: (val) => vm.setAutoComputeLodDistances(val)),
           ],
         ),
         const SizedBox(height: 14),
@@ -153,7 +98,7 @@ mixin _StaticMeshSubEditorLeftPanel on _StaticMeshSubEditorStateBase {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: EditorColors.card,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: EditorColors.border),
       ),
       child: Column(
@@ -166,9 +111,7 @@ mixin _StaticMeshSubEditorLeftPanel on _StaticMeshSubEditorStateBase {
                 'LOD ${lod.level} ${isBase ? '(Source)' : ''}',
                 style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: EditorColors.foreground),
               ),
-              OutlineBadge(
-                child: Text('${lod.triangleCount} tris', style: const TextStyle(fontSize: 9)),
-              ),
+              OutlineBadge(child: Text('${lod.triangleCount} tris', style: const TextStyle(fontSize: 9))),
               if (!isBase)
                 GhostButton(
                   size: ButtonSize.small,
@@ -184,8 +127,10 @@ mixin _StaticMeshSubEditorLeftPanel on _StaticMeshSubEditorStateBase {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Reduction: ', style: TextStyle(fontSize: 9.5, color: EditorColors.mutedForeground)),
-              Text('${(lod.reductionRatio * 100).toInt()}%',
-                  style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
+              Text(
+                '${(lod.reductionRatio * 100).toInt()}%',
+                style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: EditorColors.foreground),
+              ),
             ],
           ),
           if (!isBase)
@@ -231,10 +176,13 @@ mixin _StaticMeshSubEditorLeftPanel on _StaticMeshSubEditorStateBase {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('$label: ', style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
+          Text(
+            label,
+            style: EditorTypography.ui(fontSize: EditorTypography.labelSize, color: EditorColors.mutedForeground),
+          ),
           Text(
             value,
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground),
+            style: EditorTypography.mono(fontSize: EditorTypography.labelSize, color: EditorColors.foreground),
           ),
         ],
       ),

@@ -5,8 +5,7 @@ mixin _ParticleSubEditorRightPanel on _ParticleSubEditorStateBase {
   // ------------------------------------------------------------ right panel
 
   Widget _rightPanel() {
-    return Container(
-      color: EditorColors.card,
+    return SizedBox.expand(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

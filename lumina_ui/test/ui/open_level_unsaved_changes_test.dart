@@ -113,7 +113,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     vm.commands.execute('file.openLevel', tester.element(find.byType(MainEditorView)));
     await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.text('L_Other.lmas'));
+    await tester.tap(find.text('L_Other'));
     await tester.pump(const Duration(milliseconds: 400));
     return vm;
   }

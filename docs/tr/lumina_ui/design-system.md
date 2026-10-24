@@ -8,7 +8,7 @@ diliyle boyanır. Dört aşamada gelir; her aşama kendi başına yayınlanır:
 | 1 · Token'lar, yazı ve çerçeve | Obsidian rampası ve amber vurgu, Manrope + JetBrains Mono, Prism L kilidi ve editörün kendi pencere denetimleriyle 48 px menü barı, türlü çalışma alanı sekmeleri | yayında |
 | 2 · Adalar ve Content Drawer | her yerleşik panel bir ada (dolgu, 1 px kenarlık, 12 px yarıçap, 8 px oluk, 36 px büyük harfli başlık), ayırıcı tutamaçlar, girintisinden başlayan seçim satırları, yukarı kayan Content Drawer | yayında |
 | 3 · Viewport çerçevesi | pill sırası (Perspective, görünüm modu, snap, açı snap'i, World, Show), dikey araç sütunu, istatistik pill'leri, MiniAI istem pill'i | yayında (MiniAI istem pill'i hariç) |
-| 4 · Alt editörler | Material, Blueprint, Sequencer, Static Mesh, Skeletal Mesh, Animation, Landscape, UMG, Plugins, Project Settings ve Build Manager, 1–3. aşama bileşenleri üzerinde | planlı |
+| 4 · Alt editörler | Material, Blueprint, Sequencer, Static Mesh, Skeletal Mesh, Animation, Landscape, UMG, Plugins, Project Settings ve Build Manager, 1–3. aşama bileşenleri üzerinde | yayında (araç çubuğu satırları kalıyor) |
 
 Temalar veri olarak kalır: rampa ve vurgu Lumina Dark temasının varsayılanlarıdır (`EditorThemeData.luminaDark`);
 özel bir tema JSON'u her token'ı yine geçersiz kılar (bkz. [Editör temaları](core.md)).
@@ -127,13 +127,53 @@ kutu, `StaticMeshEditorViewModel.boundsLineSet`) verir; static mesh'lerde soket 
 Çerçevede henüz yok: MiniAI istem pill'i. MiniAI'nin araç çubuğu eklenti yuvasındaki ✦ AI düğmesi panelini açar;
 viewport'ta bir istem alanı için yazılan metni bir eklentiye ileten bir eklenti yuvası gerekir.
 
+## Alt editörler (4. aşama)
+
+Her alt editör bölmelerini zemin üzerinde adalar olarak dizer; yalnız 1–3. aşama bileşenleriyle: `EditorIslandGround`
+(8 px boşluklu `background` dolgusu), bölme başına `EditorIsland`, adaların yanında `EditorIslandDividers.gap`, üst üste
+olanların arasında `.grip`; böylece her bölme yeniden boyutlanmaya devam eder. `lib/ui/core/widgets/editor_island.dart`
+üç parça daha tutar: `EditorIslandTabHeader` (sekmeleri adanın görünümünü değiştiren ada başlığı: etkin sekme `muted`
+bir çip üzerinde kalın; dar bir ada birini kaydırıp gizlemek yerine etiketleri kısaltır; `tabKeys`/`keyPrefix` sekmelere
+anahtar verir), `EditorIslandSectionLabel` (ada içinde büyük harfli 10 px bölüm etiketi, isteğe bağlı sağ öğeyle) ve
+`editorIslandGroundGrip` (kendi boşluğunu getiren bir bölmenin altındaki tutamaç).
+
+| Editör | Adalar |
+|---|---|
+| Static Mesh | LODs / Hierarchy üstte, Mesh stats altta · viewport · Details |
+| Skeletal Mesh | Skeleton tree (kemik ve soket sayısı, + soket) üstte, Morphs / RigLogic altta · viewport (Show · Bones, Weights, Sockets) · Details |
+| Animation | Properties / Bone Tracks / Notifies · kare kartı ve altında transport çubuğu olan viewport, altında Dope sheet · Key details / Curves / BlendSpace / Pose |
+| Material | Preview üstte, Material settings altta · GLSL Source / Node Graph üstte, Compiler log altta · Parameters & uniforms |
+| Blueprint | Components üstte, My Blueprint altta · graph sekmeleri ve tuval üstte, derleme sonuçları altta · Details |
+| Sequencer | Track outliner · 3D Viewport / Curves · Key details; altta transport ve zaman çizelgesi |
+| UMG | Palette üstte, Hierarchy altta · tasarımcı · Details |
+| Landscape | araç adasının başlığında Manage / Sculpt / Foliage sekmeleri · viewport · Foliage |
+| Texture, Particle, Physics Asset, Blend Space, Anim Blueprint, Blueprint Interface, Pose Search, Cloth, Garment | her bölme bir ada |
+| Plugins | kategoriler · eklenti listesi · ayrıntılar |
+| Project Settings | kategori listesi (artık yeniden boyutlanabilir, önce sabit 220 px idi) · kaydetme alt çubuğuyla kategorinin ayarları |
+| Build Manager | Build steps · Build log · Packaging (artık yeniden boyutlanabilir, önce sabit genişlikteydi) |
+
+Skeletal Mesh editörünün Show Bones, Display Sockets ve Skin Weight Heatmap araç çubuğu düğmeleri viewport'un `Show`
+menüsüne taşındı (Bones, Weights, Sockets). Static Mesh, Skeletal Mesh ve Physics Asset viewport'larının bilgi kutuları
+pill yüzeyinde sol altta durur (sol üst pill sırasına ve araç sütununa ait); Animation kare kartı pill sırasının altında,
+araç sütununun yanında durur ve root motion anahtarı Reset View'ın altında bir pill'dir. Material editörü ayarlarını
+önizlemenin altında, parametreleri sağda tutar (önizleme görevinin kurduğu düzen), adalar üzerinde.
+
+Alt editör kabuğu Content Browser'ı çalışma alanının altında bir ada olarak sabitler (arada tutamaç) ve sabitlenmemiş
+çekmeceyi çalışma alanının altının üzerinde yüzen bir ada olarak açar. Eklentilerin sağ dock'u da bir adadır; bir
+eklentinin sekmesi ya da varlık editörü host tarafından zeminde tek bir adaya yerleştirilir.
+
+4. aşamada olmayanlar: alt editörler araç çubuğu satırlarını korur (artboard'larda eylemler sekme barının sağındadır);
+eklentiler `lumina_editor_api` üzerinden henüz kendi ada bileşenlerini almaz (host panellerini ve sekmelerini çerçeveler).
+
 ## Doğrulama
 
 `test/ui/theme_aurora_tokens_test.dart`, `test/ui/menu_bar_aurora_test.dart` ve `test/ui/typed_tab_bar_test.dart`
-1. aşamayı, `test/ui/editor_island_test.dart` ve `test/ui/content_drawer_test.dart` 2. aşamayı, `test/ui/viewport_pills_test.dart` ve `test/ui/sub_viewport_pills_test.dart` 3. aşamayı kapsar; "Design System Smoke: aurora design language" smoke senaryosu
+1. aşamayı, `test/ui/editor_island_test.dart` ve `test/ui/content_drawer_test.dart` 2. aşamayı, `test/ui/viewport_pills_test.dart` ve `test/ui/sub_viewport_pills_test.dart` 3. aşamayı kapsar, 4. aşama için her alt editörün kendi widget testi adalarını ve başlıklarını bulur (`test/helpers/island_expectations.dart`); "Design System Smoke: aurora design language" smoke senaryosu
 (`integration_test/smoke/design_system_smoke_test.dart`) gerçek bir projeye bir varil ve mankeni import eder, Static
 Mesh ve Skeletal Mesh editörlerini türlü sekmeler olarak açar, ekran görüntülerinde rail'i, komut alanını, çipi ve
 sekme alt çizgilerini ölçer ve viewport dönerken sekme geçişlerini kaydeder. "Design System Smoke: aurora islands and
 content drawer" bir varil, bir klima ve bir muz salkımı yerleştirir; zemini, ada dolgusunu, kenarlığı, tutamacı ve
 yuvarlak köşeyi, girintisinden başlayan Outliner seçimini ve çekmece barını ölçer; çekmeceyi viewport'un üzerine açar
-(322 px, viewport adası değişmeden), bardan Output Log'u açar ve paneli sabitler; hepsi videoda.
+(322 px, viewport adası değişmeden), bardan Output Log'u açar ve paneli sabitler; hepsi videoda. "Design System
+Smoke: aurora sub-editors" bir varil, mankeni ve bir idle klibini import eder, on bir editörü sekme olarak açar,
+adalarını denetler, her birinde ada dolgusunu ve yanındaki zemini ölçer ve 3B viewport'ları videoda döndürür.

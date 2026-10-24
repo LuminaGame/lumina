@@ -6,6 +6,7 @@ import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_
 import 'package:lumina_ui/ui/features/plugin_manager/views/plugin_manager_view.dart';
 import 'dart:convert';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import '../helpers/island_expectations.dart';
 
 void main() {
   late Directory tempRoot;
@@ -152,6 +153,12 @@ void main() {
     await tester.pumpAndSettle();
     
     expect(find.text('BUILT-IN'), findsOneWidget);
+    // The categories, the plugin list, the details.
+    expectIslands(tester, {
+      'plugins_island_categories': 'INSTALLED',
+      'plugins_island_list': null,
+      'plugins_island_details': null,
+    });
     expect(find.text('INSTALLED'), findsOneWidget);
     
     final texts = find.byType(Text).evaluate().map((e) => (e.widget as Text).data).toList();

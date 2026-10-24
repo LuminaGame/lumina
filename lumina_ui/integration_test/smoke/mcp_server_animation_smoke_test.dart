@@ -214,8 +214,12 @@ void main() {
       await shot('mcp10_skeletal_mesh_hand_r_keycard_socket');
       // The card itself, without the bone and socket overlays over it: out
       // along the fingers (a right-hand bone's −X points to the fingertips).
-      await tester.tap(find.text('Show Bones'));
-      await tester.tap(find.text('Display Sockets'));
+      for (final item in ['bones', 'sockets']) {
+        await tester.tap(find.byKey(const ValueKey('sub_viewport_show')).first);
+        await settle(10);
+        await tester.tap(find.byKey(ValueKey('sub_viewport_show_$item')));
+        await settle(10);
+      }
       await ok('set_skeletal_socket', {'asset': manny, 'socket': 'hand_r_keycard', 'location': [-14, 0, 0], 'rotation': [0, 0, 0]});
       await ok('save_skeletal_mesh', {'asset': manny});
       await settle(40);

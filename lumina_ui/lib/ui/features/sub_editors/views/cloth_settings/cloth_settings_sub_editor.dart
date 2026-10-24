@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/theme/asset_type_style.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/cloth_settings_editor_view_model.dart';
 
@@ -77,13 +78,13 @@ class _ClothSettingsSubEditorState extends State<ClothSettingsSubEditor> {
           Expanded(
             child: !_vm.isLoaded
                 ? const Center(child: CircularProgressIndicator())
-                : ResizablePanel.horizontal(
-                    draggerBuilder: (_) => const HorizontalResizableDragger(),
+                : EditorIslandGround(child: ResizablePanel.horizontal(
+                  dividerBuilder: EditorIslandDividers.gap,
                     children: [
-                      ResizablePane(initialSize: 220, minSize: 160, maxSize: 360, child: _sectionsPanel()),
-                      ResizablePane.flex(child: _settingsPanel()),
+                      ResizablePane(initialSize: 220, minSize: 160, maxSize: 360, child: EditorIsland(key: const ValueKey('cloth_settings_island_sections'), child: _sectionsPanel())),
+                      ResizablePane.flex(child: EditorIsland(key: const ValueKey('cloth_settings_island_settings'), child: _settingsPanel())),
                     ],
-                  ),
+                  )),
           ),
         ],
       ),
@@ -147,8 +148,7 @@ class _ClothSettingsSubEditorState extends State<ClothSettingsSubEditor> {
   }
 
   Widget _sectionsPanel() {
-    return Container(
-      color: EditorColors.sidebar,
+    return SizedBox.expand(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -196,8 +196,7 @@ class _ClothSettingsSubEditorState extends State<ClothSettingsSubEditor> {
 
   Widget _settingsPanel() {
     final section = _vm.section;
-    return Container(
-      color: EditorColors.card,
+    return SizedBox.expand(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

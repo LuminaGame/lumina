@@ -9,34 +9,14 @@ mixin _SkeletalMeshBoneTree on _SkeletalMeshSubEditorStateBase {
     final vm = _viewModel;
     return Column(
       children: [
-        // Panel Header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          color: EditorColors.card,
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  const Icon(LucideIcons.bone, size: 12, color: Colors.purple),
-                  const SizedBox(width: 6),
-                  const Text('SKELETON TREE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.purple)),
-                  const Spacer(),
-                  GhostButton(
-                    size: ButtonSize.small,
-                    onPressed: () => vm.addSocket(),
-                    child: const Icon(LucideIcons.plus, size: 12, color: Colors.amber),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                placeholder: const Text('Search bones...'),
-                onChanged: (val) => vm.setBoneSearchFilter(val),
-              ),
-            ],
+        // The bone filter; the island header holds the title and + socket.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 2),
+          child: TextField(
+            placeholder: const Text('Filter bones...'),
+            onChanged: (val) => vm.setBoneSearchFilter(val),
           ),
         ),
-        const Divider(height: 1),
 
         // Tree List
         Expanded(

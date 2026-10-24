@@ -16,13 +16,17 @@ mixin _ProjectSettingsLayout on _ProjectSettingsSubEditorStateBase {
           const Text('Project Settings',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
           const SizedBox(width: 16),
+          // The field sizes itself: a fixed-height box clipped its text.
           SizedBox(
             width: 220,
-            height: 26,
             child: TextField(
               key: const ValueKey('project_settings_search'),
               controller: _searchController,
-              placeholder: const Text('Search settings...', style: TextStyle(fontSize: 10)),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              borderRadius: BorderRadius.circular(8),
+              style: EditorTypography.ui(fontSize: EditorTypography.bodySize, color: EditorColors.foreground),
+              placeholder: Text('Search settings...',
+                  style: EditorTypography.ui(fontSize: EditorTypography.bodySize, color: EditorColors.mutedForeground)),
               onChanged: _vm.setFilterQuery,
             ),
           ),
@@ -54,26 +58,22 @@ mixin _ProjectSettingsLayout on _ProjectSettingsSubEditorStateBase {
     if (!visible.contains(_activeCategory) && visible.isNotEmpty) {
       _activeCategory = visible.first;
     }
-    return Container(
-      width: 220,
-      color: EditorColors.cardHeader,
+    return Padding(
       padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('SETTINGS CATEGORY',
-              style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: EditorColors.primary)),
-          const SizedBox(height: 8),
+          const EditorIslandSectionLabel('Settings category', padding: EdgeInsets.fromLTRB(4, 2, 4, 6)),
           Expanded(
             child: ListView(
               children: [
                 for (final (i, cat) in visible.indexed) ...[
                   // The plugins' pages under their own heading.
                   if (ProjectSettingsViewModel.isPluginCategory(cat) && (i == 0 || !ProjectSettingsViewModel.isPluginCategory(visible[i - 1])))
-                    const Padding(
-                      key: ValueKey('project_settings_nav_plugins_header'),
-                      padding: EdgeInsets.fromLTRB(2, 10, 2, 6),
-                      child: Text('PLUGINS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: EditorColors.primary)),
+                    Padding(
+                      key: const ValueKey('project_settings_nav_plugins_header'),
+                      padding: const EdgeInsets.fromLTRB(2, 10, 2, 6),
+                      child: Text('PLUGINS', style: EditorIslandSectionLabel.style),
                     ),
                   GestureDetector(
                     key: ValueKey('project_settings_nav_$cat'),
@@ -82,24 +82,21 @@ mixin _ProjectSettingsLayout on _ProjectSettingsSubEditorStateBase {
                       if (cat == ProjectSettingsCategory.mapsAndModes) _vm.refreshChoices();
                       setState(() => _activeCategory = cat);
                     },
+                    // A tree row: the amber fill with dark text when active.
                     child: Container(
-                      margin: const EdgeInsets.only(bottom: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _activeCategory == cat
-                            ? EditorColors.primary.withValues(alpha: 0.2)
-                            : EditorColors.cardHeader,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                      height: EditorIslandStyle.rowHeight,
+                      margin: const EdgeInsets.only(bottom: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: EditorTreeRowStyle.decoration(selected: _activeCategory == cat),
                       child: Row(
                         children: [
                           Expanded(
                             child: Text(
                               _vm.categoryTitle(cat),
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: _activeCategory == cat ? FontWeight.bold : FontWeight.normal,
-                                color: _activeCategory == cat ? EditorColors.primary : EditorColors.foreground,
+                              style: EditorTypography.ui(
+                                fontSize: EditorTypography.bodySize,
+                                fontWeight: _activeCategory == cat ? FontWeight.w700 : FontWeight.w500,
+                                color: EditorTreeRowStyle.foreground(selected: _activeCategory == cat),
                               ),
                             ),
                           ),
@@ -131,8 +128,9 @@ mixin _ProjectSettingsLayout on _ProjectSettingsSubEditorStateBase {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(_vm.categoryTitle(_activeCategory).toUpperCase(),
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: EditorColors.primary)),
+        Text(_vm.categoryTitle(_activeCategory),
+            key: const ValueKey('project_settings_category_title'),
+            style: EditorTypography.ui(fontSize: EditorTypography.displaySize, fontWeight: FontWeight.w700, color: EditorColors.foreground)),
         const SizedBox(height: 12),
         // One child whatever the message count: the category's editors keep
         // their list slot, so a field whose half-typed value adds an error
@@ -196,7 +194,7 @@ mixin _ProjectSettingsLayout on _ProjectSettingsSubEditorStateBase {
     return Container(
       height: 40,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      color: EditorColors.cardHeader,
+      decoration: const BoxDecoration(border: Border(top: BorderSide(color: EditorColors.border))),
       child: Row(
         children: [
           if (dirty)

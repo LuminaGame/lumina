@@ -84,22 +84,12 @@ mixin _ComponentRows on _ComponentTreeStateBase {
     final inherited = vm.isInheritedComponent(node.id);
     final overridden = inherited && vm.isComponentOverridden(node.id);
 
+    // Indented by a margin, so the amber selection starts at the indent.
     return Container(
       height: EditorDensity.rowHeight,
-      padding: EdgeInsets.only(
-        left: EditorDensity.gutter + (row.depth * EditorDensity.indentStep),
-        right: EditorDensity.gutter,
-      ),
-      decoration: BoxDecoration(
-        color: isDropTarget
-            ? EditorColors.primary.withValues(alpha: 0.18)
-            : (isSelected ? EditorColors.selectionBg : Colors.transparent),
-        border: isDropTarget
-            ? Border.all(color: EditorColors.primary, width: 1)
-            : (isSelected
-                ? const Border(left: BorderSide(color: EditorColors.primary, width: EditorDensity.selectionBarWidth))
-                : null),
-      ),
+      margin: EditorTreeRowStyle.margin(row.depth),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      decoration: EditorTreeRowStyle.decoration(selected: isSelected, dropTarget: isDropTarget),
       child: Row(
         children: [
           if (row.expandable)
@@ -163,9 +153,8 @@ mixin _ComponentRows on _ComponentTreeStateBase {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected
-                          ? EditorColors.primary
-                          : (isVisible ? EditorColors.foreground : EditorColors.mutedForeground),
+                      color: EditorTreeRowStyle.foreground(
+                          selected: isSelected, normal: isVisible ? EditorColors.foreground : EditorColors.mutedForeground),
                       decoration: isVisible ? TextDecoration.none : TextDecoration.lineThrough,
                     ),
                     overflow: TextOverflow.ellipsis,

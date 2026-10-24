@@ -173,15 +173,16 @@ mixin _PhysicsAssetToolbarWorkspace on _PhysicsAssetSubEditorStateBase {
     final bounds = _viewModel.meshWorldBounds;
     final span = bounds == null ? 0.0 : (bounds.max - bounds.min).length;
     final gridExtent = math.max(200.0, (span * 1.5 / 100.0).ceil() * 100.0);
-    return ResizablePanel.horizontal(
+    return EditorIslandGround(child: ResizablePanel.horizontal(
+      dividerBuilder: EditorIslandDividers.gap,
       children: [
         ResizablePane(
           initialSize: 280,
           minSize: 220,
-          child: Container(color: EditorColors.cardHeader, child: _buildTreePanel()),
+          child: EditorIsland(key: const ValueKey('physics_island_tree'), child: _buildTreePanel()),
         ),
         ResizablePane.flex(
-          child: Stack(
+          child: EditorIsland(key: const ValueKey('physics_island_viewport'), color: EditorColors.viewportBackdrop, child: Stack(
             children: [
               // The mesh is drawn by the preview scene, through lumina, at the
               // scale the bodies are authored in (cm): the viewport's own GLB
@@ -204,16 +205,14 @@ mixin _PhysicsAssetToolbarWorkspace on _PhysicsAssetSubEditorStateBase {
                 },
                 onPreviewWorldDisposing: (_) => _previewScene.detach(),
               ),
+              // Bottom-left above the stats strip: the pill row and the tool
+              // column own the top-left.
               Positioned(
-                top: 48,
+                bottom: 40,
                 left: 12,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: EditorColors.card.withValues(alpha: 0.85),
-                    border: Border.all(color: EditorColors.border),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
+                  decoration: ViewportPillStyle.decoration(),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -233,14 +232,14 @@ mixin _PhysicsAssetToolbarWorkspace on _PhysicsAssetSubEditorStateBase {
               if (_viewModel.hasValidated)
                 Positioned(left: 12, right: 12, bottom: 12, child: _buildValidationPanel()),
             ],
-          ),
+          )),
         ),
         ResizablePane(
           initialSize: 300,
           minSize: 240,
-          child: Container(color: EditorColors.cardHeader, child: _buildInspector()),
+          child: EditorIsland(key: const ValueKey('physics_island_details'), child: _buildInspector()),
         ),
       ],
-    );
+    ));
   }
 }

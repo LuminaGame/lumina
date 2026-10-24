@@ -12,6 +12,7 @@ import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/vector_row.dart';
 import 'package:lumina_ui/ui/core/theme/asset_type_style.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart' show AuthoringRotation, TransformGizmoModel;
 import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/viewport_ray.dart';
@@ -99,14 +100,14 @@ class GarmentSubEditorState extends _GarmentEditorBase with _GarmentDetailsPanel
           Expanded(
             child: !vm.isLoaded
                 ? const Center(child: CircularProgressIndicator())
-                : ResizablePanel.horizontal(
-                    draggerBuilder: (_) => const HorizontalResizableDragger(),
+                : EditorIslandGround(child: ResizablePanel.horizontal(
+                  dividerBuilder: EditorIslandDividers.gap,
                     children: [
-                      ResizablePane(initialSize: 280, minSize: 200, maxSize: 460, child: detailsPanel()),
-                      ResizablePane.flex(child: viewport()),
-                      ResizablePane(initialSize: 240, minSize: 180, maxSize: 420, child: landmarksPanel()),
+                      ResizablePane(initialSize: 280, minSize: 200, maxSize: 460, child: EditorIsland(key: const ValueKey('garment_island_details'), child: detailsPanel())),
+                      ResizablePane.flex(child: EditorIsland(key: const ValueKey('garment_island_viewport'), color: EditorColors.viewportBackdrop, child: viewport())),
+                      ResizablePane(initialSize: 240, minSize: 180, maxSize: 420, child: EditorIsland(key: const ValueKey('garment_island_landmarks'), child: landmarksPanel())),
                     ],
-                  ),
+                  )),
           ),
         ],
       ),

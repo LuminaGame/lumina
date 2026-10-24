@@ -54,7 +54,8 @@ void main() {
     expect(find.text('GARMENT'), findsOneWidget);
     expect(find.text('LANDMARKS'), findsOneWidget);
     expect(find.byType(ResizablePanel), findsOneWidget);
-    expect(find.byType(HorizontalResizableDragger), findsNWidgets(2));
+    // Three islands with a resizable gutter between each pair.
+    expect(find.byKey(const ValueKey('island_gap')), findsNWidgets(2));
     for (final key in ['garment_move', 'garment_rotate', 'garment_scale', 'garment_pick_garment', 'garment_pick_body', 'garment_align', 'garment_save']) {
       expect(find.byKey(ValueKey(key)), findsOneWidget, reason: key);
     }

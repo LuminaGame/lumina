@@ -110,7 +110,7 @@ void main() {
     expect(find.byKey(const ValueKey('project_settings_nav_plugins_header')), findsOneWidget);
     await tester.tap(find.byKey(ValueKey('project_settings_nav_$category')));
     await tester.pump();
-    expect(find.text('SETTINGS PLUGIN'), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('project_settings_category_title'))).data, 'Settings Plugin');
 
     await tester.tap(find.byKey(const ValueKey('settings_plugin_enabled')));
     await tester.pump();

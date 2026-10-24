@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/services.dart';
 import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintComponent;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
@@ -151,79 +152,60 @@ class _BlueprintComponentTreeState extends _ComponentTreeStateBase with _Compone
         if (!c.isSceneComponent && (!filtering || c.name.toLowerCase().contains(query))) _ComponentRow(c, 0, false),
     ];
 
-    // No surface of its own, as the World Outliner: the editor background.
-    return Container(
-      color: EditorColors.background,
-      child: Column(
+    // On its island, as the World Outliner: the island header (title,
+    // count, expand / collapse, Add), the search field, the rows.
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header, as the World Outliner's.
-          Container(
-            height: EditorDensity.panelHeaderHeight,
-            padding: const EdgeInsets.symmetric(horizontal: EditorDensity.gutter),
-            color: EditorColors.cardHeader,
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text('COMPONENTS', style: EditorTypography.panelHeading, overflow: TextOverflow.ellipsis),
-                ),
-                _headerIcon(
-                  key: const ValueKey('components_expand_all'),
-                  icon: LucideIcons.chevronsUpDown,
-                  tooltip: 'Expand All',
-                  onPressed: () => _setAllExpanded(true),
-                ),
-                _headerIcon(
-                  key: const ValueKey('components_collapse_all'),
-                  icon: LucideIcons.chevronsDownUp,
-                  tooltip: 'Collapse All',
-                  onPressed: () => _setAllExpanded(false),
-                ),
-                SizedBox(
-                  height: EditorDensity.chipHeight,
-                  child: GhostButton(
-                    key: const ValueKey('add_component_button'),
-                    density: EditorDensity.chipButton,
-                    alignment: Alignment.center,
-                    onPressed: () => _showAddComponentModal(context, vm),
-                    child: const Row(
-                      children: [
-                        Icon(LucideIcons.plus, size: 12, color: EditorColors.primary),
-                        SizedBox(width: 4),
-                        Text(
-                          'Add',
-                          style: TextStyle(
-                            fontSize: EditorTypography.labelSize,
-                            color: EditorColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+          EditorIslandHeader(
+            title: 'Components',
+            trailingInfo: '${vm.allComponents.length}',
+            actions: [
+              _headerIcon(
+                key: const ValueKey('components_expand_all'),
+                icon: LucideIcons.chevronsUpDown,
+                tooltip: 'Expand All',
+                onPressed: () => _setAllExpanded(true),
+              ),
+              _headerIcon(
+                key: const ValueKey('components_collapse_all'),
+                icon: LucideIcons.chevronsDownUp,
+                tooltip: 'Collapse All',
+                onPressed: () => _setAllExpanded(false),
+              ),
+              const SizedBox(width: 4),
+              SizedBox(
+                height: 24,
+                child: PrimaryButton(
+                  key: const ValueKey('add_component_button'),
+                  density: EditorDensity.chipButton,
+                  alignment: Alignment.center,
+                  onPressed: () => _showAddComponentModal(context, vm),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.plus, size: 12, color: EditorColors.primaryForeground),
+                      const SizedBox(width: 4),
+                      Text('Add',
+                          style: EditorTypography.ui(
+                              fontSize: EditorTypography.labelSize, fontWeight: FontWeight.w700, color: EditorColors.primaryForeground)),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
 
-          // Search field.
-          Container(
-            color: EditorColors.rail,
-            padding: const EdgeInsets.symmetric(horizontal: EditorDensity.gutter, vertical: 6),
-            child: Container(
-              height: EditorDensity.compactRowHeight,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: BoxDecoration(
-                color: EditorColors.background,
-                borderRadius: BorderRadius.circular(3),
-                border: Border.all(color: EditorColors.border),
-              ),
-              child: TextField(
-                key: const ValueKey('components_search'),
-                onChanged: (v) => setState(() => _filterQuery = v),
-                style: const TextStyle(fontSize: 10, color: EditorColors.foreground),
-                placeholder: const Text('Search components...', style: TextStyle(fontSize: 10)),
-              ),
+          // Search field, on the island as the outliner's.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(EditorDensity.gutter, 8, EditorDensity.gutter, 4),
+            child: TextField(
+              key: const ValueKey('components_search'),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              borderRadius: BorderRadius.circular(8),
+              onChanged: (v) => setState(() => _filterQuery = v),
+              style: EditorTypography.ui(fontSize: EditorTypography.bodySize, color: EditorColors.foreground),
+              placeholder: Text('Search components...',
+                  style: EditorTypography.ui(fontSize: EditorTypography.bodySize, color: EditorColors.mutedForeground)),
             ),
           ),
 
@@ -240,7 +222,7 @@ class _BlueprintComponentTreeState extends _ComponentTreeStateBase with _Compone
                               height: EditorDensity.rowHeight,
                               alignment: Alignment.centerLeft,
                               padding: const EdgeInsets.only(left: EditorDensity.gutter, top: 6),
-                              child: const Text('ACTOR COMPONENTS', style: EditorTypography.panelHeading),
+                              child: Text('ACTOR COMPONENTS', style: EditorIslandSectionLabel.style),
                             ),
                             for (final r in actorRows) _buildRow(r),
                           ],
@@ -257,7 +239,6 @@ class _BlueprintComponentTreeState extends _ComponentTreeStateBase with _Compone
                   ),
           ),
         ],
-      ),
     );
   }
 

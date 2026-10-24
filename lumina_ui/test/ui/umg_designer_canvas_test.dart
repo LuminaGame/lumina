@@ -9,6 +9,7 @@ import 'package:lumina_ui/ui/features/sub_editors/views/umg/designer_canvas.dart
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/widget_sub_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import '../helpers/island_expectations.dart';
 
 /// Designer canvas + palette + hierarchy + inspector over one persisted
 /// document (real temp project, real WIDGET `.lmas`).
@@ -63,8 +64,18 @@ void main() {
 
     final paletteItem = find.byKey(const ValueKey('umg_palette_text'));
     expect(paletteItem, findsOneWidget);
+    // The palette island scrolls: bring the entry into view first.
+    await tester.ensureVisible(paletteItem);
+    await tester.pump();
     final surface = find.byKey(const ValueKey('umg_canvas_surface'));
     expect(surface, findsOneWidget);
+    // The palette over the hierarchy, the designer, the details.
+    expectIslands(tester, {
+      'umg_island_palette': 'PALETTE',
+      'umg_island_hierarchy': 'HIERARCHY',
+      'umg_island_designer': null,
+      'umg_island_details': 'DETAILS',
+    });
 
     // Drop at a point inside the canvas frame.
     final surfaceRect = tester.getRect(surface);
@@ -95,7 +106,7 @@ void main() {
     expect(runtimeText, findsOneWidget);
     // Hierarchy and inspector follow the selection.
     expect(vm.selectedId, node.id);
-    await tester.tap(find.byKey(const ValueKey('umg_left_tab_hierarchy')));
+    // The hierarchy is an island of its own under the palette: always shown.
     await tester.pump();
     expect(find.byKey(ValueKey('umg_tree_${node.id}')), findsOneWidget);
     expect(find.text('field: ${node.fieldName}'), findsOneWidget, reason: 'inspector shows the selected element');
@@ -180,8 +191,7 @@ void main() {
     final bar = vm.addWidget(UmgWidgetType.progressBar, parentId: vm.document.root.id, canvasPosition: Offset.zero)!;
     vm.rename(bar.id, 'HealthBar Progress');
     await tester.pump();
-    // Switch the left panel to the Hierarchy tab.
-    await tester.tap(find.byKey(const ValueKey('umg_left_tab_hierarchy')));
+    // The hierarchy is an island of its own under the palette: always shown.
     await tester.pump();
     expect(find.text('HealthBar Progress'), findsWidgets);
     expect(find.byKey(ValueKey('umg_tree_${bar.id}')), findsOneWidget);

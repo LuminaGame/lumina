@@ -16,6 +16,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
+import '../helpers/island_expectations.dart';
 
 
 /// View-model + widget half. The terrain/instancing
@@ -517,9 +518,16 @@ void main() {
     testWidgets('the left panel starts at the top, not in the vertical middle',(tester) async {
       await pumpEditor(tester);
       final editorTop = tester.getTopLeft(find.byType(LandscapeFoliageSubEditor)).dy;
-      // 34 px toolbar + the panel's 8 px padding.
+      // The mode tabs head the tool island; the viewport; the foliage.
+      expectIslands(tester, {
+        'landscape_island_tools': 'Manage',
+        'landscape_island_viewport': null,
+        'landscape_island_foliage': 'FOLIAGE',
+      });
+      // 34 px toolbar, the 8 px ground gutter, the island's 1 px border and
+      // 36 px header, then the panel's 8 px padding.
       final titleTop = tester.getTopLeft(find.text('NEW TERRAIN')).dy - editorTop;
-      expect(titleTop, lessThanOrEqualTo(34 + 8 + 2), reason: 'the Manage panel is centred vertically');
+      expect(titleTop, lessThanOrEqualTo(34 + 8 + 1 + 36 + 8 + 2), reason: 'the Manage panel is centred vertically');
     });
 
     testWidgets('the viewport shows its stats line once',(tester) async {

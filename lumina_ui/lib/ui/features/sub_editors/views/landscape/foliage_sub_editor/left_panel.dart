@@ -5,8 +5,7 @@ extension _LandscapeFoliageLeftPanel on _LandscapeFoliageSubEditorState {
   // --- Left panel ------------------------------------------------------------
 
   Widget _leftPanel() {
-    return Container(
-      color: EditorColors.cardHeader,
+    return Padding(
       padding: const EdgeInsets.all(8),
       child: SingleChildScrollView(
         child: Column(

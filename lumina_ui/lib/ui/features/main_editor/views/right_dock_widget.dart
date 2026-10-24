@@ -2,6 +2,7 @@ import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_panels_controller.dart';
 
 /// The right dock: the open `PanelDefaultDock.right` plugin
@@ -29,16 +30,17 @@ class RightDockWidget extends StatelessWidget {
     // With none shown the dock is parked offstage: the bodies stay mounted.
     final active = controller.activeShownPanel(levelTab: levelTab) ?? controller.activeRightPanel;
     if (open.isEmpty || active == null) return const SizedBox.shrink();
-    return Container(
-      color: EditorColors.card,
+    // An island like the level editor's docks: the 36 px header (title or
+    // the panels' tabs, Always, close), then the panel bodies.
+    return EditorIsland(
+      key: const ValueKey('island_right_dock'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            height: 28,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
+            height: EditorIslandStyle.headerHeight,
+            padding: const EdgeInsets.only(left: 12, right: 6),
             decoration: const BoxDecoration(
-              color: EditorColors.cardHeader,
               border: Border(bottom: BorderSide(color: EditorColors.border)),
             ),
             child: Row(
@@ -79,7 +81,7 @@ class RightDockWidget extends StatelessWidget {
             child: Text(
               panel.title.toUpperCase(),
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.6, color: EditorColors.foreground),
+              style: EditorIslandHeader.titleStyle,
             ),
           ),
         ],
@@ -113,10 +115,15 @@ class RightDockWidget extends StatelessWidget {
         ),
       );
 
+  // An island header tab: the active one on a muted chip.
   Widget _tab(EditorPanelDescriptor panel, bool selected) => Container(
+        height: 24,
         margin: const EdgeInsets.only(right: 2),
-        padding: const EdgeInsets.only(left: 6),
-        decoration: EditorTabStyle.decoration(active: selected, content: EditorColors.card),
+        padding: const EdgeInsets.only(left: 8),
+        decoration: BoxDecoration(
+          color: selected ? EditorColors.muted : Colors.transparent,
+          borderRadius: BorderRadius.circular(EditorIslandStyle.rowRadius),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -129,10 +136,10 @@ class RightDockWidget extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     panel.title,
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                      color: selected ? EditorColors.primary : EditorColors.foreground,
+                    style: EditorTypography.ui(
+                      fontSize: EditorTypography.bodySize,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected ? EditorColors.foreground : EditorColors.mutedForeground,
                     ),
                   ),
                 ],

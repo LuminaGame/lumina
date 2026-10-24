@@ -180,7 +180,7 @@ void main() {
     final vm = await loaded(tester);
     vm.addVariable('LookSensitivity', 'Float', 0.4);
     await pumpEditor(tester, vm);
-    await tester.tap(find.text('My Blueprint'));
+    // My Blueprint is an island of its own: always shown.
     await tester.pumpAndSettle();
     expect(find.text('LookSensitivity'), findsOneWidget);
 

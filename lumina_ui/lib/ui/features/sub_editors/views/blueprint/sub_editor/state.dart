@@ -10,7 +10,6 @@ abstract class _BlueprintSubEditorStateBase extends State<BlueprintSubEditor> {
   /// active graph (event graph, construction script, a function, a macro or
   /// a Timeline tab) is the centre tab.
   bool _showViewport = false;
-  int _activeLeftTab = 0; // 0: Components, 1: My Blueprint
   bool _compiling = false;
 
   /// The 3D Viewport's component transform gizmo.

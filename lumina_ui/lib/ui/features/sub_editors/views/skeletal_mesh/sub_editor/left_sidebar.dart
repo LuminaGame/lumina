@@ -11,67 +11,41 @@ final String _sampleDnaPath = [LuminaWorkspace.package('flutter_riglogic'), 'tes
 mixin _SkeletalMeshLeftSidebar on _SkeletalMeshSubEditorStateBase {
 
   Widget _buildLeftSidebar() {
-    return Column(
+    final vm = _viewModel;
+    final lowerTab = _activeLeftTab == 2 ? 1 : 0;
+    return ResizablePanel.vertical(
+      dividerBuilder: EditorIslandDividers.grip,
       children: [
-        // Tabs Header (Skeleton Tree / Morph Targets / RigLogic)
-        Container(
-          padding: const EdgeInsets.all(6),
-          color: EditorColors.card,
-          child: Row(
-            children: [
-              Expanded(
-                child: GhostButton(
+        ResizablePane.flex(
+          child: EditorIsland(
+            key: const ValueKey('skeletal_mesh_island_skeleton'),
+            header: EditorIslandHeader(
+              title: 'Skeleton tree',
+              trailingInfo: '${vm.boneCount} bones · ${vm.sockets.length} sockets',
+              actions: [
+                GhostButton(
                   size: ButtonSize.small,
-                  onPressed: () => setState(() => _activeLeftTab = 0),
-                  child: Text(
-                    'Skeleton (${_viewModel.boneCount})',
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeLeftTab == 0 ? FontWeight.bold : FontWeight.normal,
-                      color: _activeLeftTab == 0 ? Colors.purple : EditorColors.mutedForeground,
-                    ),
-                  ),
+                  onPressed: () => vm.addSocket(),
+                  child: const Icon(LucideIcons.plus, size: 12, color: EditorColors.primary),
                 ),
-              ),
-              const SizedBox(width: 2),
-              Expanded(
-                child: GhostButton(
-                  size: ButtonSize.small,
-                  onPressed: () => setState(() => _activeLeftTab = 1),
-                  child: Text(
-                    'Morphs (${_viewModel.morphTargets.length})',
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeLeftTab == 1 ? FontWeight.bold : FontWeight.normal,
-                      color: _activeLeftTab == 1 ? Colors.cyan : EditorColors.mutedForeground,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 2),
-              Expanded(
-                child: GhostButton(
-                  size: ButtonSize.small,
-                  onPressed: () => setState(() => _activeLeftTab = 2),
-                  child: Text(
-                    _viewModel.hasRigLogic ? 'RigLogic ✓' : 'RigLogic',
-                    style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: _activeLeftTab == 2 ? FontWeight.bold : FontWeight.normal,
-                      color: _activeLeftTab == 2 ? Colors.blue : (_viewModel.hasRigLogic ? Colors.blue.withOpacity(0.8) : EditorColors.mutedForeground),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
+            child: _buildBoneTreePanel(),
           ),
         ),
-        const Divider(height: 1),
-
-        Expanded(
-          child: _activeLeftTab == 0
-              ? _buildBoneTreePanel()
-              : (_activeLeftTab == 1 ? _buildMorphTargetsPanel() : _buildRigLogicPanel()),
+        ResizablePane(
+          initialSize: 260,
+          minSize: 140,
+          child: EditorIsland(
+            key: const ValueKey('skeletal_mesh_island_morphs'),
+            header: EditorIslandTabHeader(
+              keyPrefix: 'skeletal_mesh_lower',
+              tabs: ['Morphs (${vm.morphTargets.length})', vm.hasRigLogic ? 'RigLogic ✓' : 'RigLogic'],
+              active: lowerTab,
+              onSelect: (i) => setState(() => _activeLeftTab = i == 0 ? 1 : 2),
+            ),
+            child: lowerTab == 0 ? _buildMorphTargetsPanel() : _buildRigLogicPanel(),
+          ),
         ),
       ],
     );
@@ -83,25 +57,20 @@ mixin _SkeletalMeshLeftSidebar on _SkeletalMeshSubEditorStateBase {
 
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          color: EditorColors.card,
-          child: Row(
-            children: [
-              const Icon(LucideIcons.slidersHorizontal, size: 12, color: Colors.cyan),
-              const SizedBox(width: 6),
-              const Text('MORPH TARGETS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.cyan)),
-              const Spacer(),
-              if (morphs.isNotEmpty)
-                GhostButton(
-                  size: ButtonSize.small,
-                  onPressed: vm.resetMorphs,
-                  child: const Text('Reset All', style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
-                ),
-            ],
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: EditorIslandSectionLabel(
+            'Morph targets',
+            padding: const EdgeInsets.only(top: 8, bottom: 2),
+            trailing: morphs.isEmpty
+                ? null
+                : GhostButton(
+                    size: ButtonSize.small,
+                    onPressed: vm.resetMorphs,
+                    child: const Text('Reset All', style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
+                  ),
           ),
         ),
-        const Divider(height: 1),
 
         Expanded(
           child: morphs.isEmpty

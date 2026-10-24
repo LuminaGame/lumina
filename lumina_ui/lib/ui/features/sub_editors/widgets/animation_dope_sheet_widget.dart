@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart' show HardwareKeyboard;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/anim_notify_and_curves.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/anim_bone_track_info.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/animation_editor_view_model.dart';
@@ -89,13 +90,7 @@ class _AnimationDopeSheetWidgetState extends _AnimationDopeSheetWidgetStateBase
         final animatedBones = vm.animatedBoneTracks;
         final filteredBones = vm.filteredAnimatedBoneTracks;
 
-        return Container(
-          decoration: BoxDecoration(
-            color: EditorColors.cardHeader,
-            border: Border(
-              top: BorderSide(color: EditorColors.border),
-            ),
-          ),
+        return SizedBox.expand(
           child: Column(
             children: [
               // Top Header Bar

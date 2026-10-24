@@ -8,6 +8,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/animation_editor_v
 import 'package:lumina_ui/ui/features/sub_editors/widgets/animation_dope_sheet_widget.dart';
 import '../view_models/animation_editor_view_model_test.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import '../helpers/island_expectations.dart';
 
 void main() {
   late Directory tempDir;
@@ -126,7 +127,7 @@ void main() {
     expect(find.textContaining('Clip: Walk'), findsWidgets);
   });
 
-  testWidgets('AnimationSubEditor allows resizing the bottom timeline panel via VerticalResizableDragger', (tester) async {
+  testWidgets('AnimationSubEditor resizes the bottom timeline island by its grip', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1280, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -147,13 +148,27 @@ void main() {
     );
     await tester.pump();
 
-    final draggerFinder = find.byType(VerticalResizableDragger);
-    expect(draggerFinder, findsOneWidget);
+    // Properties / Bone Tracks / Notifies, the viewport with the transport
+    // bar along its bottom, the dope sheet under it, the key details.
+    expectIslands(tester, {
+      'anim_island_left': 'Properties',
+      'anim_island_viewport': null,
+      'anim_island_timeline': 'DOPE SHEET',
+      'anim_island_right': 'Key Details',
+    });
+    expect(find.descendant(of: find.byKey(const ValueKey('anim_island_viewport')), matching: find.byKey(const ValueKey('anim_transport_bar'))),
+        findsOneWidget);
 
-    final draggerCenter = tester.getCenter(draggerFinder);
-    await tester.dragFrom(draggerCenter, const Offset(0, -100));
+    final grip = find.descendant(
+        of: find.byKey(const ValueKey('anim_center_vertical_panel')), matching: find.byKey(const ValueKey('island_grip')));
+    expect(grip, findsOneWidget);
+    final timeline = find.byKey(const ValueKey('anim_island_timeline'));
+    final before = tester.getSize(timeline).height;
+
+    await tester.dragFrom(tester.getCenter(grip), const Offset(0, -100));
     await tester.pump();
 
+    expect(tester.getSize(timeline).height, closeTo(before + 100, 2));
     expect(find.byType(AnimationDopeSheetWidget), findsOneWidget);
   });
 }

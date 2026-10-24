@@ -10,6 +10,7 @@ import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.da
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 
 class PluginManagerView extends StatelessWidget {
   final PluginManagerViewModel viewModel;
@@ -21,24 +22,28 @@ class PluginManagerView extends StatelessWidget {
     return ListenableBuilder(
       listenable: viewModel,
       builder: (context, _) {
-        return ResizablePanel.horizontal(
-          children: [
-            ResizablePane(
-              initialSize: 220,
-              minSize: 180,
-              child: _CategorySidebar(viewModel: viewModel),
-            ),
-            ResizablePane(
-              initialSize: 460,
-              minSize: 340,
-              child: _PluginCardList(viewModel: viewModel),
-            ),
-            ResizablePane(
-              initialSize: 400,
-              minSize: 320,
-              child: _PluginDetailsPane(viewModel: viewModel),
-            ),
-          ],
+        // Islands on the ground: the categories, the plugin list, the
+        // selected plugin's details.
+        return EditorIslandGround(
+          child: ResizablePanel.horizontal(
+            dividerBuilder: EditorIslandDividers.gap,
+            children: [
+              ResizablePane(
+                initialSize: 220,
+                minSize: 180,
+                child: EditorIsland(key: const ValueKey('plugins_island_categories'), child: _CategorySidebar(viewModel: viewModel)),
+              ),
+              ResizablePane.flex(
+                minSize: 340,
+                child: EditorIsland(key: const ValueKey('plugins_island_list'), child: _PluginCardList(viewModel: viewModel)),
+              ),
+              ResizablePane(
+                initialSize: 400,
+                minSize: 320,
+                child: EditorIsland(key: const ValueKey('plugins_island_details'), child: _PluginDetailsPane(viewModel: viewModel)),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -55,10 +60,10 @@ class _CategorySidebar extends StatelessWidget {
     final categories = vm.categoryCounts;
     
     final sortedCategories = categories.keys.toList()..sort();
-    final theme = Theme.of(context);
 
     return Container(
-      color: theme.colorScheme.background,
+      // On its island: no fill of its own.
+      color: Colors.transparent,
       child: ListView(
         padding: const EdgeInsets.all(8),
         children: [
@@ -68,11 +73,7 @@ class _CategorySidebar extends StatelessWidget {
             isSelected: vm.selectedGroup == 'ALL' && vm.selectedCategory == 'ALL PLUGINS',
             onTap: () => vm.selectCategory('ALL', 'ALL PLUGINS'),
           ),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-            child: Text('INSTALLED', style: TextStyle(color: theme.colorScheme.mutedForeground, fontWeight: FontWeight.bold)),
-          ),
+          const EditorIslandSectionLabel('Installed', padding: EdgeInsets.fromLTRB(8, 14, 8, 6)),
           _CategoryRow(
             title: 'All Installed',
             count: vm.installedCount,
@@ -89,11 +90,7 @@ class _CategorySidebar extends StatelessWidget {
               onTap: () => vm.selectCategory('INSTALLED', c),
             );
           }),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-            child: Text('BUILT-IN', style: TextStyle(color: theme.colorScheme.mutedForeground, fontWeight: FontWeight.bold)),
-          ),
+          const EditorIslandSectionLabel('Built-in', padding: EdgeInsets.fromLTRB(8, 14, 8, 6)),
           _CategoryRow(
             title: 'All Built-in',
             count: vm.builtInCount,
@@ -134,16 +131,26 @@ class _CategoryRow extends StatelessWidget {
     return Clickable(
       onPressed: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 8.0),
-        decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : null,
-          borderRadius: BorderRadius.circular(4),
-        ),
+        height: EditorIslandStyle.rowHeight,
+        margin: const EdgeInsets.only(bottom: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        decoration: EditorTreeRowStyle.decoration(selected: isSelected),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-            SecondaryBadge(child: Text('$count')),
+            Expanded(
+              child: Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: EditorTypography.ui(
+                    fontSize: EditorTypography.bodySize,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: EditorTreeRowStyle.foreground(selected: isSelected),
+                  )),
+            ),
+            Text('$count',
+                style: EditorTypography.mono(
+                    fontSize: EditorTypography.labelSize,
+                    color: EditorTreeRowStyle.foreground(selected: isSelected, normal: EditorColors.mutedForeground))),
           ],
         ),
       ),
@@ -170,13 +177,18 @@ class _PluginCardList extends StatelessWidget {
             children: [
               Expanded(
                 child: TextField(
-                  placeholder: const Text('Search plugins...'),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  borderRadius: BorderRadius.circular(8),
+                  style: EditorTypography.ui(fontSize: EditorTypography.bodySize, color: EditorColors.foreground),
+                  placeholder: Text('Search plugins...',
+                      style: EditorTypography.ui(fontSize: EditorTypography.bodySize, color: EditorColors.mutedForeground)),
                   initialValue: vm.searchQuery,
                   onChanged: (v) => vm.searchQuery = v,
                 ),
               ),
               const SizedBox(width: 8),
-              Text('$total plugins · $enabled enabled').muted(),
+              Text('$total plugins · $enabled enabled',
+                  style: EditorTypography.mono(fontSize: EditorTypography.labelSize, color: EditorColors.mutedForeground)),
             ],
           ),
         ),
@@ -268,8 +280,10 @@ class _PluginCard extends StatelessWidget {
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Text(desc.friendlyName ?? desc.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        Text(desc.version.toString()).muted(),
+                        Text(desc.friendlyName ?? desc.name,
+                            style: EditorTypography.ui(fontSize: 13, fontWeight: FontWeight.w700, color: EditorColors.foreground)),
+                        Text(desc.version.toString(),
+                            style: EditorTypography.mono(fontSize: EditorTypography.labelSize, color: EditorColors.mutedForeground)),
                         SecondaryBadge(child: Text(desc.origin.name.toUpperCase())),
                         if (desc.isKernelPlugin) KernelPluginBadge(viewModel: vm, plugin: desc.name),
                         if (vm.processFor(desc.name) case final process?) PluginProcessStatusBadge(process: process),
@@ -282,7 +296,10 @@ class _PluginCard extends StatelessWidget {
                         child: Text(desc.category, style: const TextStyle(fontSize: 11)).muted(),
                       ),
                     if (desc.description != null && desc.description!.isNotEmpty)
-                      Text(desc.description!, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      Text(desc.description!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: EditorTypography.ui(fontSize: EditorTypography.bodySize, color: EditorColors.mutedForeground)),
                     // A same-named plugin of a lower root does not load.
                     for (final o in entry.overrides)
                       Padding(

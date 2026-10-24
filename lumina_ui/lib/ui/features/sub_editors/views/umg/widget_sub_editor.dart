@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/input/text_input_focus.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart' show UmgWidgetCodegen, kEditorPanelNotGenerated;
@@ -55,7 +56,6 @@ class UMGWidgetSubEditor extends StatefulWidget {
 class _UMGWidgetSubEditorState extends State<UMGWidgetSubEditor> {
   late final UmgEditorViewModel _vm;
   late final bool _ownsViewModel;
-  int _leftTab = 0;
   final FocusNode _focusNode = FocusNode(debugLabel: 'umg_editor');
 
   UmgEditorViewModel get viewModelForTest => _vm;
@@ -166,22 +166,35 @@ class _UMGWidgetSubEditorState extends State<UMGWidgetSubEditor> {
                   ]),
                 ),
               Expanded(
-                child: vm.mode == UmgEditorMode.graph ? _graphMode(vm) : ResizablePanel.horizontal(
+                // Designer: islands on the ground. Left, the palette over the
+                // hierarchy; centre, the designer frame; right, the details.
+                child: vm.mode == UmgEditorMode.graph ? _graphMode(vm) : EditorIslandGround(
+                  child: ResizablePanel.horizontal(
+                  dividerBuilder: EditorIslandDividers.gap,
                   children: [
                     ResizablePane(
                       initialSize: 260,
                       minSize: 180,
-                      child: Container(color: EditorColors.cardHeader, child: _leftPanel(vm)),
+                      child: _leftPanel(vm),
                     ),
                     ResizablePane.flex(
-                      child: UmgDesignerCanvas(vm: vm),
+                      child: EditorIsland(
+                        key: const ValueKey('umg_island_designer'),
+                        color: EditorColors.viewportBackdrop,
+                        child: UmgDesignerCanvas(vm: vm),
+                      ),
                     ),
                     ResizablePane(
                       initialSize: 290,
                       minSize: 220,
-                      child: Container(color: EditorColors.cardHeader, child: UmgSlotInspector(vm: vm)),
+                      child: EditorIsland(
+                        key: const ValueKey('umg_island_details'),
+                        header: const EditorIslandHeader(title: 'Details'),
+                        child: UmgSlotInspector(vm: vm),
+                      ),
                     ),
                   ],
+                  ),
                 ),
               ),
             ],
@@ -205,7 +218,8 @@ class _UMGWidgetSubEditorState extends State<UMGWidgetSubEditor> {
             child: const Text('UMG WIDGET', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.blue)),
           ),
           const SizedBox(width: 8),
-          Text(widget.assetName.endsWith('.lmas') ? widget.assetName : '${widget.assetName}.lmas', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
+          // The widget's name, without the .lmas extension.
+          Text(widget.assetName.endsWith('.lmas') ? widget.assetName.substring(0, widget.assetName.length - 5) : widget.assetName, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
           if (vm.isDirty) ...[
             const SizedBox(width: 4),
             const Text('●', style: TextStyle(fontSize: 10, color: EditorColors.primary)),
@@ -321,24 +335,25 @@ class _UMGWidgetSubEditorState extends State<UMGWidgetSubEditor> {
     );
   }
 
+  /// The palette island over the hierarchy island, split by the grip.
   Widget _leftPanel(UmgEditorViewModel vm) {
-    return Column(
+    return ResizablePanel.vertical(
+      dividerBuilder: EditorIslandDividers.grip,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(6, 6, 6, 0),
-          child: Tabs(
-            index: _leftTab,
-            onChanged: (i) => setState(() => _leftTab = i),
-            children: const [
-              TabItem(key: ValueKey('umg_left_tab_palette'), child: Text('Palette', style: TextStyle(fontSize: 9))),
-              TabItem(key: ValueKey('umg_left_tab_hierarchy'), child: Text('Hierarchy', style: TextStyle(fontSize: 9))),
-            ],
+        ResizablePane(
+          initialSize: 320,
+          minSize: 120,
+          child: EditorIsland(
+            key: const ValueKey('umg_island_palette'),
+            header: const EditorIslandHeader(title: 'Palette'),
+            child: Padding(padding: const EdgeInsets.all(6), child: UmgPalette(vm: vm)),
           ),
         ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(6),
-            child: _leftTab == 0 ? UmgPalette(vm: vm) : UmgHierarchyTree(vm: vm),
+        ResizablePane.flex(
+          child: EditorIsland(
+            key: const ValueKey('umg_island_hierarchy'),
+            header: const EditorIslandHeader(title: 'Hierarchy'),
+            child: Padding(padding: const EdgeInsets.all(6), child: UmgHierarchyTree(vm: vm)),
           ),
         ),
       ],

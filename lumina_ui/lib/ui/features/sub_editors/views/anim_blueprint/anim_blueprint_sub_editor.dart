@@ -5,6 +5,7 @@ import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 import 'package:lumina_ui/ui/core/input/text_input_focus.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/anim_blueprint_editor_view_model.dart';
@@ -152,11 +153,12 @@ class AnimBlueprintSubEditorState extends State<AnimBlueprintSubEditor> {
               _toolbar(),
               const Divider(height: 1),
               Expanded(
-                child: ResizablePanel.horizontal(
+                child: EditorIslandGround(child: ResizablePanel.horizontal(
+                  dividerBuilder: EditorIslandDividers.gap,
                   children: [
-                    ResizablePane(initialSize: 320, minSize: 240, child: _left()),
+                    ResizablePane(initialSize: 320, minSize: 240, child: EditorIsland(key: const ValueKey('anim_blueprint_island_graphs'), child: _left())),
                     ResizablePane.flex(
-                      child: Column(
+                      child: EditorIsland(key: const ValueKey('anim_blueprint_island_graph'), child: Column(
                         children: [
                           _graphBar(),
                           const Divider(height: 1),
@@ -164,11 +166,11 @@ class AnimBlueprintSubEditorState extends State<AnimBlueprintSubEditor> {
                           const Divider(height: 1),
                           SizedBox(height: 200, child: _bottom()),
                         ],
-                      ),
+                      )),
                     ),
-                    ResizablePane(initialSize: 280, minSize: 220, child: _details()),
+                    ResizablePane(initialSize: 280, minSize: 220, child: EditorIsland(key: const ValueKey('anim_blueprint_island_details'), child: _details())),
                   ],
-                ),
+                )),
               ),
             ],
           ),

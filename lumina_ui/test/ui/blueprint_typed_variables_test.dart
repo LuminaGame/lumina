@@ -166,11 +166,13 @@ void main() {
       (tester) async {
     vm.addVariable('HudWidget', 'Widget:WBP_HUD');
     await pumpEditor(tester);
-    await tester.tap(find.text('My Blueprint').first);
+    // My Blueprint is an island of its own: always shown.
     await tester.pump();
     expect(find.descendant(of: find.byKey(const ValueKey('var_type_HudWidget')), matching: find.text('Widget (WBP_HUD)')), findsOneWidget,
         reason: 'the chip shows the class');
-    expect(find.text('COMPONENTS'), findsOneWidget);
+    // My Blueprint's own Components section (the component tree island
+    // above it has the same title).
+    expect(find.descendant(of: find.byKey(const ValueKey('bp_my_blueprint')), matching: find.text('COMPONENTS')), findsOneWidget);
     expect(find.byKey(const ValueKey('component_row_CameraBoom')), findsOneWidget);
     expect(find.text('Spring Arm'), findsOneWidget);
 

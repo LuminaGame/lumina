@@ -2,6 +2,7 @@ import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_interface_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/signature_editor.dart';
@@ -59,19 +60,17 @@ class BlueprintInterfaceSubEditorState extends State<BlueprintInterfaceSubEditor
               _toolbar(),
               const Divider(height: 1),
               Expanded(
-                child: ResizablePanel.horizontal(
+                child: EditorIslandGround(child: ResizablePanel.horizontal(
+                  dividerBuilder: EditorIslandDividers.gap,
                   children: [
-                    ResizablePane(initialSize: 260, minSize: 200, child: _functionList()),
+                    ResizablePane(initialSize: 260, minSize: 200, child: EditorIsland(key: const ValueKey('blueprint_interface_island_functions'), child: _functionList())),
                     ResizablePane.flex(
-                      child: Container(
-                        color: EditorColors.cardHeader,
-                        child: selected == null
+                      child: EditorIsland(key: const ValueKey('blueprint_interface_island_details'), child: selected == null
                             ? const Center(child: Text('Select a function to edit its signature.', style: TextStyle(fontSize: 10, color: EditorColors.mutedForeground)))
-                            : _signature(selected),
-                      ),
+                            : _signature(selected)),
                     ),
                   ],
-                ),
+                )),
               ),
             ],
           ),
@@ -113,7 +112,6 @@ class BlueprintInterfaceSubEditorState extends State<BlueprintInterfaceSubEditor
 
   Widget _functionList() {
     return Container(
-      color: EditorColors.cardHeader,
       padding: const EdgeInsets.all(8),
       child: ListView(
         key: const ValueKey('iface_functions'),

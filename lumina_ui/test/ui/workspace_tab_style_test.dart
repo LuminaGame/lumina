@@ -11,6 +11,7 @@ import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/blueprint_sub_
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../helpers/blueprint_test_project.dart';
+import '../helpers/island_expectations.dart';
 
 /// The selected bottom-panel or graph tab joins the content under it — tinted top and side outline, no bottom edge,
 /// and the same fill as the content below; inactive tabs stay flat. The workspace strip above them is the typed tab
@@ -112,16 +113,27 @@ void main() {
       ));
       await tester.pump();
 
+      // The graph tabs sit in the graph island's header: the active one on
+      // a muted chip, the others flat.
       final Finder eventGraph = find.byKey(ValueKey('graph_tab_${BlueprintGraphRef.eventGraph.key}'));
       final Finder construction = find.byKey(ValueKey('graph_tab_${BlueprintGraphRef.constructionScript.key}'));
       expect(eventGraph, findsOneWidget);
-      expectAttached(decorationOf(tester, eventGraph), EditorColors.graphCanvas, 'Event Graph tab');
-      expectFlat(decorationOf(tester, construction), 'Construction Script tab');
+      // The components over My Blueprint, the graph over the results, the details.
+      expectIslands(tester, {
+        'blueprint_island_components': 'COMPONENTS',
+        'blueprint_island_my_blueprint': 'MY BLUEPRINT',
+        'blueprint_island_graph': 'Event Graph',
+        'blueprint_island_results': null,
+        'blueprint_island_details': 'DETAILS',
+      });
+      int fill(Finder tab) => decorationOf(tester, tab).color!.toARGB32();
+      expect(fill(eventGraph), EditorColors.muted.toARGB32(), reason: 'Event Graph tab: active chip');
+      expect(fill(construction), Colors.transparent.toARGB32(), reason: 'Construction Script tab: flat');
 
       await tester.tap(construction);
       await tester.pump();
-      expectFlat(decorationOf(tester, eventGraph), 'Event Graph tab');
-      expectAttached(decorationOf(tester, construction), EditorColors.graphCanvas, 'Construction Script tab');
+      expect(fill(eventGraph), Colors.transparent.toARGB32(), reason: 'Event Graph tab: flat');
+      expect(fill(construction), EditorColors.muted.toARGB32(), reason: 'Construction Script tab: active chip');
     });
   });
 }
