@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import 'package:lumina_ui/ui/core/property_editors/enum_field.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/details_widget.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_server_service.dart';
@@ -407,8 +406,9 @@ void main() {
         home: SizedBox(width: 340, height: 900, child: DetailsWidget(viewModel: vm)),
       ));
       await tester.pump(const Duration(milliseconds: 200));
-      final field = tester.widget<EnumField>(find.byKey(const ValueKey('wp_layer_state_0')));
-      expect(field.value, 'loaded');
+      // The data layer tree shows each layer's initial state as a badge.
+      final badge = find.descendant(of: find.byKey(const ValueKey('wp_layer_state_0')), matching: find.byType(Text));
+      expect(tester.widget<Text>(badge).data, 'loaded');
       await tester.pumpWidget(const SizedBox());
     });
 

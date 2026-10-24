@@ -101,7 +101,8 @@ void main() {
     expect((savedCamera['properties'] as Map)['fieldOfView'], 30.0);
 
     final generated = File('${vm.projectDirPath}/lib/levels/l_main.dart').readAsStringSync();
-    expect(generated, contains("LuminaCameraActor(key: const ValueKey('${actor.id}')"));
+    // Engine objects are keyed by LuminaObjectKey, never a Flutter Key.
+    expect(generated, contains("LuminaCameraActor(key: const LuminaObjectKey('${actor.id}')"));
     expect(generated, contains("'fieldOfView': 30.0"));
 
     final played = EditorPieGame.mapEditorActor(actor);

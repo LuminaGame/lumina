@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumina_core/lumina_core.dart' show dartFileName;
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/viewport_picker.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
@@ -125,7 +126,8 @@ void main() {
     vm.moveToFolder([crate], crates);
 
     await vm.saveLevelAndGenerateCode();
-    final level = File('${tempDir.path}/FolderGame/lib/levels/${vm.project.activeLevel.split('/').last.replaceAll('.lmas', '')}.dart')
+    // Generated level files are snake_case (`L_DefaultLevel` → `l_default_level.dart`).
+    final level = File('${tempDir.path}/FolderGame/lib/levels/${dartFileName(vm.project.activeLevel.split('/').last.replaceAll('.lmas', ''))}')
         .readAsStringSync();
     expect(level, contains("'$crate'"));
     expect(level, isNot(contains('Props')));
