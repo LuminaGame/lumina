@@ -53,7 +53,9 @@ void main() {
     File(acUnitGlb).copySync('${pDir.path}/contents/meshes/AC_Unit.glb');
     final project = LuminaProject(projectName: projectName, activeLevel: 'contents/levels/L_Main.lmas');
     File('${pDir.path}/$projectName.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
-    final evm = EditorViewModel(initialProject: project, projectLocation: root.path, enableTimers: false);
+    // The default level is scaffolded inside runAsync below, not in the
+    // constructor's fake-async zone, where its file I/O never completes.
+    final evm = EditorViewModel(initialProject: project, projectLocation: root.path, enableTimers: false, autoInitAssets: false);
     await tester.runAsync(evm.ensureDefaultLevelAssets);
     await tester.runAsync(() => evm.spawnActorFromAsset(evm.realAssets.firstWhere((a) => a.fileName == 'AC_Unit.lmas'), location: [0, 0, 0]));
     final mesh = evm.actors.last;
