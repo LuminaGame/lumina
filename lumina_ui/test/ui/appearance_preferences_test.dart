@@ -191,6 +191,39 @@ void main() {
         reason: 'the Apply primary button is painted green, not orange (got 0x${painted.toRadixString(16)})');
   });
 
+  // The tokens the Aurora design language added (island fill, field
+  // outlines, the viewport backdrop) are theme slots like the rest: edited
+  // here, saved to the theme's JSON, applied to EditorColors at once.
+  testWidgets('the Aurora tokens are editable: fieldBorder and viewportBackdrop saved and applied', (tester) async {
+    final vm = await pumpEditor(tester);
+    await openAppearance(tester, vm);
+    await tester.tap(find.byKey(const ValueKey('appearance_theme_Lumina Dark')));
+    await settle(tester);
+    await tester.tap(find.byKey(const ValueKey('appearance_duplicate')));
+    await settle(tester);
+    final tokens = find.descendant(of: find.byKey(const ValueKey('appearance_tokens')), matching: find.byType(Scrollable)).first;
+    for (final (key, value) in [('fieldBorder', '#3A5F8A'), ('viewportBackdrop', '#202A33')]) {
+      await tester.scrollUntilVisible(find.byKey(ValueKey('appearance_token_$key')), 300, scrollable: tokens);
+      await settle(tester);
+      final field = find.descendant(of: find.byKey(ValueKey('appearance_token_$key')), matching: find.byType(TextField));
+      await tester.tap(field);
+      await tester.pump();
+      await tester.enterText(field, value);
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await settle(tester);
+    }
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('appearance_apply')), -300, scrollable: tokens);
+    await settle(tester);
+    await tester.tap(find.byKey(const ValueKey('appearance_apply')));
+    await settle(tester, frames: 20);
+
+    final saved = jsonDecode(File('${config.path}/themes/Lumina_Dark_Copy.json').readAsStringSync()) as Map;
+    expect((saved['colors'] as Map)['fieldBorder'], '#3A5F8A');
+    expect((saved['colors'] as Map)['viewportBackdrop'], '#202A33');
+    expect(EditorColors.fieldBorder.toARGB32(), 0xFF3A5F8A);
+    expect(EditorColors.viewportBackdrop.toARGB32(), 0xFF202A33);
+  });
+
   testWidgets('export writes the JSON; importing it back lists the theme', (tester) async {
     final vm = await pumpEditor(tester);
     final exportFile = File('${config.path}/out/Exported.json');
