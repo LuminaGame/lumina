@@ -7,10 +7,8 @@ import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_layout_state.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
-import 'package:lumina_ui/ui/features/main_editor/views/content_browser_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/details_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
-import 'package:lumina_ui/ui/features/main_editor/views/outliner_widget.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../helpers/editor_fonts.dart';
@@ -46,8 +44,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
-  Finder workspaceSplitter() => find.byElementPredicate((e) =>
-      e.widget is HorizontalResizableDragger && e.findAncestorWidgetOfExactType<ContentBrowserWidget>() == null);
+  /// The workspace gutter between the left column's islands and the centre
+  /// column: the panel's resize handle sits over it.
+  Offset workspaceSplitter(WidgetTester tester) {
+    final outliner = tester.getRect(find.byKey(const ValueKey('island_outliner')));
+    return Offset(outliner.right + 4, outliner.center.dy);
+  }
 
   test('a saved or set left column narrower than the minimum is widened to it', () {
     expect(EditorLayoutState.defaultOutlinerWidth, greaterThanOrEqualTo(EditorLayoutState.minOutlinerWidth));
@@ -59,9 +61,9 @@ void main() {
 
   testWidgets('the left column splitter stops at the minimum width', (tester) async {
     await pumpEditor(tester);
-    await tester.dragFrom(tester.getCenter(workspaceSplitter()), const Offset(-250, 0), kind: PointerDeviceKind.mouse);
+    await tester.dragFrom(workspaceSplitter(tester), const Offset(-250, 0), kind: PointerDeviceKind.mouse);
     await tester.pump(const Duration(milliseconds: 300));
-    expect(tester.getRect(find.byType(OutlinerWidget)).width,
+    expect(tester.getRect(find.byKey(const ValueKey('island_outliner'))).width,
         moreOrLessEquals(EditorLayoutState.minOutlinerWidth, epsilon: 1));
     expect(vm.layoutState.outlinerWidth, greaterThanOrEqualTo(EditorLayoutState.minOutlinerWidth - 0.5));
   });
@@ -73,9 +75,9 @@ void main() {
     vm.updateActorRotation([0.0, 90.0, -179.5]);
     vm.updateActorScale([1.25, 1.0, 12.5], isCommit: true);
     await pumpEditor(tester);
-    await tester.dragFrom(tester.getCenter(workspaceSplitter()), const Offset(-250, 0), kind: PointerDeviceKind.mouse);
+    await tester.dragFrom(workspaceSplitter(tester), const Offset(-250, 0), kind: PointerDeviceKind.mouse);
     await tester.pump(const Duration(milliseconds: 300));
-    expect(tester.getRect(find.byType(DetailsWidget)).width,
+    expect(tester.getRect(find.byKey(const ValueKey('island_details'))).width,
         moreOrLessEquals(EditorLayoutState.minOutlinerWidth, epsilon: 1));
 
     final fields = find.descendant(of: find.byType(DetailsWidget), matching: find.byType(ScrubNumericField));

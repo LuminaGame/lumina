@@ -49,6 +49,8 @@ import 'package:lumina_ui/ui/features/main_editor/views/outliner_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/viewport_widget.dart';
 import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
 import 'package:lumina_ui/ui/core/widgets/typed_tab_bar.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/content_drawer.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/static_mesh_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/skeletal_mesh/skeletal_mesh_sub_editor.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
@@ -175,6 +177,16 @@ Future<void> deleteTempProject(Directory dir) async {
   }
   // ignore: avoid_print
   print('The temp project ${dir.path} is still locked; left for the OS to clean up.');
+}
+
+/// [png] cropped to [r] (logical pixels at [dpr]).
+Uint8List _cropTo(Uint8List png, Rect r, double dpr) {
+  final img.Image im = img.decodePng(png)!;
+  final int x = (r.left * dpr).round().clamp(0, im.width - 1);
+  final int y = (r.top * dpr).round().clamp(0, im.height - 1);
+  final int w = (r.width * dpr).round().clamp(1, im.width - x);
+  final int h = (r.height * dpr).round().clamp(1, im.height - y);
+  return Uint8List.fromList(img.encodePng(img.copyCrop(im, x: x, y: y, width: w, height: h)));
 }
 
 String hex(int rgb) => '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
@@ -313,7 +325,7 @@ void main() {
     );
     report.writeln('  World Outliner header strip: ${hex(header.rgb)} on '
         '${header.count}/${header.total} px '
-        '(expected ${hex(EditorColors.cardHeader.toARGB32() & 0xFFFFFF)})');
+        '(expected ${hex(EditorColors.sidebar.toARGB32() & 0xFFFFFF)}, the island fill)');
 
     final Finder browser = find.byType(ContentBrowserWidget);
     ({int rgb, int count, int total})? rail;
@@ -376,8 +388,8 @@ void main() {
     expect(tintedSurfaces, isEmpty,
         reason: 'the Aurora neutrals carry only the Obsidian cast:\n'
             '${tintedSurfaces.join('\n')}\n$report');
-    expect(header.rgb, EditorColors.cardHeader.toARGB32() & 0xFFFFFF,
-        reason: 'the World Outliner header strip must be EditorColors.cardHeader\n$report');
+    expect(header.rgb, EditorColors.sidebar.toARGB32() & 0xFFFFFF,
+        reason: 'the World Outliner header sits on its island fill (EditorColors.sidebar)\n$report');
   }, timeout: const Timeout(Duration(minutes: 8)));
 
   testWidgets('Design System Smoke: custom chrome and Aurora surfaces', (WidgetTester tester) async {
@@ -490,9 +502,9 @@ void main() {
     final Rect outliner = tester.getRect(find.byType(OutlinerWidget));
     final Rect details = tester.getRect(find.byType(DetailsWidget));
     measure('World Outliner header', full,
-        Rect.fromLTWH(outliner.left + 2, outliner.top + 2, outliner.width - 4, EditorDensity.panelHeaderHeight - 4), EditorColors.cardHeader);
+        Rect.fromLTWH(outliner.left + 2, outliner.top + 2, outliner.width - 4, EditorDensity.panelHeaderHeight - 4), EditorColors.sidebar);
     measure('World Outliner body', full,
-        Rect.fromLTWH(outliner.left + 4, outliner.bottom - 60, outliner.width - 8, 50), EditorColors.background);
+        Rect.fromLTWH(outliner.left + 4, outliner.bottom - 60, outliner.width - 8, 50), EditorColors.sidebar);
     final Finder browser = find.byType(ContentBrowserWidget);
     Rect panels = outliner.expandToInclude(details);
     if (browser.evaluate().isNotEmpty) {
@@ -660,8 +672,9 @@ void main() {
       final Rect tab = tester.getRect(find.byKey(const ValueKey<String>('workspace_tab_0')));
       final ({int rgb, int count, int total}) tabFill = dominantColorIn(
           png, Rect.fromLTWH(tab.left + 3, tab.top + 4, tab.width - 6, tab.height - 8), dpr: dpr);
-      final int wantBody = theme.color('background').toARGB32() & 0xFFFFFF;
-      final int wantHeader = theme.color('cardHeader').toARGB32() & 0xFFFFFF;
+      // The Outliner is an island: header and body on the island fill.
+      final int wantBody = theme.color('sidebar').toARGB32() & 0xFFFFFF;
+      final int wantHeader = theme.color('sidebar').toARGB32() & 0xFFFFFF;
       report.writeln('  ${theme.name}: outliner body ${hex(body.rgb)} (${body.count}/${body.total}, expected ${hex(wantBody)}), '
           'header ${hex(header.rgb)} (expected ${hex(wantHeader)}), title bar ${hex(title.rgb)}');
       if (body.rgb != wantBody) failures.add('${theme.name}: outliner body ${hex(body.rgb)} != ${hex(wantBody)}');
@@ -912,6 +925,159 @@ void main() {
       }
     }
     await rec.hold(const Duration(seconds: 2));
+    rec.save(testName, usedAssets: usedAssets);
+    // ignore: avoid_print
+    print(report);
+    expect(failures, isEmpty, reason: '${failures.join('\n')}\n$report');
+  }, timeout: const Timeout(Duration(minutes: 10)));
+
+  // Stage 2 of the Aurora design language on the real editor: every docked
+  // panel an island on the window's ground (island fill, 1 px border, 12 px
+  // radius, 8 px gutters, the grip between stacked islands), the Outliner's
+  // amber selection starting at the row's indent, and the Content Drawer: a
+  // bar under the viewport whose panel slides up over it, the Output Log
+  // from the same bar, and the pin that docks it. A barrel, an AC unit and a
+  // banana bunch are imported and placed; the viewport orbits on video
+  // while the drawer opens and closes.
+  testWidgets('Design System Smoke: aurora islands and content drawer', (WidgetTester tester) async {
+    const String testName = 'Design System Smoke: aurora islands and content drawer';
+    final Directory tempDir = Directory.systemTemp.createTempSync('design_system_islands_smoke_');
+    final Directory pDir = Directory('${tempDir.path}/IslandSmoke')..createSync(recursive: true);
+    Directory('${pDir.path}/contents/levels').createSync(recursive: true);
+    File('${pDir.path}/IslandSmoke.lmproject').writeAsStringSync('{}');
+    addTearDown(() => deleteTempProject(tempDir));
+    final List<String> usedAssets = <String>[
+      for (final String rel in <String>[
+        'Props/Barrels/fuel_barrel_red.glb',
+        'Props/AC_units/ac_unit_a_300x300.glb',
+        'Props/Banana Bunch/banana_bunch_long.glb',
+      ])
+        '${SmokeArtifacts.testAssetsDir.path}/$rel',
+    ]..removeWhere((String path) => !File(path).existsSync());
+    expect(usedAssets, isNotEmpty, reason: 'the smoke loads real models from test-assets/');
+
+    final EditorViewModel vm = EditorViewModel(
+      initialProject: LuminaProject(
+        projectName: 'IslandSmoke',
+        activeLevel: 'contents/levels/L_Main.lmas',
+        settings: EngineScalabilitySettings(targetFps: 60),
+      ),
+      projectLocation: tempDir.path,
+    );
+    addTearDown(vm.dispose);
+    await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+    for (final String path in usedAssets) {
+      await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: path));
+    }
+    vm.refreshAssets();
+    // Unpinned: the bottom panel is the Content Drawer.
+    vm.setBottomPinned(false);
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final GlobalKey boundaryKey = GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(
+      key: boundaryKey,
+      child: ShadcnApp(theme: luminaEditorTheme(), home: Scaffold(child: MainEditorView(viewModel: vm))),
+    ));
+    await settle(tester);
+    double x = -150;
+    for (final RealAssetInfo asset in vm.realAssets.where((RealAssetInfo a) => a.type == AssetType.filamesh)) {
+      await tester.runAsync(() => vm.spawnActorFromAsset(asset, location: <double>[x, 0, 0]));
+      x += 150;
+    }
+    await settle(tester, frames: 40);
+    final SmokeRecorder rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+    await rec.hold(const Duration(seconds: 2));
+
+    final double dpr = tester.view.devicePixelRatio;
+    final StringBuffer report = StringBuffer('MEASURE aurora stage 2:\n');
+    final List<String> failures = <String>[];
+    void measure(String name, Uint8List png, Rect r, Color expected) {
+      final ({int rgb, int count, int total}) d = dominantColorIn(png, r, dpr: dpr);
+      final int want = expected.toARGB32() & 0xFFFFFF;
+      report.writeln('  $name: ${hex(d.rgb)} on ${d.count}/${d.total} px (expected ${hex(want)})');
+      if (d.rgb != want) failures.add('$name is ${hex(d.rgb)}, expected ${hex(want)}');
+    }
+
+    Rect island(String key) => tester.getRect(find.byKey(ValueKey<String>(key)));
+    final Rect outliner = island('island_outliner');
+    final Rect details = island('island_details');
+    final Rect viewport = island('island_viewport');
+
+    // 1. Islands on the ground with their gutters and the grip.
+    Uint8List png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    measure('ground in the gutter beside the Outliner', png, Rect.fromLTWH(outliner.right + 2, outliner.center.dy, 4, 40), EditorColors.background);
+    measure('Outliner island fill', png, Rect.fromLTWH(outliner.left + 8, outliner.bottom - 40, outliner.width - 16, 30), EditorColors.sidebar);
+    measure('Outliner island border', png, Rect.fromLTWH(outliner.left + 40, outliner.top, 60, 1), EditorColors.border);
+    measure('Details island fill', png, Rect.fromLTWH(details.left + 8, details.bottom - 30, details.width - 16, 20), EditorColors.sidebar);
+    measure('grip between Outliner and Details', png,
+        Rect.fromLTWH(outliner.center.dx - 10, outliner.bottom + EditorIslandStyle.gripGap / 2 - 1, 20, 2), EditorColors.fieldBorder);
+    // The rounded corner: the outermost corner pixel shows the ground.
+    measure('rounded Outliner corner', png, Rect.fromLTWH(outliner.left, outliner.top, 2, 2), EditorColors.background);
+    report.writeln('  gutters: outliner→viewport ${(viewport.left - outliner.right).toStringAsFixed(1)} px, '
+        'outliner→details ${(details.top - outliner.bottom).toStringAsFixed(1)} px');
+    if ((viewport.left - outliner.right - EditorIslandStyle.gap).abs() > 0.5) failures.add('the column gutter is not 8 px');
+    SmokeArtifacts.saveScreenshot('$testName — islands', png, usedAssets: usedAssets);
+
+    // 2. A selected outliner row: the amber fill starts at the row's indent.
+    vm.selectActorById(vm.actors.where((EditorActorNode a) => a.type != 'Folder').last.id);
+    await settle(tester, frames: 12);
+    await rec.hold(const Duration(seconds: 1));
+    png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    final Finder selectedRow = find.byKey(ValueKey<String>('outliner_row_${vm.selectedActorId}'));
+    final Rect row = tester.getRect(selectedRow);
+    measure('selected row fill', png, Rect.fromLTWH(row.left + 40, row.top + 4, 30, row.height - 8), EditorColors.primary);
+    measure('left of the selected row (its indent)', png, Rect.fromLTWH(outliner.left + 2, row.center.dy, 3, 2), EditorColors.sidebar);
+    SmokeArtifacts.saveScreenshot('$testName — outliner selection at the indent',
+        _cropTo(png, outliner.inflate(4), dpr), usedAssets: usedAssets);
+
+    // 3. The Content Drawer: bar, open over the viewport, Output Log, closed.
+    final Rect bar = tester.getRect(find.byKey(const ValueKey<String>('content_drawer_bar')));
+    measure('drawer bar', png, Rect.fromLTWH(bar.center.dx - 40, bar.top + 4, 80, 4), EditorColors.sidebar);
+    expect(bar.height, ContentDrawerBar.height);
+    await tester.tap(find.byKey(const ValueKey<String>('content_drawer_toggle')));
+    for (int i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await settle(tester, frames: 10);
+    await rec.hold(const Duration(seconds: 1));
+    final Rect panel = tester.getRect(find.byKey(const ValueKey<String>('content_drawer_panel')));
+    report.writeln('  drawer panel ${panel.height.toStringAsFixed(0)} px over a ${viewport.height.toStringAsFixed(0)} px viewport island');
+    if ((panel.height - ContentDrawer.height).abs() > 0.5) failures.add('the open drawer is ${panel.height} px, not 322');
+    if ((island('island_viewport').height - viewport.height).abs() > 0.5) failures.add('the drawer resized the viewport island');
+    expect(find.byType(ContentBrowserWidget), findsOneWidget);
+    png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    SmokeArtifacts.saveScreenshot('$testName — content drawer open', png, usedAssets: usedAssets);
+    SmokeArtifacts.saveScreenshot(testName, png, usedAssets: usedAssets);
+
+    await tester.tap(find.byKey(const ValueKey<String>('content_drawer_output_log')));
+    await settle(tester, frames: 12);
+    await rec.hold(const Duration(milliseconds: 1500));
+    expect(vm.layoutState.isOutputLogOpen, isTrue);
+    await tester.tap(find.byKey(const ValueKey<String>('content_drawer_toggle')));
+    await settle(tester, frames: 12);
+    await rec.hold(const Duration(milliseconds: 1000));
+    await tester.tap(find.byKey(const ValueKey<String>('content_drawer_toggle')));
+    await settle(tester, frames: 20);
+    expect(vm.layoutState.bottomVisible, isFalse);
+
+    // 4. On video: orbit the open viewport, open the drawer again, pin it.
+    final Rect view = tester.getRect(find.byType(ViewportWidget));
+    await rec.drag(view.center + const Offset(-140, -60), view.center + const Offset(140, -40), steps: 50);
+    await rec.hold(const Duration(milliseconds: 600));
+    await tester.tap(find.byKey(const ValueKey<String>('content_drawer_toggle')));
+    await settle(tester, frames: 20);
+    await rec.hold(const Duration(milliseconds: 1200));
+    await tester.tap(find.byKey(const ValueKey<String>('bottom_panel_pin')));
+    await settle(tester, frames: 20);
+    expect(vm.layoutState.bottomPinned, isTrue);
+    expect(find.byKey(const ValueKey<String>('island_bottom_panel')), findsOneWidget);
+    await rec.hold(const Duration(seconds: 2));
+    png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    SmokeArtifacts.saveScreenshot('$testName — pinned bottom panel island', png, usedAssets: usedAssets);
     rec.save(testName, usedAssets: usedAssets);
     // ignore: avoid_print
     print(report);

@@ -364,7 +364,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(ContentBrowserWidget), findsNothing);
     vm.toggleContentDrawer();
-    await tester.pump(const Duration(milliseconds: 300));
+    // The drawer slides up over a few frames.
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     expect(find.byType(ContentBrowserWidget), findsOneWidget);
 
     await tester.dragFrom(tester.getCenter(sourcesDragger()), const Offset(90, 0), kind: PointerDeviceKind.mouse);

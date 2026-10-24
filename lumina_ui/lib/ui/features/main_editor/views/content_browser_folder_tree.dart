@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:lumina_editor_data/lumina_editor.dart' show RealAssetInfo;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/core/services/content_folders.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
@@ -105,16 +106,12 @@ class ContentFolderRow extends StatelessWidget {
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
+            // Indented by a margin, so the amber selection starts at the
+            // folder's own indent.
             child: Container(
-              padding: EdgeInsets.only(left: 6 + depth * EditorDensity.indentStep, right: 6, top: 3, bottom: 3),
-              margin: const EdgeInsets.only(bottom: 2),
-              decoration: BoxDecoration(
-                color: isHover
-                    ? EditorColors.primary.withValues(alpha: 0.35)
-                    : (selected ? EditorColors.primary.withValues(alpha: 0.15) : Colors.transparent),
-                borderRadius: BorderRadius.circular(2),
-                border: isHover ? Border.all(color: EditorColors.primary) : null,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              margin: EditorTreeRowStyle.margin(depth, base: 0).copyWith(bottom: 2),
+              decoration: EditorTreeRowStyle.decoration(selected: selected && !isHover, dropTarget: isHover),
               child: Row(
                 children: [
                   if (showChevronSlot) ...[
@@ -136,7 +133,9 @@ class ContentFolderRow extends StatelessWidget {
                   Icon(
                     expanded ? LucideIcons.folderOpen : LucideIcons.folder,
                     size: 11,
-                    color: active ? EditorColors.primary : EditorColors.mutedForeground,
+                    color: selected && !isHover
+                        ? EditorColors.primaryForeground
+                        : (active ? EditorColors.primary : EditorColors.mutedForeground),
                   ),
                   const SizedBox(width: 6),
                   Expanded(
@@ -145,7 +144,9 @@ class ContentFolderRow extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: active ? FontWeight.bold : FontWeight.normal,
-                        color: active ? EditorColors.primary : EditorColors.foreground,
+                        color: selected && !isHover
+                            ? EditorColors.primaryForeground
+                            : (active ? EditorColors.primary : EditorColors.foreground),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),

@@ -5,13 +5,13 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_layout_state.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/content_browser_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/details_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/outliner_widget.dart';
-import 'package:lumina_ui/ui/features/main_editor/views/viewport_widget.dart';
 
 /// The Details inspector docked under the Outliner in one
 /// resizable left column, a resizable bottom panel that is open by default,
@@ -35,6 +35,8 @@ void main() {
     if (root.existsSync()) root.deleteSync(recursive: true);
   });
 
+  Finder island(String key) => find.byKey(ValueKey(key));
+
   Future<void> pumpEditor(WidgetTester tester) async {
     // A desktop-sized window: the default 800×600 test window leaves the
     // default panes little room to move.
@@ -48,33 +50,49 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
-  /// The vertical splitter inside the left column (Outliner / Details) or the
-  /// centre column (viewport / bottom panel), told apart by where it sits.
+  /// The splitter grip between the stacked islands of the left column
+  /// (Outliner / Details) or of the centre column (viewport / bottom panel),
+  /// told apart by where it sits.
   Offset draggerCenter(WidgetTester tester, {required bool inLeftColumn}) {
-    final outlinerRight = tester.getBottomRight(find.byType(OutlinerWidget)).dx;
+    final outlinerRight = tester.getRect(island('island_outliner')).right;
     final centers = find
-        .byType(VerticalResizableDragger)
+        .byKey(const ValueKey('island_grip'))
         .evaluate()
         .map((e) => tester.getCenter(find.byElementPredicate((c) => identical(c, e))))
         .where((c) => inLeftColumn ? c.dx <= outlinerRight + 1 : c.dx > outlinerRight + 1)
         .toList();
-    expect(centers, hasLength(1), reason: 'one vertical splitter per column');
+    expect(centers, hasLength(1), reason: 'one grip per column');
     return centers.single;
+  }
+
+  /// The workspace gutter between the left column and the centre column.
+  Offset columnGutterCenter(WidgetTester tester) {
+    final outliner = tester.getRect(island('island_outliner'));
+    return Offset(outliner.right + 4, outliner.center.dy);
+  }
+
+  /// Lets the drawer finish sliding: the animation starts on one frame and
+  /// ends a few later.
+  Future<void> slide(WidgetTester tester) async {
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
   }
 
   testWidgets('Details is docked under the Outliner on the left; no right column', (tester) async {
     await pumpEditor(tester);
 
-    final outliner = tester.getRect(find.byType(OutlinerWidget));
-    final details = tester.getRect(find.byType(DetailsWidget));
-    final viewport = tester.getRect(find.byType(ViewportWidget));
+    final outliner = tester.getRect(island('island_outliner'));
+    final details = tester.getRect(island('island_details'));
+    final viewport = tester.getRect(island('island_viewport'));
 
     expect(details.left, moreOrLessEquals(outliner.left, epsilon: 1), reason: 'same column');
     expect(details.top, greaterThanOrEqualTo(outliner.bottom), reason: 'Details sits below the Outliner');
     expect(details.right, lessThanOrEqualTo(viewport.left + 1), reason: 'Details is left of the viewport');
     expect(outliner.right, lessThanOrEqualTo(viewport.left + 1));
-    // Nothing to the right of the viewport: it reaches the window's edge.
-    expect(viewport.right, moreOrLessEquals(tester.view.physicalSize.width, epsilon: 1));
+    // Nothing to the right of the viewport: it reaches the window's edge,
+    // less the workspace gutter.
+    expect(viewport.right, moreOrLessEquals(tester.view.physicalSize.width - EditorIslandStyle.gap, epsilon: 1));
     expect(details.height, moreOrLessEquals(EditorLayoutState.defaultDetailsHeight, epsilon: 1));
     expect(outliner.width, moreOrLessEquals(EditorLayoutState.defaultOutlinerWidth, epsilon: 1));
   });
@@ -110,13 +128,14 @@ void main() {
     expect(find.descendant(of: drawerButton, matching: find.byIcon(LucideIcons.folder)), findsOneWidget);
     expect(layoutJson()['bottomPinned'], isFalse);
     expect(layoutJson()['bottomVisible'], isFalse);
-    // The button is at the left end of the status bar, below the viewport.
+    // The button is at the left end of the status bar, below the viewport
+    // island (and its Content Drawer bar).
     final buttonCenter = tester.getCenter(drawerButton);
     expect(buttonCenter.dx, lessThan(60));
-    expect(buttonCenter.dy, greaterThan(tester.getRect(find.byType(ViewportWidget)).bottom));
+    expect(buttonCenter.dy, greaterThan(tester.getRect(island('island_viewport')).bottom));
 
     await tester.tap(drawerButton);
-    await tester.pump(const Duration(milliseconds: 300));
+    await slide(tester);
     expect(viewModel.layoutState.bottomVisible, isTrue);
     expect(find.byType(ContentBrowserWidget), findsOneWidget, reason: 'the drawer opened');
     expect(find.descendant(of: drawerButton, matching: find.byIcon(LucideIcons.folderOpen)), findsOneWidget);
@@ -131,7 +150,7 @@ void main() {
 
     // Open it and pin it back: docked, the drawer button goes away.
     await tester.tap(drawerButton);
-    await tester.pump(const Duration(milliseconds: 300));
+    await slide(tester);
     await tester.tap(find.byKey(const ValueKey('bottom_panel_pin')));
     await tester.pump(const Duration(milliseconds: 300));
     expect(viewModel.layoutState.bottomPinned, isTrue);
@@ -149,25 +168,23 @@ void main() {
 
   testWidgets('Dragging the three splitters persists the sizes and a fresh view model restores them', (tester) async {
     await pumpEditor(tester);
-    final detailsBefore = tester.getRect(find.byType(DetailsWidget)).height;
-    final columnBefore = tester.getRect(find.byType(OutlinerWidget)).width;
-    final bottomBefore = tester.getRect(find.byType(ContentBrowserWidget)).bottom - tester.getRect(find.byType(ViewportWidget)).bottom;
+    final detailsBefore = tester.getRect(island('island_details')).height;
+    final columnBefore = tester.getRect(island('island_outliner')).width;
+    final bottomBefore = tester.getRect(island('island_bottom_panel')).height;
 
     // Outliner / Details splitter, 60 px up: Details grows.
     await tester.dragFrom(draggerCenter(tester, inLeftColumn: true), const Offset(0, -60), kind: PointerDeviceKind.mouse);
     await tester.pump(const Duration(milliseconds: 300));
     expect(viewModel.layoutState.detailsHeight, closeTo(detailsBefore + 60, 25));
     expect((layoutJson()['detailsHeight'] as num).toDouble(), closeTo(detailsBefore + 60, 25));
-    expect(tester.getRect(find.byType(DetailsWidget)).height, closeTo(detailsBefore + 60, 25));
+    expect(tester.getRect(island('island_details')).height, closeTo(detailsBefore + 60, 25));
 
     // Left column / centre splitter, 80 px right: the column widens.
-    await tester.dragFrom(tester.getCenter(find.byElementPredicate((e) =>
-        // The workspace splitter, not the Content Browser's own.
-        e.widget is HorizontalResizableDragger && e.findAncestorWidgetOfExactType<ContentBrowserWidget>() == null)), const Offset(80, 0), kind: PointerDeviceKind.mouse);
+    await tester.dragFrom(columnGutterCenter(tester), const Offset(80, 0), kind: PointerDeviceKind.mouse);
     await tester.pump(const Duration(milliseconds: 300));
     expect(viewModel.layoutState.outlinerWidth, closeTo(columnBefore + 80, 25));
     expect((layoutJson()['outlinerWidth'] as num).toDouble(), closeTo(columnBefore + 80, 25));
-    expect(tester.getRect(find.byType(OutlinerWidget)).width, closeTo(columnBefore + 80, 25));
+    expect(tester.getRect(island('island_outliner')).width, closeTo(columnBefore + 80, 25));
 
     // Viewport / bottom panel splitter, 50 px up: the bottom panel grows.
     await tester.dragFrom(draggerCenter(tester, inLeftColumn: false), const Offset(0, -50), kind: PointerDeviceKind.mouse);
@@ -210,13 +227,13 @@ void main() {
   testWidgets('Window menu hides Details alone, then both, and Reset Layout restores everything', (tester) async {
     await pumpEditor(tester);
     final ctx = tester.element(find.byType(MainEditorView));
-    final workspaceLeft = tester.getRect(find.byType(OutlinerWidget)).left;
+    final workspaceLeft = tester.getRect(island('island_outliner')).left;
 
     viewModel.commands.execute('window.toggleDetails', ctx);
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(DetailsWidget), findsNothing);
     expect(find.byType(OutlinerWidget), findsOneWidget);
-    expect(tester.getRect(find.byType(OutlinerWidget)).bottom, moreOrLessEquals(tester.getRect(find.byType(ContentBrowserWidget)).bottom, epsilon: 1),
+    expect(tester.getRect(island('island_outliner')).bottom, moreOrLessEquals(tester.getRect(island('island_bottom_panel')).bottom, epsilon: 1),
         reason: 'the Outliner fills the whole left column, down to the workspace bottom');
     expect(layoutJson()['detailsVisible'], isFalse);
 
@@ -224,7 +241,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(OutlinerWidget), findsNothing);
     expect(find.byType(DetailsWidget), findsNothing);
-    expect(tester.getRect(find.byType(ViewportWidget)).left, moreOrLessEquals(workspaceLeft, epsilon: 1), reason: 'the left column is gone');
+    expect(tester.getRect(island('island_viewport')).left, moreOrLessEquals(workspaceLeft, epsilon: 1), reason: 'the left column is gone');
 
     // Unpin and shrink a pane so Reset has something to undo.
     viewModel.setBottomPinned(false);
@@ -242,8 +259,8 @@ void main() {
     expect(viewModel.layoutState.outlinerWidth, EditorLayoutState.defaultOutlinerWidth);
     expect(viewModel.layoutState.detailsHeight, EditorLayoutState.defaultDetailsHeight);
     expect(viewModel.layoutState.bottomHeight, EditorLayoutState.defaultBottomHeight);
-    expect(tester.getRect(find.byType(OutlinerWidget)).width, moreOrLessEquals(EditorLayoutState.defaultOutlinerWidth, epsilon: 1));
-    expect(tester.getRect(find.byType(DetailsWidget)).height, moreOrLessEquals(EditorLayoutState.defaultDetailsHeight, epsilon: 1));
+    expect(tester.getRect(island('island_outliner')).width, moreOrLessEquals(EditorLayoutState.defaultOutlinerWidth, epsilon: 1));
+    expect(tester.getRect(island('island_details')).height, moreOrLessEquals(EditorLayoutState.defaultDetailsHeight, epsilon: 1));
     final json = layoutJson();
     expect(json['bottomPinned'], isTrue);
     expect(json['outlinerWidth'], EditorLayoutState.defaultOutlinerWidth);

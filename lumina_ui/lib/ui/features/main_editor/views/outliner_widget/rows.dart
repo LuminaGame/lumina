@@ -113,24 +113,15 @@ mixin _OutlinerRows on _OutlinerWidgetStateBase, _OutlinerRenameAndDrop, _Outlin
     final isEditing = _editingId == node.id;
     final cellLabel = isFolder ? null : vm.worldPartitionCellLabel(node);
 
+    // Indented by a margin, so the amber selection starts at the row's own
+    // indent, not at the panel edge.
+    final onRow = EditorTreeRowStyle.foreground(selected: isSelected);
+    final mutedOnRow = isSelected ? EditorColors.primaryForeground.withValues(alpha: 0.7) : EditorColors.mutedForeground;
     return Container(
-      // `h-6 px-2` with `paddingLeft: 8 + depth * 14` and, when selected,
-      // `bg-primary/20 border-l-2 border-primary`.
       height: EditorDensity.rowHeight,
-      padding: EdgeInsets.only(
-        left: EditorDensity.gutter + (fnode.depth * EditorDensity.indentStep),
-        right: EditorDensity.gutter,
-      ),
-      decoration: BoxDecoration(
-        color: isDropTarget
-            ? EditorColors.primary.withValues(alpha: 0.18)
-            : (isSelected ? EditorColors.selectionBg : Colors.transparent),
-        border: isDropTarget
-            ? Border.all(color: EditorColors.primary, width: 1)
-            : (isSelected
-                ? const Border(left: BorderSide(color: EditorColors.primary, width: EditorDensity.selectionBarWidth))
-                : null),
-      ),
+      margin: EditorTreeRowStyle.margin(fnode.depth),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: EditorTreeRowStyle.decoration(selected: isSelected, dropTarget: isDropTarget),
       child: Row(
         children: [
           // Expand chevron: every folder has one, even when empty.
@@ -142,7 +133,7 @@ mixin _OutlinerRows on _OutlinerWidgetStateBase, _OutlinerRenameAndDrop, _Outlin
               child: Icon(
                 isExpanded ? LucideIcons.chevronDown : LucideIcons.chevronRight,
                 size: 14,
-                color: EditorColors.mutedForeground,
+                color: mutedOnRow,
               ),
             )
           else
@@ -163,7 +154,7 @@ mixin _OutlinerRows on _OutlinerWidgetStateBase, _OutlinerRenameAndDrop, _Outlin
             child: Icon(
               node.isVisible ? LucideIcons.eye : LucideIcons.eyeOff,
               size: 11,
-              color: node.isVisible ? EditorColors.mutedForeground : EditorColors.destructive,
+              color: node.isVisible ? mutedOnRow : EditorColors.destructive,
             ),
           ),
           // Lock toggle
@@ -173,7 +164,7 @@ mixin _OutlinerRows on _OutlinerWidgetStateBase, _OutlinerRenameAndDrop, _Outlin
             child: Icon(
               node.isLocked ? LucideIcons.lock : LucideIcons.lockOpen,
               size: 11,
-              color: node.isLocked ? EditorColors.warning : EditorColors.border,
+              color: node.isLocked ? (isSelected ? EditorColors.primaryForeground : EditorColors.warning) : (isSelected ? mutedOnRow : EditorColors.border),
             ),
           ),
           const SizedBox(width: 4),
@@ -181,7 +172,7 @@ mixin _OutlinerRows on _OutlinerWidgetStateBase, _OutlinerRenameAndDrop, _Outlin
           Icon(
             isFolder ? (isExpanded ? LucideIcons.folderOpen : LucideIcons.folder) : _getIconForType(node.type),
             size: 12,
-            color: _getColorForType(node.type),
+            color: isSelected ? onRow : _getColorForType(node.type),
           ),
           const SizedBox(width: 6),
           Expanded(
@@ -211,10 +202,8 @@ mixin _OutlinerRows on _OutlinerWidgetStateBase, _OutlinerRenameAndDrop, _Outlin
                     node.name,
                     style: TextStyle(
                       fontSize: 10,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected
-                          ? EditorColors.primary
-                          : (node.isVisible ? EditorColors.foreground : EditorColors.mutedForeground),
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected ? onRow : (node.isVisible ? EditorColors.foreground : EditorColors.mutedForeground),
                       decoration: node.isVisible ? TextDecoration.none : TextDecoration.lineThrough,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -239,7 +228,7 @@ mixin _OutlinerRows on _OutlinerWidgetStateBase, _OutlinerRenameAndDrop, _Outlin
           ],
           Text(
             isFolder ? '${fnode.childCount}' : node.type,
-            style: const TextStyle(fontSize: 8, color: EditorColors.mutedForeground),
+            style: EditorTypography.mono(fontSize: 8, color: mutedOnRow),
           ),
         ],
       ),

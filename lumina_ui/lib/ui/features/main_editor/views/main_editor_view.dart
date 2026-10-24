@@ -7,7 +7,9 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/asset_type_style.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/core/widgets/typed_tab_bar.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/content_drawer.dart';
 import 'package:lumina_ui/ui/core/window/lumina_window.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
@@ -376,54 +378,34 @@ class _MainEditorViewState extends State<MainEditorView> {
     final tabs = IndexedStack(
       index: viewModel.activeTabIndex.clamp(0, math.max(0, viewModel.openTabs.length - 1)),
       children: [
-        // Tab 0: Main Editor Workspace: the
-        // Outliner over the Details inspector in one left column,
-        // the viewport in the centre with the bottom panel under
-        // it. Every absolute pane reports its dragged size back
-        // into the layout state, one disk write per drag.
-        ResizablePanel.horizontal(
-          draggerBuilder: (context) => const HorizontalResizableDragger(),
-          children: [
-            // Left Column: World Outliner over Details
-            if (viewModel.layoutState.outlinerVisible || viewModel.layoutState.detailsVisible)
-              ResizablePane(
-                // Keyed: hiding the left column must not hand its
-                // absolute-size pane state to the centre column.
-                key: const ValueKey('workspace_left_column'),
-                initialSize: viewModel.layoutState.outlinerWidth,
-                minSize: EditorLayoutState.minOutlinerWidth,
-                onSizeChangeEnd: (size) => viewModel.setPaneSize(outlinerWidth: size),
-                child: _buildLeftColumn(),
+        // Tab 0: the level workspace, islands on the window's ground: the
+        // Outliner over the Details inspector in one left column, the
+        // viewport in the centre with the bottom panel under it (pinned) or
+        // the Content Drawer sliding over it (unpinned). Every absolute
+        // pane reports its dragged size back into the layout state, one
+        // disk write per drag.
+        Container(
+          color: EditorColors.background,
+          padding: const EdgeInsets.all(EditorIslandStyle.gap),
+          child: ResizablePanel.horizontal(
+            dividerBuilder: EditorIslandDividers.gap,
+            children: [
+              if (viewModel.layoutState.outlinerVisible || viewModel.layoutState.detailsVisible)
+                ResizablePane(
+                  // Keyed: hiding the left column must not hand its
+                  // absolute-size pane state to the centre column.
+                  key: const ValueKey('workspace_left_column'),
+                  initialSize: viewModel.layoutState.outlinerWidth,
+                  minSize: EditorLayoutState.minOutlinerWidth,
+                  onSizeChangeEnd: (size) => viewModel.setPaneSize(outlinerWidth: size),
+                  child: _buildLeftColumn(),
+                ),
+              ResizablePane.flex(
+                key: const ValueKey('workspace_centre_column'),
+                child: _buildCentreColumn(),
               ),
-
-            // Center Column: 3D Viewport & Bottom Tabs
-            ResizablePane.flex(
-              key: const ValueKey('workspace_centre_column'),
-              child: ResizablePanel.vertical(
-                draggerBuilder: (context) => const VerticalResizableDragger(),
-                children: [
-                  // 3D Viewport Screen
-                  ResizablePane.flex(
-                    child: RepaintBoundary(
-                      key: viewModel.mcpServer.viewportBoundaryKey,
-                      child: ViewportWidget(viewModel: viewModel),
-                    ),
-                  ),
-
-                  // Bottom Panel (Tabs): docked while pinned, a
-                  // Content Drawer opened from the status bar
-                  // while unpinned.
-                  if (viewModel.layoutState.bottomVisible)
-                    ResizablePane(
-                      initialSize: viewModel.layoutState.bottomHeight,
-                      minSize: 100,
-                      onSizeChangeEnd: (size) => viewModel.setPaneSize(bottomHeight: size),
-                      child: _buildBottomPanel(),
-                    ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
 
         // Tabs 1..N: Sub-Editor Workspaces
@@ -472,24 +454,58 @@ class _MainEditorViewState extends State<MainEditorView> {
     );
   }
 
-  /// The left column: the Outliner over the Details inspector, each hideable
-  /// from the Window menu; one alone fills the column.
+  /// The left column: the Outliner island over the Details island, each
+  /// hideable from the Window menu; one alone fills the column. The grip
+  /// between them resizes them.
   Widget _buildLeftColumn() {
     final layout = viewModel.layoutState;
-    if (!layout.detailsVisible) return OutlinerWidget(viewModel: viewModel);
-    if (!layout.outlinerVisible) return DetailsWidget(viewModel: viewModel);
+    final outliner = EditorIsland(key: const ValueKey('island_outliner'), child: OutlinerWidget(viewModel: viewModel));
+    final details = EditorIsland(key: const ValueKey('island_details'), child: DetailsWidget(viewModel: viewModel));
+    if (!layout.detailsVisible) return outliner;
+    if (!layout.outlinerVisible) return details;
     return ResizablePanel.vertical(
-      draggerBuilder: (context) => const VerticalResizableDragger(),
+      dividerBuilder: EditorIslandDividers.grip,
       children: [
-        ResizablePane.flex(
-          child: OutlinerWidget(viewModel: viewModel),
-        ),
+        ResizablePane.flex(child: outliner),
         ResizablePane(
           initialSize: layout.detailsHeight,
           minSize: 120,
           onSizeChangeEnd: (size) => viewModel.setPaneSize(detailsHeight: size),
-          child: DetailsWidget(viewModel: viewModel),
+          child: details,
         ),
+      ],
+    );
+  }
+
+  /// The centre column: the viewport island, and under it the bottom panel
+  /// island while pinned; unpinned, the viewport island carries the Content
+  /// Drawer (its bar along the bottom, the panel sliding up over the view).
+  Widget _buildCentreColumn() {
+    final layout = viewModel.layoutState;
+    final viewport = RepaintBoundary(
+      key: viewModel.mcpServer.viewportBoundaryKey,
+      child: ViewportWidget(viewModel: viewModel),
+    );
+    if (!layout.bottomPinned) {
+      return EditorIsland(
+        key: const ValueKey('island_viewport'),
+        color: EditorColors.viewportBackdrop,
+        child: ContentDrawer(viewModel: viewModel, viewport: viewport, panel: _buildBottomPanel()),
+      );
+    }
+    return ResizablePanel.vertical(
+      dividerBuilder: EditorIslandDividers.grip,
+      children: [
+        ResizablePane.flex(
+          child: EditorIsland(key: const ValueKey('island_viewport'), color: EditorColors.viewportBackdrop, child: viewport),
+        ),
+        if (layout.bottomVisible)
+          ResizablePane(
+            initialSize: layout.bottomHeight,
+            minSize: 100,
+            onSizeChangeEnd: (size) => viewModel.setPaneSize(bottomHeight: size),
+            child: EditorIsland(key: const ValueKey('island_bottom_panel'), child: _buildBottomPanel()),
+          ),
       ],
     );
   }
@@ -499,7 +515,7 @@ class _MainEditorViewState extends State<MainEditorView> {
   Widget _buildBottomPanel() {
     final pinned = viewModel.layoutState.bottomPinned;
     return Container(
-      color: EditorColors.card,
+      color: Colors.transparent,
       child: Column(
         children: [
           // Tab Bar (the active tab joins its content).

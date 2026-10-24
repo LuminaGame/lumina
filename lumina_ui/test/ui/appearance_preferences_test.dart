@@ -107,7 +107,8 @@ void main() {
     final body = Rect.fromLTWH(outliner.left + 6, outliner.bottom - 50, outliner.width - 12, 40);
     final title = tester.getRect(find.text('LUMINA'));
     var shot = await capture(tester);
-    expect(await dominant(tester, shot, body), rgbOf(EditorThemeData.luminaDark, 'background'));
+    // The outliner body sits on its island's fill.
+    expect(await dominant(tester, shot, body), rgbOf(EditorThemeData.luminaDark, 'sidebar'));
     final darkHeader = rgbOf(EditorThemeData.luminaDark, 'rail');
     expect(await dominant(tester, shot, title, excluding: darkHeader), rgbOf(EditorThemeData.luminaDark, 'foreground'));
 
@@ -121,7 +122,7 @@ void main() {
     await settle(tester);
 
     shot = await capture(tester);
-    expect(await dominant(tester, shot, body), rgbOf(EditorThemeData.luminaLight, 'background'),
+    expect(await dominant(tester, shot, body), rgbOf(EditorThemeData.luminaLight, 'sidebar'),
         reason: 'the outliner body is repainted in the new theme');
     final lightHeader = rgbOf(EditorThemeData.luminaLight, 'rail');
     expect(await dominant(tester, shot, title, excluding: lightHeader), rgbOf(EditorThemeData.luminaLight, 'foreground'),

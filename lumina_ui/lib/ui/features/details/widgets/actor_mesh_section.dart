@@ -44,7 +44,7 @@ class ActorMeshSection extends StatelessWidget {
           ]),
         ),
         Container(
-          color: EditorColors.background,
+          color: Colors.transparent,
           padding: const EdgeInsets.all(8),
           child: Row(
             children: [

@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintComponent, LuminaBlueprintDocument, LuminaMeshPhysics, MeshPhysicsService;
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/details/services/multi_edit_service.dart';
 
 import 'package:lumina_ui/ui/core/property_editors/vector_row.dart';
@@ -69,33 +70,20 @@ class _DetailsWidgetState extends _DetailsWidgetStateBase
         return Column(
           children: [
             // Details Header
-            Container(
-              // `h-7 px-2 bg-[oklch(0.105 0 0)]` in the prototype's
-              // DetailsPanel header.
-              height: EditorDensity.panelHeaderHeight,
-              padding: const EdgeInsets.symmetric(
-                  horizontal: EditorDensity.gutter),
-              color: EditorColors.cardHeader,
-              child: Row(
-                children: [
-                  const Icon(LucideIcons.listFilter, size: 14, color: EditorColors.primary),
-                  const SizedBox(width: 8),
-                  // `text-[11px] font-semibold` on the selected actor's name.
-                  const Text('Details',
-                      style: TextStyle(
-                          fontSize: EditorTypography.bodySize,
-                          fontWeight: EditorTypography.panelTitleWeight)),
-                  const Spacer(),
-                  const Icon(LucideIcons.lock, size: 12, color: EditorColors.mutedForeground),
-                ],
-              ),
+            const EditorIslandHeader(
+              title: 'Details',
+              actions: [
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Icon(LucideIcons.lock, size: 13, color: EditorColors.mutedForeground),
+                ),
+              ],
             ),
             
             // Search Bar & Component Add Button
             if (actor != null)
               Container(
                 padding: const EdgeInsets.all(8),
-                color: EditorColors.background,
                 child: Row(
                   children: [
                     Expanded(

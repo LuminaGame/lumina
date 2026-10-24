@@ -45,7 +45,7 @@ mixin _DetailsLevelAndBlueprintSections on _DetailsWidgetStateBase {
         _CategoryHeader(title: section.sectionTitle),
         Container(
           key: ValueKey('details_plugin_section_${section.targetTypeId}_${section.sectionTitle}'),
-          color: EditorColors.background,
+          color: Colors.transparent,
           child: section.builder(context, target),
         ),
         const SizedBox(height: 8),

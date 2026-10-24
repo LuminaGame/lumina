@@ -8,6 +8,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/services/file_reveal.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/models/editor_actor_catalog.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
@@ -94,76 +95,66 @@ class _OutlinerWidgetState extends _OutlinerWidgetStateBase with _OutlinerRename
 
     return Column(
       children: [
-        // Header
-        Container(
-          // `h-7 px-2 bg-[oklch(0.105 0 0)]` in the prototype's OutlinerPanel.
-          height: EditorDensity.panelHeaderHeight,
-          padding: const EdgeInsets.symmetric(horizontal: EditorDensity.gutter),
-          color: EditorColors.cardHeader,
-          child: Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'WORLD OUTLINER',
-                  // `text-[10px] font-semibold uppercase tracking-widest
-                  //  text-muted-foreground`.
-                  style: EditorTypography.panelHeading,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              _headerIcon(
-                key: const ValueKey('outliner_new_folder'),
-                icon: LucideIcons.folderPlus,
-                tooltip: 'New Folder',
-                onPressed: () => vm.createFolderFromSelection(),
-              ),
-              _headerIcon(
-                key: const ValueKey('outliner_expand_all'),
-                icon: LucideIcons.chevronsUpDown,
-                tooltip: 'Expand All',
-                onPressed: () => vm.expandAllInOutliner(),
-              ),
-              _headerIcon(
-                key: const ValueKey('outliner_collapse_all'),
-                icon: LucideIcons.chevronsDownUp,
-                tooltip: 'Collapse All',
-                onPressed: () => vm.collapseAllInOutliner(),
-              ),
-              SizedBox(height: EditorDensity.chipHeight, child: GhostButton(
+        // The island header: title, the actor count, folder tools and Add.
+        EditorIslandHeader(
+          title: 'World Outliner',
+          trailingInfo: '${vm.actors.length}',
+          actions: [
+            _headerIcon(
+              key: const ValueKey('outliner_new_folder'),
+              icon: LucideIcons.folderPlus,
+              tooltip: 'New Folder',
+              onPressed: () => vm.createFolderFromSelection(),
+            ),
+            _headerIcon(
+              key: const ValueKey('outliner_expand_all'),
+              icon: LucideIcons.chevronsUpDown,
+              tooltip: 'Expand All',
+              onPressed: () => vm.expandAllInOutliner(),
+            ),
+            _headerIcon(
+              key: const ValueKey('outliner_collapse_all'),
+              icon: LucideIcons.chevronsDownUp,
+              tooltip: 'Collapse All',
+              onPressed: () => vm.collapseAllInOutliner(),
+            ),
+            const SizedBox(width: 4),
+            SizedBox(
+              height: 24,
+              child: PrimaryButton(
                 key: const ValueKey('outliner_add_actor'),
                 density: EditorDensity.chipButton,
                 alignment: Alignment.center,
                 onPressed: () => _showAddActorDialog(context, vm),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(LucideIcons.plus, size: 12, color: EditorColors.primary),
-                    SizedBox(width: 4),
-                    Text('Add', style: TextStyle(fontSize: EditorTypography.labelSize, color: EditorColors.primary, fontWeight: FontWeight.bold)),
+                    const Icon(LucideIcons.plus, size: 12, color: EditorColors.primaryForeground),
+                    const SizedBox(width: 4),
+                    Text('Add',
+                        style: EditorTypography.ui(
+                            fontSize: EditorTypography.labelSize, fontWeight: FontWeight.w700, color: EditorColors.primaryForeground)),
                   ],
                 ),
-              )),
-            ],
-          ),
+              ),
+            ),
+          ],
         ),
 
         // Search Field
         // `px-2 py-1.5 border-b bg-[oklch(0.1 0 0)]` with an `h-5.5` box.
-        Container(
-          color: EditorColors.rail,
-          padding: const EdgeInsets.symmetric(horizontal: EditorDensity.gutter, vertical: 6),
-          child: Container(
-            height: EditorDensity.compactRowHeight,
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            decoration: BoxDecoration(
-              color: EditorColors.background,
-              borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: EditorColors.border),
-            ),
-            child: TextField(
-              onChanged: (v) => setState(() => _filterQuery = v),
-              style: const TextStyle(fontSize: 10, color: EditorColors.foreground),
-              placeholder: const Text('Search actors...', style: TextStyle(fontSize: 10)),
-            ),
+        // The search field on the island: shadcn's field draws its own
+        // fill, outline and padding (a fixed box around it clipped the text).
+        Padding(
+          padding: const EdgeInsets.fromLTRB(EditorDensity.gutter, 8, EditorDensity.gutter, 4),
+          child: TextField(
+            key: const ValueKey('outliner_search'),
+            // Compact: a row's height, so the tree keeps its room.
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            borderRadius: BorderRadius.circular(8),
+            onChanged: (v) => setState(() => _filterQuery = v),
+            style: EditorTypography.ui(fontSize: EditorTypography.bodySize, color: EditorColors.foreground),
+            placeholder: Text('Search actors...',
+                style: EditorTypography.ui(fontSize: EditorTypography.bodySize, color: EditorColors.mutedForeground)),
           ),
         ),
 

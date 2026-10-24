@@ -19,7 +19,7 @@ class _WorldPartitionSection extends StatelessWidget {
       children: [
         const _CategoryHeader(title: 'WORLD PARTITION'),
         Container(
-          color: EditorColors.background,
+          color: Colors.transparent,
           padding: const EdgeInsets.all(EditorDensity.gutter),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

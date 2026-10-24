@@ -6,7 +6,7 @@ Concepts", artboard 3 · Aurora). It lands in four stages that each ship on thei
 | Stage | What it covers | State |
 |---|---|---|
 | 1 · Tokens, type and chrome | the Obsidian ramp and amber accent, Manrope + JetBrains Mono, the 48 px menu bar with the Prism L lockup and the editor's own window controls, the typed workspace tabs | shipped |
-| 2 · Islands and the Content Drawer | every docked panel as an island (fill, 1 px border, 12 px radius, 8 px gutters, 36 px uppercase header), splitter grips, selection rows that start at their indent, the slide-up Content Drawer | planned |
+| 2 · Islands and the Content Drawer | every docked panel as an island (fill, 1 px border, 12 px radius, 8 px gutters, 36 px uppercase header), splitter grips, selection rows that start at their indent, the slide-up Content Drawer | shipped |
 | 3 · Viewport chrome | the pill row (Perspective, view mode, snap, angle snap, World, Show), the vertical tool column, stats pills, the MiniAI prompt pill | planned |
 | 4 · Sub-editors | Material, Blueprint, Sequencer, Static Mesh, Skeletal Mesh, Animation, Landscape, UMG, Plugins, Project Settings and Build Manager on the stage 1–3 components | planned |
 
@@ -67,10 +67,46 @@ underline in that colour; an unsaved tab shows an amber dot where the close cros
 the pointer; a middle click closes; `+` opens New Asset; tabs that do not fit the width collapse into a `+N` menu that
 lists and selects them, and the active tab is always kept visible.
 
+## Islands (stage 2)
+
+`EditorIsland` (`lib/ui/core/widgets/editor_island.dart`) is a docked panel: the island fill (`sidebar`), a 1 px
+`border` and a 12 px radius, its content clipped to the corners, with an optional `EditorIslandHeader` on top (36 px,
+the title in upper case at 11 px bold with a little tracking, an optional mono `trailingInfo` and `actions` at the right
+end, over a 1 px border). `EditorIslandStyle` holds the measurements (`radius` 12, `gap` 8, `gripGap` 10,
+`headerHeight` 36, `rowHeight` 24, `rowRadius` 6).
+
+The level workspace lays its islands on the window's ground (`background`) with an 8 px gutter round them: the Outliner
+island over the Details island in the left column, the viewport island (`viewportBackdrop` fill) in the centre and,
+while pinned, the bottom panel island under it. The panes are still `ResizablePanel`s: `EditorIslandDividers.gap` is the
+8 px gutter beside islands and `EditorIslandDividers.grip` the 10 px gutter with a 28 × 3 px grip bar between stacked
+ones; the panel's own resize handle sits over either, so every island stays resizable and its size persists.
+
+## Tree rows
+
+`EditorTreeRowStyle` is how a tree row inside an island shows its state. The row is indented by a **margin**
+(`margin(depth)`: the inner gutter plus one indent step per level), not by padding, so the selection fill starts at the
+row's own indent rather than at the panel edge; the selected fill is the amber `primary` with `primaryForeground` text
+and icons on it (`foreground(selected:)`), 6 px rounded; a drag over the row tints it and outlines it in amber. The
+World Outliner and the Content Browser's folder tree use it.
+
+## The Content Drawer
+
+While the bottom panel is not pinned, the viewport island carries the Content Drawer (`ContentDrawer`,
+`lib/ui/features/main_editor/views/content_drawer.dart`): a 36 px `ContentDrawerBar` along its bottom and, above it,
+the bottom panel (Content Browser, Output Log, Blueprint, plugin tabs) sliding up 322 px over the viewport in 180 ms.
+The viewport keeps its size and its input outside the panel; closed, the panel is not built at all. The bar holds the
+**Content Drawer** toggle (opens on the Content Browser, or brings it forward; again closes), the pin (docks the panel
+into the layout as an island), the selected folder as a breadcrumb (`Content / Props / Barrels`), the **Output Log**
+button (opens or closes the drawer on the log) and the editor's state (`Ready · MCP on/off`). The open and pinned states
+persist with the layout (`.lumina/editor_layout.json`); the pin in the panel's tab bar unpins it again.
+
 ## Verification
 
 `test/ui/theme_aurora_tokens_test.dart`, `test/ui/menu_bar_aurora_test.dart` and `test/ui/typed_tab_bar_test.dart`
-cover stage 1; the smoke scenario "Design System Smoke: aurora design language"
+cover stage 1, `test/ui/editor_island_test.dart` and `test/ui/content_drawer_test.dart` stage 2; the smoke scenario "Design System Smoke: aurora design language"
 (`integration_test/smoke/design_system_smoke_test.dart`) imports a barrel and the mannequin into a real project, opens
 the Static Mesh and Skeletal Mesh editors as typed tabs, measures the rail, the command field, the chip and the tab
-underlines in screenshots, and records the tab switches with the viewport orbiting.
+underlines in screenshots, and records the tab switches with the viewport orbiting. "Design System Smoke: aurora islands
+and content drawer" places a barrel, an AC unit and a banana bunch, measures the ground, the island fill, border, grip
+and rounded corner, the Outliner selection at its indent and the drawer bar, opens the drawer over the viewport (322 px,
+the viewport island unchanged), opens the Output Log from the bar, and pins the panel, on video.

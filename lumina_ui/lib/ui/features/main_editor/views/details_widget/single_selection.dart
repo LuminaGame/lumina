@@ -10,7 +10,7 @@ mixin _DetailsSingleSelection on _DetailsWidgetStateBase, _DetailsReferenceField
       children: [
         const _CategoryHeader(title: 'Transform'),
         Container(
-          color: EditorColors.background,
+          color: Colors.transparent,
           padding: const EdgeInsets.all(8),
           child: Column(
             children: [
@@ -88,7 +88,7 @@ mixin _DetailsSingleSelection on _DetailsWidgetStateBase, _DetailsReferenceField
       for (final c in components) ...[
         _CategoryHeader(title: '${c.name} (${c.type.replaceAll('Lumina', '').replaceAll('Component', '')})'),
         Container(
-          color: EditorColors.background,
+          color: Colors.transparent,
           padding: const EdgeInsets.all(8),
           child: CollisionSectionEditor(
             key: ValueKey('details_collision_${c.id}'),
@@ -104,7 +104,7 @@ mixin _DetailsSingleSelection on _DetailsWidgetStateBase, _DetailsReferenceField
       for (final c in BlueprintCollisionOverrides.physicsComponentsOf(actor, vm.projectDirPath)) ...[
         _CategoryHeader(title: '${c.name} Physics'),
         Container(
-          color: EditorColors.background,
+          color: Colors.transparent,
           padding: const EdgeInsets.all(8),
           child: PhysicsSectionEditor(
             key: ValueKey('details_physics_${c.id}'),
@@ -151,7 +151,7 @@ mixin _DetailsSingleSelection on _DetailsWidgetStateBase, _DetailsReferenceField
     if (desc == null) {
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _CategoryHeader(title: comp.name),
-        Container(color: EditorColors.background, padding: const EdgeInsets.all(8), child: _componentCollisionSection(actor, comp)),
+        Container(padding: const EdgeInsets.all(8), child: _componentCollisionSection(actor, comp)),
         const SizedBox(height: 8),
       ]);
     }
@@ -175,18 +175,18 @@ mixin _DetailsSingleSelection on _DetailsWidgetStateBase, _DetailsReferenceField
         if (desc.note != null)
           Container(
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
-            color: EditorColors.background,
+            color: Colors.transparent,
             child: Text(desc.note!, style: const TextStyle(fontSize: 9, color: EditorColors.mutedForeground, fontStyle: FontStyle.italic)),
           ),
         if (!comp.enabled)
           Container(
             padding: const EdgeInsets.all(4),
-            color: EditorColors.background,
+            color: Colors.transparent,
             child: const Text('Component Disabled', style: TextStyle(fontSize: 10, color: EditorColors.mutedForeground, fontStyle: FontStyle.italic)),
           ),
         if (comp.enabled)
           Container(
-            color: EditorColors.background,
+            color: Colors.transparent,
             padding: const EdgeInsets.all(8),
             child: Column(
               children: [

@@ -35,7 +35,7 @@ void main() {
     expect(find.text('Lumina Engine ${LuminaRelease.displayVersion}'), findsOneWidget);
     expect(find.text('WORLD OUTLINER'), findsOneWidget);
     expect(find.text('DirectionalLight_Sun'), findsOneWidget);
-    expect(find.text('Details'), findsOneWidget);
+    expect(find.text('DETAILS'), findsOneWidget);
     expect(find.text('Content Browser'), findsOneWidget);
   });
 }

@@ -6,7 +6,7 @@ diliyle boyanır. Dört aşamada gelir; her aşama kendi başına yayınlanır:
 | Aşama | Kapsamı | Durum |
 |---|---|---|
 | 1 · Token'lar, yazı ve çerçeve | Obsidian rampası ve amber vurgu, Manrope + JetBrains Mono, Prism L kilidi ve editörün kendi pencere denetimleriyle 48 px menü barı, türlü çalışma alanı sekmeleri | yayında |
-| 2 · Adalar ve Content Drawer | her yerleşik panel bir ada (dolgu, 1 px kenarlık, 12 px yarıçap, 8 px oluk, 36 px büyük harfli başlık), ayırıcı tutamaçlar, girintisinden başlayan seçim satırları, yukarı kayan Content Drawer | planlı |
+| 2 · Adalar ve Content Drawer | her yerleşik panel bir ada (dolgu, 1 px kenarlık, 12 px yarıçap, 8 px oluk, 36 px büyük harfli başlık), ayırıcı tutamaçlar, girintisinden başlayan seçim satırları, yukarı kayan Content Drawer | yayında |
 | 3 · Viewport çerçevesi | pill sırası (Perspective, görünüm modu, snap, açı snap'i, World, Show), dikey araç sütunu, istatistik pill'leri, MiniAI istem pill'i | planlı |
 | 4 · Alt editörler | Material, Blueprint, Sequencer, Static Mesh, Skeletal Mesh, Animation, Landscape, UMG, Plugins, Project Settings ve Build Manager, 1–3. aşama bileşenleri üzerinde | planlı |
 
@@ -68,10 +68,47 @@ bir alt çizgiyle oturur; kaydedilmemiş bir sekme kapatma çarpısının yerind
 geri gelir; orta tık kapatır; `+` New Asset'i açar; genişliğe sığmayan sekmeler onları listeleyip seçen bir `+N`
 menüsüne katlanır ve etkin sekme her zaman görünür tutulur.
 
+## Adalar (2. aşama)
+
+`EditorIsland` (`lib/ui/core/widgets/editor_island.dart`) yerleşik bir paneldir: ada dolgusu (`sidebar`), 1 px
+`border` ve 12 px yarıçap; içeriği köşelere kırpılır, üstte isteğe bağlı bir `EditorIslandHeader` bulunur (36 px,
+başlık büyük harfle 11 px kalın ve hafif harf aralıklı, sağ uçta isteğe bağlı mono `trailingInfo` ve `actions`, altında
+1 px kenarlık). `EditorIslandStyle` ölçüleri tutar (`radius` 12, `gap` 8, `gripGap` 10, `headerHeight` 36, `rowHeight`
+24, `rowRadius` 6).
+
+Seviye çalışma alanı adalarını pencerenin zeminine (`background`) çevresinde 8 px'lik bir olukla dizer: sol sütunda
+Details adasının üstünde Outliner adası, ortada viewport adası (`viewportBackdrop` dolgusu) ve sabitliyken altında alt
+panel adası. Bölmeler hâlâ `ResizablePanel`'dır: `EditorIslandDividers.gap` adaların yanındaki 8 px oluk,
+`EditorIslandDividers.grip` üst üste duran adalar arasındaki 28 × 3 px tutamaç çubuklu 10 px oluktur; panelin kendi
+yeniden boyutlandırma tutamacı ikisinin de üstündedir, böylece her ada yeniden boyutlandırılabilir kalır ve boyutu
+saklanır.
+
+## Ağaç satırları
+
+`EditorTreeRowStyle`, bir ada içindeki ağaç satırının durumunu nasıl gösterdiğidir. Satır dolgu (padding) ile değil
+**kenar boşluğu** (margin) ile girintilenir (`margin(depth)`: iç oluk artı seviye başına bir girinti adımı); böylece
+seçim dolgusu panel kenarından değil satırın kendi girintisinden başlar. Seçili dolgu amber `primary`'dir, üzerindeki
+metin ve ikonlar `primaryForeground`'dur (`foreground(selected:)`), köşeleri 6 px yuvarlaktır; satırın üstüne
+sürüklenen bir şey onu renklendirir ve amber çerçeveler. World Outliner ve Content Browser'ın klasör ağacı bunu kullanır.
+
+## Content Drawer
+
+Alt panel sabitlenmemişken viewport adası Content Drawer'ı taşır (`ContentDrawer`,
+`lib/ui/features/main_editor/views/content_drawer.dart`): altında 36 px'lik bir `ContentDrawerBar` ve onun üstünde,
+viewport'un üzerine 180 ms'de 322 px yukarı kayan alt panel (Content Browser, Output Log, Blueprint, eklenti
+sekmeleri). Viewport boyutunu ve panel dışındaki girdisini korur; kapalıyken panel hiç kurulmaz. Bar şunları taşır:
+**Content Drawer** düğmesi (Content Browser'da açar ya da onu öne getirir; tekrar basınca kapatır), pin (paneli düzene
+ada olarak sabitler), seçili klasör breadcrumb olarak (`Content / Props / Barrels`), **Output Log** düğmesi (çekmeceyi
+günlükte açar ya da kapatır) ve editörün durumu (`Ready · MCP on/off`). Açık ve sabit durumları düzenle birlikte
+saklanır (`.lumina/editor_layout.json`); panelin sekme çubuğundaki pin onu yeniden serbest bırakır.
+
 ## Doğrulama
 
 `test/ui/theme_aurora_tokens_test.dart`, `test/ui/menu_bar_aurora_test.dart` ve `test/ui/typed_tab_bar_test.dart`
-1. aşamayı kapsar; "Design System Smoke: aurora design language" smoke senaryosu
+1. aşamayı, `test/ui/editor_island_test.dart` ve `test/ui/content_drawer_test.dart` 2. aşamayı kapsar; "Design System Smoke: aurora design language" smoke senaryosu
 (`integration_test/smoke/design_system_smoke_test.dart`) gerçek bir projeye bir varil ve mankeni import eder, Static
 Mesh ve Skeletal Mesh editörlerini türlü sekmeler olarak açar, ekran görüntülerinde rail'i, komut alanını, çipi ve
-sekme alt çizgilerini ölçer ve viewport dönerken sekme geçişlerini kaydeder.
+sekme alt çizgilerini ölçer ve viewport dönerken sekme geçişlerini kaydeder. "Design System Smoke: aurora islands and
+content drawer" bir varil, bir klima ve bir muz salkımı yerleştirir; zemini, ada dolgusunu, kenarlığı, tutamacı ve
+yuvarlak köşeyi, girintisinden başlayan Outliner seçimini ve çekmece barını ölçer; çekmeceyi viewport'un üzerine açar
+(322 px, viewport adası değişmeden), bardan Output Log'u açar ve paneli sabitler; hepsi videoda.

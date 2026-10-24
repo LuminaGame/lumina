@@ -23,7 +23,7 @@
 | [Uygulama kabuğu ve ortak UI](core.md) | Uygulama girişi, yerleşik eklenti, eklenti uzantı registry'si, tema, property editor'leri, sahne servisleri. |
 | [Uygulama kabuğu ve ortak UI (devamı, bölüm 1)](core-continued.md) | `lib/`, `lib/testing/`, `lib/ui/core/`, `lib/ui/core/host/`, `lib/ui/core/property_editors/`, `lib/ui/core/services/`, `lib/ui/core/theme/`, `lib/ui/core/widgets/` altındaki diğer dosyalar. |
 | [Uygulama kabuğu ve ortak UI (devamı, bölüm 2)](core-continued-2.md) | `lib/ui/core/window/` altındaki diğer dosyalar, medya oynatıcıları ve bildirimsel eklenti panelleri (`PluginViewRenderer`). |
-| [Aurora tasarım dili](design-system.md) | 1. aşamanın token'ları, yazısı, menü barı ve türlü sekmeleri; gelecek aşamalar. |
+| [Aurora tasarım dili](design-system.md) | Token'lar, yazı, menü barı ve türlü sekmeler (1. aşama), adalar, ağaç satırları ve Content Drawer (2. aşama); gelecek aşamalar. |
 | [Marka: Prism L](brand.md) | İşaretin geometrisi ve renkleri, kilit ve tek SVG'den üretilen tüm uygulama ikonları (`tool/brand/render_icons.dart`). |
 | [Ana editör: view'ler](main-editor-views.md) | Viewport, outliner, details, content browser, toolbar, menü çubuğu, output log, diyaloglar. |
 | [Ana editör: view'ler (devamı)](main-editor-views-continued.md) | `lib/ui/features/main_editor/views/` altındaki diğer dosyalar. |
