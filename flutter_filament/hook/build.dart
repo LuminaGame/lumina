@@ -319,8 +319,11 @@ void main(List<String> args) async {
           '$filament/out/cmake-release/libs/uberz/libuberzlib.a',
           '$filament/out/cmake-release/third_party/libwebp/libwebpdecoder.a',
           '$filament/out/cmake-release/third_party/stb/tnt/libstb.a',
-          '-Wl,--no-whole-archive',
+          // The NGX entry points, whole: these flags reach clang before the
+          // wrapper's object files, so a plain archive here would add no member
+          // and the library would only fail at dlopen on NVSDK_NGX_*.
           if (dlssSdk != null) '$dlssSdk/lib/Linux_x86_64/libnvsdk_ngx.a',
+          '-Wl,--no-whole-archive',
           'third_party/libcxx/usr/lib/$linuxTriplet/libc++.a',
           'third_party/libcxx/usr/lib/$linuxTriplet/libc++abi.a',
           '-lpng',
@@ -328,6 +331,10 @@ void main(List<String> args) async {
           '-lGL',
           '-lEGL',
           '-lX11',
+          // NVIDIA builds the NGX archive against libstdc++ (std::__cxx11);
+          // the wrapper's own C++ is the bundled libc++ above.
+          if (dlssSdk != null) '-lstdc++',
+          '-lm',
           '-ldl',
           '-lpthread',
         ],
