@@ -510,10 +510,10 @@ Declarative game built from the editor's level actors for Play-In-Editor.  Every
 
 ### `class ConditionalActivator`
 
-`ConditionalActivator`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
+`ConditionalActivator`: editörün klavye kısayolları ve koşulları: tam değiştirici tuşlar; bir metin alanı odaktayken, Play'in oyun girdisi ya da uçuş gezintisi sırasında asla; `levelEditing` tuşları (Delete, F, F2) yalnız seviye sekmesinde, `transformTool` tuşları (Q/W/E/R) seviye sekmesinde ve editörü seviyenin dönüşüm aracını izleyen sekmelerde (`EditorViewModel.activeTabUsesTransformTools`: Blueprint editörü).
 
 **Yapıcı Metotlar (Constructors):**
-- `ConditionalActivator(this.key, this.viewModel)`: `ConditionalActivator(this.key, this.viewModel)` nesnesini ilklendirir.
+- `ConditionalActivator(this.key, this.viewModel, {this.control = false, this.shift = false, this.levelEditing = true, this.transformTool = false})`.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -521,6 +521,8 @@ Declarative game built from the editor's level actors for Play-In-Editor.  Every
 | :--- | :--- | :--- |
 | `key` | `LogicalKeyboardKey key` | `key` alanını (field/property) ve ilişkili veriyi saklar. |
 | `viewModel` | `EditorViewModel viewModel` | `viewModel` alanını (field/property) ve ilişkili veriyi saklar. |
+| `levelEditing` | `bool levelEditing` | Tuş seviyeyi düzenler: yalnız seviye sekmesinde geçerlidir. |
+| `transformTool` | `bool transformTool` | Bir dönüşüm aracı tuşu: etkin sekme seviyenin dönüşüm aracını kullanıyorsa geçerlidir. |
 | `accepts` | `bool accepts(KeyEvent event, HardwareKeyboard state)` | `accepts` işlemini gerçekleştirir. |
 | `triggers` | `Iterable<LogicalKeyboardKey>? get triggers` | `triggers` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `debugDescribeKeys` | `String debugDescribeKeys()` | `debugDescribeKeys` işlemini gerçekleştirir. |

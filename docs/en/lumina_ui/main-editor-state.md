@@ -510,10 +510,10 @@ Declarative game built from the editor's level actors for Play-In-Editor.  Every
 
 ### `class ConditionalActivator`
 
-`ConditionalActivator`: `class` representing the data model or functionality of the module.
+`ConditionalActivator`: the editor's keyboard shortcuts with their conditions: exact modifiers, never while a text field has focus, Play's game input or fly navigation; `levelEditing` keys (Delete, F, F2) only on the level tab, `transformTool` keys (Q/W/E/R) on the level tab and in the tabs whose editor follows the level's transform tool (`EditorViewModel.activeTabUsesTransformTools`: the Blueprint editor).
 
 **Constructors:**
-- `ConditionalActivator(this.key, this.viewModel)`: Initializes `ConditionalActivator(this.key, this.viewModel)`.
+- `ConditionalActivator(this.key, this.viewModel, {this.control = false, this.shift = false, this.levelEditing = true, this.transformTool = false})`.
 
 **Functions, Methods & Accessors:**
 
@@ -521,6 +521,8 @@ Declarative game built from the editor's level actors for Play-In-Editor.  Every
 | :--- | :--- | :--- |
 | `key` | `LogicalKeyboardKey key` | Holds the `key` property or configuration state. |
 | `viewModel` | `EditorViewModel viewModel` | Holds the `viewModel` property or configuration state. |
+| `levelEditing` | `bool levelEditing` | The key edits the level: it applies only on the level tab. |
+| `transformTool` | `bool transformTool` | A transform tool key: it applies where the active tab uses the level's transform tool. |
 | `accepts` | `bool accepts(KeyEvent event, HardwareKeyboard state)` | Executes `accepts` operation. |
 | `triggers` | `Iterable<LogicalKeyboardKey>? get triggers` | Getter accessor returning the current value of `triggers`. |
 | `debugDescribeKeys` | `String debugDescribeKeys()` | Executes `debugDescribeKeys` operation. |

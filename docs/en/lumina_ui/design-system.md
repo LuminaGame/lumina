@@ -117,7 +117,8 @@ Bounds, Collision, Actor Icons & Labels, Ground Drop Shadows) — with the tool 
 Scale, then Focus; Q/W/E/R/F still switch them). Top-right: the stats pill (`182k tris · 120 fps`) beside the camera
 speed, DLSS, FSR3 and RTX pills, zoom and reset. The level toolbar above the viewport keeps Play and its modes, the
 Blueprints menu, the plugin slots, the full frame stats and Quality; the tools, snaps, view mode, Show and camera
-projection moved into the viewport.
+projection moved into the viewport. During Play the chrome is hidden: the game's own widgets
+take that space and its clicks (the toolbar's Stop ends Play).
 
 **Sub-editor viewports** (`SubEditor3DViewport`): the same pill row (view mode with Wireframe, the projection, Scene
 Lights where the scene has lights, the preview shape, `Show · n` from `showItems`, then World ⇄ Local and the snap

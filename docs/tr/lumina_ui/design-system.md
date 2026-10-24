@@ -117,7 +117,8 @@ Bounds, Collision, Actor Icons & Labels, Ground Drop Shadows) — altında araç
 Focus; Q/W/E/R/F yine bunları değiştirir). Sağ üstte: kamera hızı, DLSS, FSR3 ve RTX pill'lerinin yanında istatistik
 pill'i (`182k tris · 120 fps`), yakınlaştırma ve sıfırlama. Viewport'un üstündeki seviye araç çubuğu Play'i ve
 modlarını, Blueprints menüsünü, eklenti yuvalarını, tam kare istatistiklerini ve Quality'yi tutar; araçlar, snap'ler,
-görünüm modu, Show ve kamera projeksiyonu viewport'a taşındı.
+görünüm modu, Show ve kamera projeksiyonu viewport'a taşındı. Play sırasında çerçeve gizlenir: o alanı ve
+tıklamalarını oyunun kendi widget'ları alır (Play'i araç çubuğundaki Stop bitirir).
 
 **Alt editör viewport'ları** (`SubEditor3DViewport`): aynı pill sırası (Wireframe'li görünüm modu, projeksiyon, sahnede
 ışık varsa Scene Lights, önizleme şekli, `showItems`'tan `Show · n`, sonra World ⇄ Local ve `TransformGizmoToolbar`'ın
