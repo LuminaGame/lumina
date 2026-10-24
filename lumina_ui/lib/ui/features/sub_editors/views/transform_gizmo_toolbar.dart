@@ -1,11 +1,12 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/viewport_pills.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';
 
-/// Reusable transform gizmo toolbar component for 3D viewports and sub-editors.
-///
-/// Provides interactive tool mode buttons (Select/Translate/Rotate/Scale),
-/// coordinate space toggle (World/Local), and numeric snapping controls (Grid/Rotation/Scale).
+/// A sub-editor viewport's transform controls in the Aurora chrome: the
+/// World/Local pill and the three snap pills (each its toggle and an inline
+/// step field), laid out as pills of the viewport's pill row. The tools
+/// themselves are the [TransformGizmoToolColumn] under the row.
 class TransformGizmoToolbar extends StatelessWidget {
   final SubEditorTransformGizmo gizmo;
 
@@ -20,162 +21,165 @@ class TransformGizmoToolbar extends StatelessWidget {
       listenable: gizmo,
       builder: (context, _) {
         final snap = gizmo.snap;
-
-        Widget tool(IconData icon, GizmoMode mode, String tip, String key) {
-          final sel = gizmo.mode == mode;
-          return Tooltip(
-            tooltip: (context) => TooltipContainer(child: Text('$tip ($key)')),
-            child: GestureDetector(
-              key: ValueKey('sub_gizmo_tool_${tip.toLowerCase()}'),
-              onTap: () => gizmo.setMode(mode),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                margin: const EdgeInsets.only(right: 2),
-                decoration: BoxDecoration(
-                  color: sel ? EditorColors.primary.withValues(alpha: 0.3) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Icon(icon, size: 11, color: sel ? EditorColors.primary : EditorColors.foreground),
-              ),
+        final world = gizmo.space == GizmoSpace.world;
+        return Wrap(
+          spacing: ViewportPillStyle.gap,
+          runSpacing: ViewportPillStyle.gap,
+          children: [
+            ViewportPill(
+              key: const ValueKey('sub_gizmo_space'),
+              icon: world ? LucideIcons.globe : LucideIcons.box,
+              label: world ? 'World' : 'Local',
+              highlighted: !world,
+              tooltip: world ? 'World space (click for Local)' : 'Local space (click for World)',
+              onPressed: gizmo.toggleSpace,
             ),
-          );
-        }
+            _SnapFieldPill(
+              toggleKey: const ValueKey('sub_gizmo_snap_translate'),
+              fieldKey: const ValueKey('sub_gizmo_snap_translate_step'),
+              icon: LucideIcons.magnet,
+              tooltip: 'Grid snap',
+              enabled: snap.translateEnabled,
+              value: snap.translateStep,
+              suffix: 'cm',
+              onToggle: () => gizmo.setSnap(snap.copyWith(translateEnabled: !snap.translateEnabled)),
+              onChanged: (v) => gizmo.setSnap(gizmo.snap.copyWith(translateStep: v)),
+            ),
+            _SnapFieldPill(
+              toggleKey: const ValueKey('sub_gizmo_snap_rotate'),
+              fieldKey: const ValueKey('sub_gizmo_snap_rotate_step'),
+              icon: LucideIcons.rotateCw,
+              tooltip: 'Rotation snap',
+              enabled: snap.rotateEnabled,
+              value: snap.rotateStep,
+              suffix: '°',
+              onToggle: () => gizmo.setSnap(snap.copyWith(rotateEnabled: !snap.rotateEnabled)),
+              onChanged: (v) => gizmo.setSnap(gizmo.snap.copyWith(rotateStep: v)),
+            ),
+            _SnapFieldPill(
+              toggleKey: const ValueKey('sub_gizmo_snap_scale'),
+              fieldKey: const ValueKey('sub_gizmo_snap_scale_step'),
+              icon: LucideIcons.scaling,
+              tooltip: 'Scale snap',
+              enabled: snap.scaleEnabled,
+              value: snap.scaleStep,
+              suffix: '×',
+              onToggle: () => gizmo.setSnap(snap.copyWith(scaleEnabled: !snap.scaleEnabled)),
+              onChanged: (v) => gizmo.setSnap(gizmo.snap.copyWith(scaleStep: v)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
 
-        Widget snapToggle({
-          required Key key,
-          required IconData icon,
-          required bool active,
-          required String tip,
-          required VoidCallback onToggle,
-        }) {
-          return Tooltip(
-            tooltip: (context) => TooltipContainer(child: Text(tip)),
+/// The vertical tool column of a sub-editor viewport: Select, Move, Rotate,
+/// Scale (Select picks with the move gizmo, as Q does), then [onFocus].
+class TransformGizmoToolColumn extends StatelessWidget {
+  const TransformGizmoToolColumn({super.key, required this.gizmo, this.onFocus});
+
+  final SubEditorTransformGizmo gizmo;
+  final VoidCallback? onFocus;
+
+  static const List<ViewportTool> tools = [
+    ViewportTool(id: 'select', icon: LucideIcons.mousePointer, tooltip: 'Select (Q)', key: ValueKey('sub_gizmo_tool_select')),
+    ViewportTool(id: 'translate', icon: LucideIcons.move, tooltip: 'Move (W)', key: ValueKey('sub_gizmo_tool_translate')),
+    ViewportTool(id: 'rotate', icon: LucideIcons.rotateCcw, tooltip: 'Rotate (E)', key: ValueKey('sub_gizmo_tool_rotate')),
+    ViewportTool(id: 'scale', icon: LucideIcons.maximize2, tooltip: 'Scale (R)', key: ValueKey('sub_gizmo_tool_scale')),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: gizmo,
+      builder: (context, _) => ViewportToolColumn(
+        key: const ValueKey('sub_gizmo_tool_column'),
+        tools: tools,
+        active: switch (gizmo.mode) {
+          GizmoMode.rotate => 'rotate',
+          GizmoMode.scale => 'scale',
+          _ => 'translate',
+        },
+        onSelect: (id) => gizmo.setMode(switch (id) {
+          'rotate' => GizmoMode.rotate,
+          'scale' => GizmoMode.scale,
+          _ => GizmoMode.translate,
+        }),
+        actions: [
+          if (onFocus != null)
+            const ViewportTool(id: 'focus', icon: LucideIcons.scan, tooltip: 'Frame the view (F)', key: ValueKey('sub_gizmo_focus')),
+        ],
+        onAction: (_) => onFocus?.call(),
+      ),
+    );
+  }
+}
+
+/// A snap pill with an inline step field: the toggle (amber while on) and
+/// the free step value with its unit.
+class _SnapFieldPill extends StatelessWidget {
+  const _SnapFieldPill({
+    required this.toggleKey,
+    required this.fieldKey,
+    required this.icon,
+    required this.tooltip,
+    required this.enabled,
+    required this.value,
+    required this.suffix,
+    required this.onToggle,
+    required this.onChanged,
+  });
+
+  final Key toggleKey;
+  final Key fieldKey;
+  final IconData icon;
+  final String tooltip;
+  final bool enabled;
+  final double value;
+  final String suffix;
+  final VoidCallback onToggle;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: ViewportPillStyle.height,
+      padding: const EdgeInsets.only(right: 4),
+      decoration: ViewportPillStyle.decoration(),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Tooltip(
+            tooltip: (_) => TooltipContainer(child: Text(tooltip)),
             child: GestureDetector(
-              key: key,
+              key: toggleKey,
+              behavior: HitTestBehavior.opaque,
               onTap: onToggle,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                margin: const EdgeInsets.only(left: 6),
-                decoration: BoxDecoration(
-                  color: active ? EditorColors.primary.withValues(alpha: 0.3) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Icon(icon, size: 11, color: active ? EditorColors.primary : EditorColors.foreground),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Icon(icon, size: 13, color: enabled ? EditorColors.primary : EditorColors.mutedForeground),
               ),
             ),
-          );
-        }
-
-        Widget stepField({
-          required Key key,
-          required double value,
-          required String suffix,
-          required ValueChanged<double> onChanged,
-        }) {
-          return SizedBox(
-            width: 54,
-            height: 20,
+          ),
+          SizedBox(
+            width: 52,
+            height: 22,
             child: TextField(
-              key: key,
+              key: fieldKey,
               initialValue: value == value.roundToDouble() ? value.toInt().toString() : value.toString(),
-              style: const TextStyle(fontSize: 9),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              placeholder: Text(suffix, style: const TextStyle(fontSize: 9)),
+              style: EditorTypography.mono(fontSize: EditorTypography.labelSize, color: EditorColors.foreground),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              borderRadius: BorderRadius.circular(6),
+              placeholder: Text(suffix, style: EditorTypography.mono(fontSize: EditorTypography.labelSize)),
               onChanged: (text) {
                 final v = double.tryParse(text);
                 if (v != null && v > 0) onChanged(v);
               },
             ),
-          );
-        }
-
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: EditorColors.border),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              tool(LucideIcons.mousePointer, GizmoMode.translate, 'Select', 'Q'),
-              tool(LucideIcons.move, GizmoMode.translate, 'Translate', 'W'),
-              tool(LucideIcons.rotateCcw, GizmoMode.rotate, 'Rotate', 'E'),
-              tool(LucideIcons.maximize2, GizmoMode.scale, 'Scale', 'R'),
-              const SizedBox(width: 4),
-              Tooltip(
-                tooltip: (context) => TooltipContainer(
-                  child: Text(gizmo.space == GizmoSpace.world ? 'World space (click for Local)' : 'Local space (click for World)'),
-                ),
-                child: GestureDetector(
-                  key: const ValueKey('sub_gizmo_space'),
-                  onTap: gizmo.toggleSpace,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: gizmo.space == GizmoSpace.local ? EditorColors.primary.withValues(alpha: 0.3) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(gizmo.space == GizmoSpace.world ? LucideIcons.globe : LucideIcons.box,
-                            size: 11, color: gizmo.space == GizmoSpace.local ? EditorColors.primary : EditorColors.foreground),
-                        const SizedBox(width: 3),
-                        Text(gizmo.space == GizmoSpace.world ? 'WORLD' : 'LOCAL',
-                            style: TextStyle(
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                                color: gizmo.space == GizmoSpace.local ? EditorColors.primary : EditorColors.foreground)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              snapToggle(
-                key: const ValueKey('sub_gizmo_snap_translate'),
-                icon: LucideIcons.magnet,
-                active: snap.translateEnabled,
-                tip: 'Grid snap',
-                onToggle: () => gizmo.setSnap(snap.copyWith(translateEnabled: !snap.translateEnabled)),
-              ),
-              stepField(
-                key: const ValueKey('sub_gizmo_snap_translate_step'),
-                value: snap.translateStep,
-                suffix: 'cm',
-                onChanged: (v) => gizmo.setSnap(gizmo.snap.copyWith(translateStep: v)),
-              ),
-              snapToggle(
-                key: const ValueKey('sub_gizmo_snap_rotate'),
-                icon: LucideIcons.rotateCw,
-                active: snap.rotateEnabled,
-                tip: 'Rotation snap',
-                onToggle: () => gizmo.setSnap(snap.copyWith(rotateEnabled: !snap.rotateEnabled)),
-              ),
-              stepField(
-                key: const ValueKey('sub_gizmo_snap_rotate_step'),
-                value: snap.rotateStep,
-                suffix: '°',
-                onChanged: (v) => gizmo.setSnap(gizmo.snap.copyWith(rotateStep: v)),
-              ),
-              snapToggle(
-                key: const ValueKey('sub_gizmo_snap_scale'),
-                icon: LucideIcons.scaling,
-                active: snap.scaleEnabled,
-                tip: 'Scale snap',
-                onToggle: () => gizmo.setSnap(snap.copyWith(scaleEnabled: !snap.scaleEnabled)),
-              ),
-              stepField(
-                key: const ValueKey('sub_gizmo_snap_scale_step'),
-                value: snap.scaleStep,
-                suffix: '×',
-                onChanged: (v) => gizmo.setSnap(gizmo.snap.copyWith(scaleStep: v)),
-              ),
-            ],
-          ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

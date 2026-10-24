@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:lumina_ui/ui/core/widgets/viewport_pills.dart' show ViewportShowItem;
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -167,12 +168,21 @@ class _StaticMeshSubEditorState extends _StaticMeshSubEditorStateBase
                             initialShape: PreviewShape.mesh,
                             selectedNode: _selectedNode,
                             showShapeSelector: true,
-                            // The collision view.
+                            // The collision view and the bounds box, toggled from Show.
                             collisionLines: _viewModel.collisionOverlayLines,
+                            overlayLines: [if (_viewModel.boundsLineSet case final bounds?) bounds],
+                            showItems: [
+                              ViewportShowItem(
+                                  label: 'Collision',
+                                  value: _viewModel.showCollisionWireframe,
+                                  onChanged: _viewModel.setShowCollisionWireframe),
+                              ViewportShowItem(label: 'Bounds', value: _viewModel.showBounds, onChanged: _viewModel.setShowBounds),
+                            ],
                           ),
-                          // LOD Info Overlay
+                          // LOD Info Overlay, bottom-left above the stats strip:
+                          // the pill row owns the top.
                           Positioned(
-                            top: 48,
+                            bottom: 40,
                             left: 12,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

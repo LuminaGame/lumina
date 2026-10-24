@@ -8,6 +8,7 @@ import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
 import 'package:lumina_ui/ui/features/launcher/views/launcher_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/level_viewport_chrome.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/toolbar_widget.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -36,7 +37,13 @@ void main() {
     // is the only route: popping it leaves nothing on screen.
     await tester.pumpWidget(ShadcnApp(
       theme: luminaEditorTheme(),
-      home: Scaffold(child: ToolbarWidget(viewModel: vm)),
+      // The level toolbar over the viewport chrome's pills.
+      home: Scaffold(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [ToolbarWidget(viewModel: vm), LevelViewportPills(viewModel: vm, onFocus: () {})],
+        ),
+      ),
     ));
     await tester.pumpAndSettle();
     return vm;
@@ -52,7 +59,8 @@ void main() {
   testWidgets('picking a grid step closes the menu and keeps the editor page', (tester) async {
     final vm = await pumpToolbarPage(tester);
     final grid = find.byKey(const Key('toggle_grid_snap'));
-    await pick(tester, find.descendant(of: grid, matching: find.byIcon(LucideIcons.chevronDown)), '1 m');
+    // The grid pill's step value opens its menu.
+    await pick(tester, find.descendant(of: grid, matching: find.byType(Text)).last, '1 m');
 
     expect(vm.editorGridStep, 100.0);
     expect(find.byType(ToolbarWidget), findsOneWidget, reason: 'the grid menu popped the editor page');
@@ -61,7 +69,7 @@ void main() {
 
   testWidgets('picking a snap step closes the menu and keeps the editor page', (tester) async {
     final vm = await pumpToolbarPage(tester);
-    await pick(tester, find.text('10 cm').first, '50 cm');
+    await pick(tester, find.descendant(of: find.byKey(const Key('toggle_translate_snap')), matching: find.text('10 cm')), '50 cm');
 
     expect(vm.translateSnapStep, 50.0);
     expect(find.byType(ToolbarWidget), findsOneWidget, reason: 'the snap menu popped the editor page');

@@ -1,232 +1,121 @@
 part of '../sub_editor_3d_viewport.dart';
 
-/// The top toolbar HUD: shading mode, perspective label, scene lights,
-/// gizmo tools, preview shape and Reset View.
+/// The viewport chrome in the Aurora design language: the pill row
+/// top-left (shading mode, projection, scene lights, preview shape, the
+/// transform space and snaps), the tool column under it while a gizmo is
+/// active, and Reset View top-right.
 mixin _SubEditor3DViewportToolbar
     on _SubEditor3DViewportStateBase, _SubEditor3DViewportCamera, _SubEditor3DViewportGizmo, _SubEditor3DViewportOverlays {
+  static String _title(String name) => name.isEmpty ? name : '${name[0].toUpperCase()}${name.substring(1)}';
+
   Widget _buildToolbar() {
+    final gizmo = _effectiveGizmo;
     return Positioned(
-      top: 8,
-      left: 8,
-      right: 8,
+      top: ViewportPillStyle.inset,
+      left: ViewportPillStyle.inset,
+      right: ViewportPillStyle.inset,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Shading Mode Selector
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 6,
-              vertical: 2,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: EditorColors.border),
-            ),
-            child: Row(
-              children: ViewportShadingMode.values.map((m) {
-                final sel = _shadingMode == m;
-                return GestureDetector(
-                  onTap: () => _updateShadingMode(m),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 3,
-                    ),
-                    margin: const EdgeInsets.only(right: 4),
-                    decoration: BoxDecoration(
-                      color: sel
-                          ? EditorColors.primary.withValues(alpha: 0.3)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: Text(
-                      m.name.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 8,
-                        fontWeight: sel
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: sel
-                            ? EditorColors.primary
-                            : EditorColors.foreground,
+          Expanded(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Wrap(
+                    spacing: ViewportPillStyle.gap,
+                    runSpacing: ViewportPillStyle.gap,
+                    children: [
+                      ViewportPill(
+                        key: const ValueKey('sub_viewport_shading'),
+                        icon: LucideIcons.sun,
+                        label: _title(_shadingMode.name),
+                        tooltip: 'View mode',
+                        menu: () => [
+                          for (final m in ViewportShadingMode.values)
+                            viewportMenuItem(_title(m.name), checked: _shadingMode == m, onPressed: () => _updateShadingMode(m)),
+                        ],
                       ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Perspective Label
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 4,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: EditorColors.border),
-            ),
-            child: Text(
-              _perspective,
-              style: const TextStyle(
-                fontSize: 9,
-                color: EditorColors.foreground,
-              ),
-            ),
-          ),
-
-          if (widget.hasSceneLights) ...[
-            const SizedBox(width: 8),
-            _sceneLightsToggle(),
-          ],
-
-          if (_effectiveGizmo != null) ...[
-            const SizedBox(width: 8),
-            _gizmoToolCluster(_effectiveGizmo!),
-          ],
-
-          if (widget.showShapeSelector) ...[
-            const SizedBox(width: 8),
-            // Shape Selector
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 6,
-                vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: EditorColors.border),
-              ),
-              child: Row(
-                children: PreviewShape.values
-                    .where((s) => s != PreviewShape.mesh)
-                    .map((s) {
-                      final sel = _shape == s;
-                      return GestureDetector(
-                        onTap: () => setState(() {
-                          _shape = s;
-                          if (_isMaterialPreview) {
-                            _materialPreview.setShape(s);
-                            if (_materialFramed) {
-                              _cameraDistance = _materialFitDistance();
-                              _updateNativeCamera();
-                            }
-                          }
-                        }),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3,
-                          ),
-                          margin: const EdgeInsets.only(right: 2),
-                          decoration: BoxDecoration(
-                            color: sel
-                                ? EditorColors.primary.withValues(
-                                    alpha: 0.3,
-                                  )
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                          child: Text(
-                            s.name.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 8,
-                              fontWeight: sel
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: sel
-                                  ? EditorColors.primary
-                                  : EditorColors.foreground,
-                            ),
-                          ),
+                      ViewportPill(
+                        key: const ValueKey('sub_viewport_projection'),
+                        icon: LucideIcons.video,
+                        label: _perspective,
+                      ),
+                      if (widget.hasSceneLights) _sceneLightsToggle(),
+                      if (widget.showShapeSelector)
+                        ViewportPill(
+                          key: const ValueKey('sub_viewport_shape'),
+                          icon: LucideIcons.shapes,
+                          label: _title(_shape.name),
+                          tooltip: 'Preview shape',
+                          menu: () => [
+                            for (final s in PreviewShape.values.where((s) => s != PreviewShape.mesh))
+                              viewportMenuItem(_title(s.name), checked: _shape == s, onPressed: () => _selectShape(s)),
+                          ],
                         ),
-                      );
-                    })
-                    .toList(),
+                      if (widget.showItems.isNotEmpty)
+                        ViewportPill(
+                          key: const ValueKey('sub_viewport_show'),
+                          icon: LucideIcons.eye,
+                          label: 'Show · ${widget.showItems.where((i) => i.value).length}',
+                          tooltip: 'Overlays drawn in the viewport',
+                          menu: () => [
+                            for (final item in widget.showItems)
+                              viewportMenuItem(item.label,
+                                  key: ValueKey('sub_viewport_show_${item.label.toLowerCase()}'),
+                                  checked: item.value,
+                                  onPressed: () => item.onChanged(!item.value)),
+                          ],
+                        ),
+                      if (gizmo != null) TransformGizmoToolbar(gizmo: gizmo),
+                    ],
+                  ),
+                  if (gizmo != null) ...[
+                    const SizedBox(height: 8),
+                    TransformGizmoToolColumn(gizmo: gizmo, onFocus: _resetCamera),
+                  ],
+                ],
               ),
             ),
-          ],
-
-          const Spacer(),
-
-          // Reset Camera Button
-          GhostButton(
+          ),
+          const SizedBox(width: 12),
+          ViewportPill(
+            key: const ValueKey('sub_viewport_reset_view'),
+            icon: LucideIcons.rotateCcw,
+            label: 'Reset View',
+            tooltip: 'Back to the framing the editor opened with',
             onPressed: _resetCamera,
-            child: const Row(
-              children: [
-                Icon(
-                  LucideIcons.rotateCcw,
-                  size: 11,
-                  color: EditorColors.primary,
-                ),
-                SizedBox(width: 4),
-                Text(
-                  'Reset View',
-                  style: TextStyle(
-                    fontSize: 9,
-                    color: EditorColors.primary,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
     );
   }
 
+  void _selectShape(PreviewShape s) => setState(() {
+        _shape = s;
+        if (_isMaterialPreview) {
+          _materialPreview.setShape(s);
+          if (_materialFramed) {
+            _cameraDistance = _materialFitDistance();
+            _updateNativeCamera();
+          }
+        }
+      });
+
   Widget _sceneLightsToggle() {
     final active = widget.renderSceneLights;
-    return Tooltip(
-      tooltip: (context) => TooltipContainer(
-        child: Text(
-          active
-              ? 'Scene Lights: Active (using authored lights in scene)'
-              : 'Scene Lights: Inactive (using studio daylight sun/sky)',
-        ),
-      ),
-      child: GestureDetector(
-        key: const ValueKey('sub_viewport_toggle_scene_lights'),
-        onTap: () => widget.onToggleSceneLights?.call(!active),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 8,
-            vertical: 4,
-          ),
-          decoration: BoxDecoration(
-            color: active
-                ? EditorColors.primary.withValues(alpha: 0.25)
-                : Colors.black.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: active ? EditorColors.primary : EditorColors.border,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                LucideIcons.lightbulb,
-                size: 11,
-                color: active ? EditorColors.primary : EditorColors.foreground,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'SCENE LIGHTS',
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: active ? FontWeight.bold : FontWeight.normal,
-                  color: active ? EditorColors.primary : EditorColors.foreground,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return ViewportPill(
+      key: const ValueKey('sub_viewport_toggle_scene_lights'),
+      icon: LucideIcons.lightbulb,
+      accentIcon: active,
+      highlighted: active,
+      label: 'Scene Lights',
+      tooltip: active
+          ? 'Scene Lights: Active (using authored lights in scene)'
+          : 'Scene Lights: Inactive (using studio daylight sun/sky)',
+      onPressed: () => widget.onToggleSceneLights?.call(!active),
     );
   }
 }

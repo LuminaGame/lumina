@@ -9,11 +9,9 @@ import 'package:lumina_editor_data/lumina_editor.dart' show AssetType;
 import 'package:lumina_ui/ui/features/main_editor/services/standalone_game_runner.dart' show StandaloneState;
 import 'package:lumina_ui/ui/features/main_editor/services/android_device_runner.dart' show AndroidRunState;
 import 'package:lumina_ui/ui/features/main_editor/views/play_on_device_menu.dart';
-import 'package:lumina_ui/ui/features/main_editor/services/snap_service.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/editor_slot_bar.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/toolbar_priority_row.dart';
 
-part 'toolbar_widget/toolbar_controls.dart';
 
 /// The frame stats the toolbar shows: while Play runs,
 /// the frame rate and frame time are the running `LuminaWorld`'s own
@@ -65,9 +63,6 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
     super.dispose();
   }
 
-  final GlobalKey _litKey = GlobalKey();
-  final GlobalKey _cameraKey = GlobalKey();
-  final GlobalKey _showKey = GlobalKey();
   final GlobalKey _playModeKey = GlobalKey();
   final GlobalKey _blueprintsKey = GlobalKey();
 
@@ -190,32 +185,10 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Transform Tool Buttons (Select, Translate, Rotate, Scale)
-                  _ToolBtn(
-                    icon: LucideIcons.mousePointer,
-                    active: vm.activeTool == 'select',
-                    onTap: () => vm.setActiveTool('select'),
-                  ),
-                  _ToolBtn(
-                    icon: LucideIcons.move,
-                    active: vm.activeTool == 'translate',
-                    onTap: () => vm.setActiveTool('translate'),
-                  ),
-                  _ToolBtn(
-                    icon: LucideIcons.rotateCcw,
-                    active: vm.activeTool == 'rotate',
-                    onTap: () => vm.setActiveTool('rotate'),
-                  ),
-                  _ToolBtn(
-                    icon: LucideIcons.maximize2,
-                    active: vm.activeTool == 'scale',
-                    onTap: () => vm.setActiveTool('scale'),
-                  ),
-
-                  const VerticalDivider(width: 16),
-                  _SnapCluster(vm),
-                  const VerticalDivider(width: 16),
-
+                  // The transform tools, snaps, view mode, Show and camera
+                  // projection live in the viewport's chrome
+                  // (LevelViewportPills); the toolbar keeps Play, the
+                  // Blueprints menu, the plugin slots and Quality.
                   // Simulation Control Buttons (Play, Pause, Stop PIE)
                   // Stable keys: the title bar's window controls
                   // draw the same Lucide glyphs (maximize is a square), so finding these
@@ -328,173 +301,7 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
 
                   const VerticalDivider(width: 16),
 
-                  // Viewport Shading Mode Dropdown Button
-                  GestureDetector(
-                    key: _litKey,
-                    onTap: () {
-                      final renderBox = _litKey.currentContext?.findRenderObject() as RenderBox?;
-                      if (renderBox != null) {
-                        final offset = renderBox.localToGlobal(Offset.zero);
-                        final position = Offset(offset.dx, offset.dy + renderBox.size.height + 2);
-                        showDropdown(
-                          context: context,
-                          // An explicit position is where the menu opens; following the
-                          // anchor widget would drag it to that widget's bottom centre.
-                          follow: false,
-                          // Top-left corner at the point, as editor context menus open.
-                          alignment: Alignment.topLeft,
-                          anchorAlignment: Alignment.topLeft,
-                          position: position,
-                          builder: (context) => DropdownMenu(
-                            children: [
-                              MenuButton(
-                                onPressed: (ctx) { vm.setViewMode('Lit'); },
-                                child: const Text('Lit', style: TextStyle(fontSize: 10)),
-                              ),
-                              MenuButton(
-                                onPressed: (ctx) { vm.setViewMode('Unlit'); },
-                                child: const Text('Unlit', style: TextStyle(fontSize: 10)),
-                              ),
-                              MenuButton(
-                                onPressed: (ctx) { vm.setViewMode('Wireframe'); },
-                                child: const Text('Wireframe', style: TextStyle(fontSize: 10)),
-                              ),
-                              const MenuDivider(),
-                              MenuButton(
-                                subMenu: [
-                                  'Base Color', 'Opacity', 'Roughness', 'Metallic', 'Emissive', 'Normal'
-                                ].map((buffer) => MenuButton(
-                                  onPressed: (ctx) { 
-                                    vm.setBufferVisualization(buffer); 
-                                    vm.setViewMode('Buffer');
-                                  },
-                                  child: Text(buffer, style: const TextStyle(fontSize: 10)),
-                                )).toList(),
-                                child: const Text('Buffer Visualization', style: TextStyle(fontSize: 10)),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: EditorColors.cardHeader,
-                        borderRadius: BorderRadius.circular(3),
-                        border: Border.all(color: EditorColors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(vm.viewMode, style: const TextStyle(fontSize: 10, color: EditorColors.foreground, fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 4),
-                          const Icon(LucideIcons.chevronDown, size: 10, color: EditorColors.mutedForeground),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 6),
-
-                            const SizedBox(width: 6),
-
-                  // Show Flags Dropdown Button
-                  GestureDetector(
-                    key: _showKey,
-                    onTap: () {
-                      final renderBox = _showKey.currentContext?.findRenderObject() as RenderBox?;
-                      if (renderBox != null) {
-                        final offset = renderBox.localToGlobal(Offset.zero);
-                        final position = Offset(offset.dx, offset.dy + renderBox.size.height + 2);
-                        showDropdown(
-                          context: context,
-                          // An explicit position is where the menu opens; following the
-                          // anchor widget would drag it to that widget's bottom centre.
-                          follow: false,
-                          // Top-left corner at the point, as editor context menus open.
-                          alignment: Alignment.topLeft,
-                          anchorAlignment: Alignment.topLeft,
-                          position: position,
-                          builder: (context) => DropdownMenu(
-                            children: [
-                              'Grid', 'Transform Gizmo', 'Selection Bounds', 
-                              'Collision', 'Actor Icons & Labels', 'Ground Drop Shadows'
-                            ].map((flag) => MenuButton(
-                              onPressed: (ctx) {
-                                vm.toggleShowFlag(flag);
-                                // don't pop because it's a multi-select
-                              },
-                              trailing: vm.showFlags[flag] == true ? const Icon(LucideIcons.check, size: 12) : null,
-                              child: Text(flag, style: const TextStyle(fontSize: 10)),
-                            )).toList(),
-                          ),
-                        );
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: EditorColors.cardHeader,
-                        borderRadius: BorderRadius.circular(3),
-                        border: Border.all(color: EditorColors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          const Text('Show', style: TextStyle(fontSize: 10, color: EditorColors.foreground, fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 4),
-                          const Icon(LucideIcons.chevronDown, size: 10, color: EditorColors.mutedForeground),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Camera Projection Dropdown Button
-                  GestureDetector(
-                    key: _cameraKey,
-                    onTap: () {
-                      final renderBox = _cameraKey.currentContext?.findRenderObject() as RenderBox?;
-                      if (renderBox != null) {
-                        final offset = renderBox.localToGlobal(Offset.zero);
-                        final position = Offset(offset.dx, offset.dy + renderBox.size.height + 2);
-                        showDropdown(
-                          context: context,
-                          // An explicit position is where the menu opens; following the
-                          // anchor widget would drag it to that widget's bottom centre.
-                          follow: false,
-                          // Top-left corner at the point, as editor context menus open.
-                          alignment: Alignment.topLeft,
-                          anchorAlignment: Alignment.topLeft,
-                          position: position,
-                          builder: (context) => DropdownMenu(
-                            children: ['Perspective', 'Top', 'Bottom', 'Left', 'Right', 'Front', 'Back'].map((mode) => MenuButton(
-                              onPressed: (ctx) { vm.setCameraMode(mode); },
-                              child: Text(mode, style: const TextStyle(fontSize: 10)),
-                            )).toList(),
-                          ),
-                        );
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: EditorColors.cardHeader,
-                        borderRadius: BorderRadius.circular(3),
-                        border: Border.all(color: EditorColors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          Text(vm.cameraMode, style: const TextStyle(fontSize: 10, color: EditorColors.foreground, fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 4),
-                          const Icon(LucideIcons.chevronDown, size: 10, color: EditorColors.mutedForeground),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 6),
-
-                  // Blueprints ▸ Open Level Blueprint, right of
-                  // the Perspective dropdown.
+                  // Blueprints ▸ Open Level Blueprint, after Play.
                   Tooltip(
                     tooltip: (context) => TooltipContainer(child: Text('Blueprints: open the Level Blueprint of ${vm.activeLevelName} or a Blueprint class')),
                     child: GestureDetector(

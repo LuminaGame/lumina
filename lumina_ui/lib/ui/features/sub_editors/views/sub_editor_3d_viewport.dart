@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_filament/flutter_filament.dart' hide GizmoMode;
+import 'package:lumina_ui/ui/core/widgets/viewport_pills.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_preview_renderer.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/viewport_mesh.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/preview_mesh_factory.dart';

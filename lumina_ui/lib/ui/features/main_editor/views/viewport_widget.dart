@@ -1,4 +1,6 @@
 // design-token-exempt: 3D viewport canvas painter overlays and debug stats
+import 'package:lumina_ui/ui/core/widgets/viewport_pills.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/level_viewport_chrome.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/gizmo_controller.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
@@ -359,11 +361,9 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                     if (widget.viewModel.isPlaying)
                       _buildPieBanner(),
 
-                    // Top Left Viewport Camera Header Overlay
+                    // The chrome's top row: pills and tool column at the
+                    // left, stats and quick controls at the right.
                     _buildCameraHeader(),
-
-                    // Top Right Quick Controls Overlay
-                    _buildQuickControls(),
 
                     // Bottom Left Live World Coordinate Info
                     _buildCoordinateBar(),

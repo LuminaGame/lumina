@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
-import 'package:lumina_ui/ui/features/main_editor/views/toolbar_widget.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/level_viewport_chrome.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'dart:io';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 void main() {
-  testWidgets('Toolbar exposes working translate/rotate/scale snap toggles', (tester) async {
+  testWidgets('the viewport pills expose working translate/rotate/scale snap toggles', (tester) async {
     // An editor-sized window; at the default 800 px test surface
     // the snap group sits in the toolbar's scrolled-away part.
     tester.view.physicalSize = const Size(1600, 900);
@@ -22,7 +22,7 @@ void main() {
     
     await tester.pumpWidget(ShadcnApp(
       theme: luminaEditorTheme(),
-      home: Scaffold(child: ToolbarWidget(viewModel: vm)),
+      home: Scaffold(child: LevelViewportPills(viewModel: vm, onFocus: () {})),
     ));
     await tester.pumpAndSettle();
     
@@ -57,7 +57,7 @@ void main() {
     expect(vm.gridVisible, isFalse);
     vm.dispose();
   });
-  testWidgets('Toolbar can change snap increments via dropdown', (tester) async {
+  testWidgets('the snap pills change snap increments via their dropdown', (tester) async {
     final tempProjectsDir = Directory.systemTemp.createTempSync('snap_toolbar2_');
     final pDir = Directory('${tempProjectsDir.path}/SmokeProject');
     pDir.createSync(recursive: true);
@@ -66,7 +66,7 @@ void main() {
     
     await tester.pumpWidget(ShadcnApp(
       theme: luminaEditorTheme(),
-      home: Scaffold(child: ToolbarWidget(viewModel: vm)),
+      home: Scaffold(child: LevelViewportPills(viewModel: vm, onFocus: () {})),
     ));
     await tester.pumpAndSettle();
     

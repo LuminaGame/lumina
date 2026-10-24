@@ -175,6 +175,10 @@ class SubEditor3DViewport extends StatefulWidget {
   /// lines are rebuilt when its [SubEditorLineSet.signature] changes.
   final List<SubEditorLineSet> overlayLines;
 
+  /// The overlays the viewport's Show pill toggles (a Static Mesh's
+  /// collision and bounds); empty shows no Show pill.
+  final List<ViewportShowItem> showItems;
+
   /// The orbit camera's starting (and Reset View) yaw in degrees; -35 when
   /// null. A Y-up preview at 145° looks at an actor facing −Z from its front.
   final double? initialCameraYaw;
@@ -261,6 +265,7 @@ class SubEditor3DViewport extends StatefulWidget {
     this.gridExtent,
     this.gridStep,
     this.overlayLines = const [],
+    this.showItems = const [],
     this.initialCameraYaw,
     this.transformGizmo,
     this.showTransformGizmo,

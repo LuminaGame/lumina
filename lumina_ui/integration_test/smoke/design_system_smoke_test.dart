@@ -49,6 +49,8 @@ import 'package:lumina_ui/ui/features/main_editor/views/outliner_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/viewport_widget.dart';
 import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
 import 'package:lumina_ui/ui/core/widgets/typed_tab_bar.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/core/widgets/viewport_pills.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/content_drawer.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/static_mesh_sub_editor.dart';
@@ -1078,6 +1080,136 @@ void main() {
     await rec.hold(const Duration(seconds: 2));
     png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
     SmokeArtifacts.saveScreenshot('$testName — pinned bottom panel island', png, usedAssets: usedAssets);
+    rec.save(testName, usedAssets: usedAssets);
+    // ignore: avoid_print
+    print(report);
+    expect(failures, isEmpty, reason: '${failures.join('\n')}\n$report');
+  }, timeout: const Timeout(Duration(minutes: 10)));
+
+  // Stage 3 of the Aurora design language: the viewport chrome. The level
+  // viewport shows the pill row (camera, view mode, snaps, grid, World,
+  // Show) with the tool column under it and the stats pill at the right;
+  // the Static Mesh editor shows the same chrome with its Show menu (the
+  // collision view and the bounds box). The pills drive the editor: the tool
+  // column switches tools, Show toggles an overlay, the view mode pill turns
+  // Wireframe on; all on video while the camera orbits.
+  testWidgets('Design System Smoke: aurora viewport pills and tool column', (WidgetTester tester) async {
+    const String testName = 'Design System Smoke: aurora viewport pills and tool column';
+    final Directory tempDir = Directory.systemTemp.createTempSync('design_system_pills_smoke_');
+    final Directory pDir = Directory('${tempDir.path}/PillSmoke')..createSync(recursive: true);
+    Directory('${pDir.path}/contents/levels').createSync(recursive: true);
+    File('${pDir.path}/PillSmoke.lmproject').writeAsStringSync('{}');
+    addTearDown(() => deleteTempProject(tempDir));
+    final String barrel = '${SmokeArtifacts.testAssetsDir.path}/Props/Barrels/fuel_barrel_red.glb';
+    final String acUnit = '${SmokeArtifacts.testAssetsDir.path}/Props/AC_units/ac_unit_a_300x300.glb';
+    final List<String> usedAssets = <String>[barrel, acUnit];
+    expect(File(barrel).existsSync(), isTrue, reason: 'the smoke loads real models from test-assets/');
+
+    final EditorViewModel vm = EditorViewModel(
+      initialProject: LuminaProject(
+        projectName: 'PillSmoke',
+        activeLevel: 'contents/levels/L_Main.lmas',
+        settings: EngineScalabilitySettings(targetFps: 60),
+      ),
+      projectLocation: tempDir.path,
+    );
+    addTearDown(vm.dispose);
+    await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+    await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: barrel));
+    await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: acUnit));
+    vm.refreshAssets();
+    final RealAssetInfo barrelAsset = vm.realAssets.firstWhere((a) => a.type == AssetType.filamesh && a.fileName.startsWith('fuel_barrel'));
+    final RealAssetInfo acAsset = vm.realAssets.firstWhere((a) => a.type == AssetType.filamesh && a.fileName.startsWith('ac_unit'));
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final GlobalKey boundaryKey = GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(
+      key: boundaryKey,
+      child: ShadcnApp(theme: luminaEditorTheme(), home: Scaffold(child: MainEditorView(viewModel: vm))),
+    ));
+    await settle(tester);
+    await tester.runAsync(() => vm.spawnActorFromAsset(barrelAsset, location: <double>[-80, 0, 0]));
+    await tester.runAsync(() => vm.spawnActorFromAsset(acAsset, location: <double>[80, 0, 0]));
+    await settle(tester, frames: 40);
+    vm.selectActorById(vm.actors.last.id);
+    await settle(tester, frames: 12);
+    final SmokeRecorder rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+    await rec.hold(const Duration(seconds: 2));
+
+    final double dpr = tester.view.devicePixelRatio;
+    final StringBuffer report = StringBuffer('MEASURE aurora stage 3:\n');
+    final List<String> failures = <String>[];
+    void measure(String name, Uint8List png, Rect r, Color expected) {
+      final ({int rgb, int count, int total}) d = dominantColorIn(png, r, dpr: dpr);
+      final int want = expected.toARGB32() & 0xFFFFFF;
+      report.writeln('  $name: ${hex(d.rgb)} on ${d.count}/${d.total} px (expected ${hex(want)})');
+      if (d.rgb != want) failures.add('$name is ${hex(d.rgb)}, expected ${hex(want)}');
+    }
+
+    // 1. The level chrome: pills, tool column, stats; the active tool amber.
+    await tester.tap(find.byKey(const ValueKey<String>('viewport_tool_translate')));
+    await settle(tester, frames: 12);
+    expect(vm.activeTool, 'translate');
+    Uint8List png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    final Rect move = tester.getRect(find.byKey(const ValueKey<String>('viewport_tool_translate')));
+    measure('active tool (Move)', png, Rect.fromLTWH(move.left + 2, move.top + 2, 6, 6), EditorColors.primary);
+    final Rect camera = tester.getRect(find.byKey(const ValueKey<String>('viewport_pill_camera')));
+    report.writeln('  camera pill ${camera.width.toStringAsFixed(0)}x${camera.height.toStringAsFixed(0)} at '
+        '(${camera.left.toStringAsFixed(0)}, ${camera.top.toStringAsFixed(0)})');
+    if ((camera.height - ViewportPillStyle.height).abs() > 0.5) failures.add('the camera pill is not 28 px tall');
+    expect(find.byKey(const ValueKey<String>('viewport_stats_pill')), findsOneWidget);
+    final Rect viewport = tester.getRect(find.byType(ViewportWidget));
+    SmokeArtifacts.saveScreenshot('$testName — level viewport chrome', png, usedAssets: usedAssets);
+    SmokeArtifacts.saveScreenshot('$testName — pill row and tool column',
+        _cropTo(png, Rect.fromLTWH(viewport.left, viewport.top, 760, 260), dpr), usedAssets: usedAssets);
+
+    // 2. The pills drive the editor: rotate tool, Show toggles Selection Bounds, Wireframe.
+    await tester.tap(find.byKey(const ValueKey<String>('viewport_tool_rotate')));
+    await settle(tester, frames: 12);
+    expect(vm.activeTool, 'rotate');
+    await rec.hold(const Duration(milliseconds: 800));
+    final bool boundsBefore = vm.showFlags['Selection Bounds'] == true;
+    await tester.tap(find.byKey(const ValueKey<String>('viewport_pill_show')));
+    await settle(tester, frames: 30);
+    await rec.hold(const Duration(milliseconds: 800));
+    await tester.tap(find.text('Selection Bounds').last);
+    await settle(tester, frames: 30);
+    expect(vm.showFlags['Selection Bounds'] == true, !boundsBefore);
+    await tester.tap(find.byKey(const ValueKey<String>('viewport_pill_view_mode')));
+    await settle(tester, frames: 30);
+    await tester.tap(find.text('Wireframe').last);
+    await settle(tester, frames: 40);
+    expect(vm.viewMode, 'Wireframe');
+    await rec.hold(const Duration(seconds: 1));
+    await rec.drag(viewport.center + const Offset(-160, 40), viewport.center + const Offset(160, 60), steps: 50);
+    await rec.hold(const Duration(milliseconds: 600));
+    await tester.tap(find.byKey(const ValueKey<String>('viewport_pill_view_mode')));
+    await settle(tester, frames: 30);
+    await tester.tap(find.text('Lit').last);
+    await settle(tester, frames: 40);
+
+    // 3. The Static Mesh editor: the same chrome, Show · Collision / Bounds.
+    vm.openSubEditorTab('Mesh', asset: barrelAsset);
+    await settle(tester, frames: 60);
+    await rec.hold(const Duration(seconds: 1));
+    expect(find.byKey(const ValueKey<String>('sub_viewport_shading')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey<String>('sub_viewport_show')));
+    await settle(tester, frames: 30);
+    await rec.hold(const Duration(milliseconds: 800));
+    await tester.tap(find.byKey(const ValueKey<String>('sub_viewport_show_bounds')));
+    await settle(tester, frames: 40);
+    await rec.hold(const Duration(seconds: 1));
+    final Rect sub = tester.getRect(find.byType(SubEditor3DViewport).first);
+    await rec.drag(sub.center + const Offset(-140, 0), sub.center + const Offset(140, 20), steps: 50);
+    await rec.hold(const Duration(seconds: 1));
+    png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    SmokeArtifacts.saveScreenshot('$testName — static mesh chrome with bounds', png, usedAssets: usedAssets);
+    SmokeArtifacts.saveScreenshot(testName, png, usedAssets: usedAssets);
+    expect(find.text('Show · 2'), findsOneWidget, reason: 'collision and bounds both on');
+    await rec.hold(const Duration(seconds: 2));
     rec.save(testName, usedAssets: usedAssets);
     // ignore: avoid_print
     print(report);

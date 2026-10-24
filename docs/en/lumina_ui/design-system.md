@@ -7,7 +7,7 @@ Concepts", artboard 3 · Aurora). It lands in four stages that each ship on thei
 |---|---|---|
 | 1 · Tokens, type and chrome | the Obsidian ramp and amber accent, Manrope + JetBrains Mono, the 48 px menu bar with the Prism L lockup and the editor's own window controls, the typed workspace tabs | shipped |
 | 2 · Islands and the Content Drawer | every docked panel as an island (fill, 1 px border, 12 px radius, 8 px gutters, 36 px uppercase header), splitter grips, selection rows that start at their indent, the slide-up Content Drawer | shipped |
-| 3 · Viewport chrome | the pill row (Perspective, view mode, snap, angle snap, World, Show), the vertical tool column, stats pills, the MiniAI prompt pill | planned |
+| 3 · Viewport chrome | the pill row (Perspective, view mode, snap, angle snap, World, Show), the vertical tool column, stats pills, the MiniAI prompt pill | shipped (without the MiniAI prompt pill) |
 | 4 · Sub-editors | Material, Blueprint, Sequencer, Static Mesh, Skeletal Mesh, Animation, Landscape, UMG, Plugins, Project Settings and Build Manager on the stage 1–3 components | planned |
 
 Themes stay data: the ramp and accent are the defaults of the Lumina Dark theme (`EditorThemeData.luminaDark`), so a
@@ -100,10 +100,37 @@ into the layout as an island), the selected folder as a breadcrumb (`Content / P
 button (opens or closes the drawer on the log) and the editor's state (`Ready · MCP on/off`). The open and pinned states
 persist with the layout (`.lumina/editor_layout.json`); the pin in the panel's tab bar unpins it again.
 
+## Viewport chrome (stage 3)
+
+`lib/ui/core/widgets/viewport_pills.dart` holds the pieces every 3D view shares: `ViewportPill` (28 px on the HUD
+surface, 10 px radius, an icon, a label — in mono for numbers — and a chevron when it opens a menu), `ViewportSnapPill`
+(a snap toggle and its step value in one pill, the step menu on the value), `ViewportToolColumn` (the vertical pill of
+30 px tool buttons, the active one amber with dark icon, a divider, then actions such as Focus), `ViewportShowItem` and
+`ViewportPillStyle`.
+
+**Level viewport** (`LevelViewportPills`, `lib/ui/features/main_editor/views/level_viewport_chrome.dart`): top-left the
+pill row — camera projection, view mode (Lit, Unlit, Wireframe, Buffer Visualization), the translate, rotate and scale
+snaps, the grid with its step, World ⇄ Local, and `Show · n` with the overlays (Grid, Transform Gizmo, Selection
+Bounds, Collision, Actor Icons & Labels, Ground Drop Shadows) — with the tool column under it (Select, Move, Rotate,
+Scale, then Focus; Q/W/E/R/F still switch them). Top-right: the stats pill (`182k tris · 120 fps`) beside the camera
+speed, DLSS, FSR3 and RTX pills, zoom and reset. The level toolbar above the viewport keeps Play and its modes, the
+Blueprints menu, the plugin slots, the full frame stats and Quality; the tools, snaps, view mode, Show and camera
+projection moved into the viewport.
+
+**Sub-editor viewports** (`SubEditor3DViewport`): the same pill row (view mode with Wireframe, the projection, Scene
+Lights where the scene has lights, the preview shape, `Show · n` from `showItems`, then World ⇄ Local and the snap
+pills of `TransformGizmoToolbar` with their inline step fields) and, while a gizmo is active, `TransformGizmoToolColumn`
+under it; Reset View sits top-right. The Static Mesh editor passes Show · Collision (its collision view) and Show ·
+Bounds (a cyan box from the mesh's own bounds, `StaticMeshEditorViewModel.boundsLineSet`); static meshes carry no
+sockets, so its Show menu lists none.
+
+Not yet in the chrome: the MiniAI prompt pill. MiniAI's ✦ AI button in the toolbar's plugin slot opens its panel; a
+prompt field in the viewport needs a plugin slot that hands typed text to a plugin.
+
 ## Verification
 
 `test/ui/theme_aurora_tokens_test.dart`, `test/ui/menu_bar_aurora_test.dart` and `test/ui/typed_tab_bar_test.dart`
-cover stage 1, `test/ui/editor_island_test.dart` and `test/ui/content_drawer_test.dart` stage 2; the smoke scenario "Design System Smoke: aurora design language"
+cover stage 1, `test/ui/editor_island_test.dart` and `test/ui/content_drawer_test.dart` stage 2, `test/ui/viewport_pills_test.dart` and `test/ui/sub_viewport_pills_test.dart` stage 3; the smoke scenario "Design System Smoke: aurora design language"
 (`integration_test/smoke/design_system_smoke_test.dart`) imports a barrel and the mannequin into a real project, opens
 the Static Mesh and Skeletal Mesh editors as typed tabs, measures the rail, the command field, the chip and the tab
 underlines in screenshots, and records the tab switches with the viewport orbiting. "Design System Smoke: aurora islands

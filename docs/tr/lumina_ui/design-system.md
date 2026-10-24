@@ -7,7 +7,7 @@ diliyle boyanır. Dört aşamada gelir; her aşama kendi başına yayınlanır:
 |---|---|---|
 | 1 · Token'lar, yazı ve çerçeve | Obsidian rampası ve amber vurgu, Manrope + JetBrains Mono, Prism L kilidi ve editörün kendi pencere denetimleriyle 48 px menü barı, türlü çalışma alanı sekmeleri | yayında |
 | 2 · Adalar ve Content Drawer | her yerleşik panel bir ada (dolgu, 1 px kenarlık, 12 px yarıçap, 8 px oluk, 36 px büyük harfli başlık), ayırıcı tutamaçlar, girintisinden başlayan seçim satırları, yukarı kayan Content Drawer | yayında |
-| 3 · Viewport çerçevesi | pill sırası (Perspective, görünüm modu, snap, açı snap'i, World, Show), dikey araç sütunu, istatistik pill'leri, MiniAI istem pill'i | planlı |
+| 3 · Viewport çerçevesi | pill sırası (Perspective, görünüm modu, snap, açı snap'i, World, Show), dikey araç sütunu, istatistik pill'leri, MiniAI istem pill'i | yayında (MiniAI istem pill'i hariç) |
 | 4 · Alt editörler | Material, Blueprint, Sequencer, Static Mesh, Skeletal Mesh, Animation, Landscape, UMG, Plugins, Project Settings ve Build Manager, 1–3. aşama bileşenleri üzerinde | planlı |
 
 Temalar veri olarak kalır: rampa ve vurgu Lumina Dark temasının varsayılanlarıdır (`EditorThemeData.luminaDark`);
@@ -102,10 +102,35 @@ ada olarak sabitler), seçili klasör breadcrumb olarak (`Content / Props / Barr
 günlükte açar ya da kapatır) ve editörün durumu (`Ready · MCP on/off`). Açık ve sabit durumları düzenle birlikte
 saklanır (`.lumina/editor_layout.json`); panelin sekme çubuğundaki pin onu yeniden serbest bırakır.
 
+## Viewport çerçevesi (3. aşama)
+
+`lib/ui/core/widgets/viewport_pills.dart` her 3B görünümün paylaştığı parçaları tutar: `ViewportPill` (HUD yüzeyinde
+28 px, 10 px yarıçap, bir ikon, bir etiket — sayılar için mono — ve menü açıyorsa bir ok), `ViewportSnapPill` (bir snap
+anahtarı ve adım değeri tek pill'de, adım menüsü değerin üstünde), `ViewportToolColumn` (30 px araç düğmeli dikey pill;
+etkin olan amber ve koyu ikonlu, bir ayırıcı, sonra Focus gibi eylemler), `ViewportShowItem` ve `ViewportPillStyle`.
+
+**Seviye viewport'u** (`LevelViewportPills`, `lib/ui/features/main_editor/views/level_viewport_chrome.dart`): sol
+üstte pill sırası — kamera projeksiyonu, görünüm modu (Lit, Unlit, Wireframe, Buffer Visualization), öteleme, döndürme
+ve ölçek snap'leri, adımıyla ızgara, World ⇄ Local ve kaplamalarıyla `Show · n` (Grid, Transform Gizmo, Selection
+Bounds, Collision, Actor Icons & Labels, Ground Drop Shadows) — altında araç sütunu (Select, Move, Rotate, Scale, sonra
+Focus; Q/W/E/R/F yine bunları değiştirir). Sağ üstte: kamera hızı, DLSS, FSR3 ve RTX pill'lerinin yanında istatistik
+pill'i (`182k tris · 120 fps`), yakınlaştırma ve sıfırlama. Viewport'un üstündeki seviye araç çubuğu Play'i ve
+modlarını, Blueprints menüsünü, eklenti yuvalarını, tam kare istatistiklerini ve Quality'yi tutar; araçlar, snap'ler,
+görünüm modu, Show ve kamera projeksiyonu viewport'a taşındı.
+
+**Alt editör viewport'ları** (`SubEditor3DViewport`): aynı pill sırası (Wireframe'li görünüm modu, projeksiyon, sahnede
+ışık varsa Scene Lights, önizleme şekli, `showItems`'tan `Show · n`, sonra World ⇄ Local ve `TransformGizmoToolbar`'ın
+satır içi adım alanlı snap pill'leri) ve bir gizmo etkinken altında `TransformGizmoToolColumn`; Reset View sağ üsttedir.
+Static Mesh editörü Show · Collision (çarpışma görünümü) ve Show · Bounds (mesh'in kendi sınırlarından camgöbeği bir
+kutu, `StaticMeshEditorViewModel.boundsLineSet`) verir; static mesh'lerde soket olmadığı için Show menüsünde soket yoktur.
+
+Çerçevede henüz yok: MiniAI istem pill'i. MiniAI'nin araç çubuğu eklenti yuvasındaki ✦ AI düğmesi panelini açar;
+viewport'ta bir istem alanı için yazılan metni bir eklentiye ileten bir eklenti yuvası gerekir.
+
 ## Doğrulama
 
 `test/ui/theme_aurora_tokens_test.dart`, `test/ui/menu_bar_aurora_test.dart` ve `test/ui/typed_tab_bar_test.dart`
-1. aşamayı, `test/ui/editor_island_test.dart` ve `test/ui/content_drawer_test.dart` 2. aşamayı kapsar; "Design System Smoke: aurora design language" smoke senaryosu
+1. aşamayı, `test/ui/editor_island_test.dart` ve `test/ui/content_drawer_test.dart` 2. aşamayı, `test/ui/viewport_pills_test.dart` ve `test/ui/sub_viewport_pills_test.dart` 3. aşamayı kapsar; "Design System Smoke: aurora design language" smoke senaryosu
 (`integration_test/smoke/design_system_smoke_test.dart`) gerçek bir projeye bir varil ve mankeni import eder, Static
 Mesh ve Skeletal Mesh editörlerini türlü sekmeler olarak açar, ekran görüntülerinde rail'i, komut alanını, çipi ve
 sekme alt çizgilerini ölçer ve viewport dönerken sekme geçişlerini kaydeder. "Design System Smoke: aurora islands and

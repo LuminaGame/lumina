@@ -244,11 +244,11 @@ mixin _ViewportCameraControls on _ViewportWidgetStateBase {
           _triggerSpeedFeedback();
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          height: 24,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          height: ViewportPillStyle.height,
           decoration: BoxDecoration(
             color: EditorColors.hudSurface,
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: BorderRadius.circular(ViewportPillStyle.radius),
             border: Border.all(color: EditorColors.border),
           ),
           child: Row(
@@ -324,10 +324,10 @@ mixin _ViewportCameraControls on _ViewportWidgetStateBase {
     return Tooltip(
       tooltip: (context) => TooltipContainer(child: Text(tooltip)),
       child: Container(
-        height: 24,
+        height: ViewportPillStyle.height,
         decoration: BoxDecoration(
           color: EditorColors.hudSurface,
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(ViewportPillStyle.radius),
           border: Border.all(color: active && supported ? color.withValues(alpha: 0.7) : EditorColors.border),
         ),
         child: Row(
@@ -342,7 +342,7 @@ mixin _ViewportCameraControls on _ViewportWidgetStateBase {
                 RtxSettingsKind.rayTracing => vm.toggleRayTracing(),
               },
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -411,10 +411,10 @@ mixin _ViewportCameraControls on _ViewportWidgetStateBase {
         onTap: onTap,
         child: Container(
           width: 24,
-          height: 24,
+          height: ViewportPillStyle.height,
           decoration: BoxDecoration(
             color: EditorColors.hudSurface,
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: BorderRadius.circular(ViewportPillStyle.radius),
             border: Border.all(color: EditorColors.border),
           ),
           child: Icon(icon, size: 12, color: EditorColors.foreground),

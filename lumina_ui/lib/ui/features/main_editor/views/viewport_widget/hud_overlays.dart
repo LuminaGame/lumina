@@ -187,83 +187,65 @@ mixin _ViewportHudOverlays on _ViewportWidgetStateBase, _ViewportCameraControls 
     );
   }
 
-  /// The top-left camera / view mode header.
+  /// The viewport chrome's top row: the Aurora pill row and the tool column
+  /// under it at the left, the stats pill and the quick controls at the
+  /// right.
   Widget _buildCameraHeader() {
     return Positioned(
-      top: 8,
-      left: 8,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 8,
-          vertical: 4,
-        ),
-        decoration: BoxDecoration(
-          color: EditorColors.hudSurface,
-          borderRadius: BorderRadius.circular(3),
-          border: Border.all(color: EditorColors.border),
-        ),
-        child: Row(
-          children: [
-            const Icon(
-              LucideIcons.video,
-              size: 12,
-              color: Colors.amber,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              '${widget.viewModel.cameraMode}  |  ${widget.viewModel.viewportMode}  |  Realtime',
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: EditorColors.foreground,
+      top: ViewportPillStyle.inset,
+      left: ViewportPillStyle.inset,
+      right: ViewportPillStyle.inset,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: LevelViewportPills(
+                viewModel: widget.viewModel,
+                onFocus: () {
+                  if (widget.viewModel.selectedActor != null) {
+                    widget.viewModel.focusCameraOnActor(widget.viewModel.selectedActor!);
+                  } else {
+                    widget.viewModel.resetCamera();
+                  }
+                  _updateNativeCamera();
+                },
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 12),
+          LevelViewportStatsPill(viewModel: widget.viewModel),
+          const SizedBox(width: ViewportPillStyle.gap),
+          _buildQuickControls(),
+        ],
       ),
     );
   }
 
   /// The top-right HUD buttons: speed, DLSS, FSR3, ray tracing, focus, zoom, reset.
   Widget _buildQuickControls() {
-    return Positioned(
-      top: 8,
-      right: 8,
-      child: Row(
+    return Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           _buildCameraSpeedHudBtn(),
-          const SizedBox(width: 4),
+          const SizedBox(width: ViewportPillStyle.gap),
           _buildRtxFeatureHudBtn(RtxSettingsKind.dlss),
-          const SizedBox(width: 4),
+          const SizedBox(width: ViewportPillStyle.gap),
           _buildRtxFeatureHudBtn(RtxSettingsKind.fsr3),
-          const SizedBox(width: 4),
+          const SizedBox(width: ViewportPillStyle.gap),
           _buildRtxFeatureHudBtn(RtxSettingsKind.rayTracing),
-          const SizedBox(width: 4),
-          _buildHudBtn(
-            LucideIcons.scan,
-            'Focus Selection [F]',
-            () {
-              if (widget.viewModel.selectedActor != null) {
-                widget.viewModel.focusCameraOnActor(
-                  widget.viewModel.selectedActor!,
-                );
-              } else {
-                widget.viewModel.resetCamera();
-              }
-              _updateNativeCamera();
-            },
-          ),
-          const SizedBox(width: 4),
+          const SizedBox(width: ViewportPillStyle.gap),
           _buildHudBtn(LucideIcons.zoomIn, 'Zoom In', () {
             widget.viewModel.dollyCamera(-60);
             _updateNativeCamera();
           }),
-          const SizedBox(width: 4),
+          const SizedBox(width: ViewportPillStyle.gap),
           _buildHudBtn(LucideIcons.zoomOut, 'Zoom Out', () {
             widget.viewModel.dollyCamera(60);
             _updateNativeCamera();
           }),
-          const SizedBox(width: 4),
+          const SizedBox(width: ViewportPillStyle.gap),
           _buildHudBtn(
             LucideIcons.refreshCw,
             'Reset Camera',
@@ -273,7 +255,6 @@ mixin _ViewportHudOverlays on _ViewportWidgetStateBase, _ViewportCameraControls 
             },
           ),
         ],
-      ),
     );
   }
 

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
+import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_line_set.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/static_mesh_collision.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_slot_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/static_mesh_lod.dart';
@@ -120,6 +121,43 @@ class StaticMeshEditorViewModel extends ChangeNotifier {
     }
     _overlayShapes = _collisionShapes;
     return _overlayLines = indices.isEmpty ? null : (positions: positions, indices: indices);
+  }
+
+  bool _showBounds = false;
+
+  /// Whether the viewport draws the mesh's bounding box (Show · Bounds).
+  bool get showBounds => _showBounds;
+
+  void setShowBounds(bool value) {
+    if (_showBounds == value) return;
+    _showBounds = value;
+    notifyListeners();
+  }
+
+  void setShowCollisionWireframe(bool value) {
+    if (_showCollisionWireframe != value) toggleCollisionWireframe();
+  }
+
+  /// The mesh's bounding box as 12 edges in the preview viewport's frame
+  /// (the GLB's own bounds: metres, Y up), while Show · Bounds is on.
+  SubEditorLineSet? get boundsLineSet {
+    if (!_showBounds) return null;
+    final lo = _gltfMinBounds, hi = _gltfMaxBounds;
+    final positions = <double>[
+      for (final z in [lo[2], hi[2]])
+        for (final (x, y) in [(lo[0], lo[1]), (hi[0], lo[1]), (hi[0], hi[1]), (lo[0], hi[1])]) ...[x, y, z],
+    ];
+    const indices = [0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7];
+    return SubEditorLineSet(
+      id: 'static_mesh_bounds',
+      positions: positions,
+      indices: indices,
+      // The bounds read in the cyan accent, apart from the amber collision.
+      r: 0.22,
+      g: 0.78,
+      b: 0.88,
+      signature: 'bounds:${lo.join(',')}:${hi.join(',')}',
+    );
   }
 
   // LOD Getters

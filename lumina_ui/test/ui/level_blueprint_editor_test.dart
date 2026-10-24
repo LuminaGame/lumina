@@ -128,10 +128,11 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(ShadcnApp(theme: luminaEditorTheme(), home: Scaffold(child: ToolbarWidget(viewModel: vm))));
 
-    // The button sits right of the Perspective dropdown.
+    // The button sits after the Play cluster (the view and camera controls
+    // are viewport pills).
     final button = find.byKey(const ValueKey('toolbar_blueprints'));
     expect(button, findsOneWidget);
-    expect(tester.getTopLeft(button).dx, greaterThan(tester.getTopRight(find.text('Perspective')).dx));
+    expect(tester.getTopLeft(button).dx, greaterThan(tester.getTopRight(find.byKey(const ValueKey('toolbar_stop'))).dx));
 
     Future<void> openFromToolbar() async {
       await tester.tap(button);

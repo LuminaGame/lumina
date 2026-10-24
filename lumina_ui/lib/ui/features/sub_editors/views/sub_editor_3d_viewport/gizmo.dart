@@ -375,7 +375,4 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
     gizmo.setMode(mode);
     return true;
   }
-
-  Widget _gizmoToolCluster(SubEditorTransformGizmo gizmo) =>
-      TransformGizmoToolbar(gizmo: gizmo);
 }

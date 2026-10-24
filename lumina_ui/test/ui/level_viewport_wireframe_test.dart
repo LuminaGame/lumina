@@ -93,7 +93,7 @@ void main() {
     await _settle(tester, () => viewport().editorActorsInSceneForTest == 2);
     expect(viewport().editorActorsInSceneForTest, 2, reason: 'both solids drawn in Lit');
     expect(viewport().meshWiresForTest, isEmpty);
-    expect(find.text('Perspective  |  Lit  |  Realtime'), findsOneWidget);
+    expectChrome(tester, 'Lit');
     final FilamentScene scene = viewport().nativeSceneForTest;
     final FilamentEngine engine = viewport().nativeEngineForTest;
 
@@ -107,7 +107,7 @@ void main() {
       final int entity = viewport().meshWireEntityForTest(id);
       expect(scene.hasEntity(entity), isTrue, reason: '$id\'s wire is in the scene');
     }
-    expect(find.text('Perspective  |  Wireframe  |  Realtime'), findsOneWidget, reason: 'the header follows');
+    expectChrome(tester, 'Wireframe', reason: 'the header follows');
 
     // The wire sits where the solid was drawn: the solid root's matrix.
     final tm = FilamentTransformManager(engine);
@@ -120,7 +120,7 @@ void main() {
     await _settle(tester, () => viewport().editorActorsInSceneForTest == 2, frames: 60);
     expect(viewport().meshWiresForTest, isEmpty);
     expect(viewport().editorActorsInSceneForTest, 2);
-    expect(find.text('Perspective  |  Unlit  |  Realtime'), findsOneWidget);
+    expectChrome(tester, 'Unlit');
 
     // Round-trip through the View menu's setter.
     vm.setViewportMode('Wireframe');
@@ -129,7 +129,7 @@ void main() {
     vm.setViewportMode('Lit');
     await _settle(tester, () => viewport().editorActorsInSceneForTest == 2, frames: 60);
     expect(viewport().meshWiresForTest, isEmpty);
-    expect(find.text('Perspective  |  Lit  |  Realtime'), findsOneWidget);
+    expectChrome(tester, 'Lit');
 
     // Wireframe, then the viewport goes: nothing is left on the engine.
     vm.setViewMode('Wireframe');
@@ -139,4 +139,12 @@ void main() {
     expect(engine.isDisposed, isTrue, reason: 'the last viewport gave the engine back');
     vm.dispose();
   }, skip: !hasFixture);
+}
+
+/// The viewport chrome's camera pill reads the projection and its view mode
+/// pill the mode.
+void expectChrome(WidgetTester tester, String mode, {String? reason}) {
+  expect(find.descendant(of: find.byKey(const ValueKey('viewport_pill_camera')), matching: find.text('Perspective')), findsOneWidget);
+  expect(find.descendant(of: find.byKey(const ValueKey('viewport_pill_view_mode')), matching: find.text(mode)), findsOneWidget,
+      reason: reason);
 }
