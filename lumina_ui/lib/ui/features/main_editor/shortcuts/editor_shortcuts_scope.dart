@@ -17,12 +17,17 @@ class ConditionalActivator extends ShortcutActivator {
   final bool shift;
   final bool levelEditing;
 
+  /// A transform tool key (Q/W/E/R): it applies where the active tab uses
+  /// the level's transform tools.
+  final bool transformTool;
+
   ConditionalActivator(
     this.key,
     this.viewModel, {
     this.control = false,
     this.shift = false,
     this.levelEditing = true,
+    this.transformTool = false,
   });
 
   @override
@@ -36,6 +41,7 @@ class ConditionalActivator extends ShortcutActivator {
     if (viewModel.isFlyNavigating) return false;
     if (viewModel.pieController.acceptsGameInput) return false;
     if (levelEditing && viewModel.activeTabIndex != 0) return false;
+    if (transformTool && !viewModel.activeTabUsesTransformTools) return false;
 
     // Check if EditableText is focused
     final focusNode = FocusManager.instance.primaryFocus;
@@ -111,10 +117,10 @@ class _EditorShortcutsScopeState extends State<EditorShortcutsScope> {
     final vm = widget.viewModel;
     return Shortcuts(
       shortcuts: <ShortcutActivator, Intent>{
-        ConditionalActivator(LogicalKeyboardKey.keyQ, vm, levelEditing: false): const DispatchCommandIntent('tool.select'),
-        ConditionalActivator(LogicalKeyboardKey.keyW, vm, levelEditing: false): const DispatchCommandIntent('tool.translate'),
-        ConditionalActivator(LogicalKeyboardKey.keyE, vm, levelEditing: false): const DispatchCommandIntent('tool.rotate'),
-        ConditionalActivator(LogicalKeyboardKey.keyR, vm, levelEditing: false): const DispatchCommandIntent('tool.scale'),
+        ConditionalActivator(LogicalKeyboardKey.keyQ, vm, levelEditing: false, transformTool: true): const DispatchCommandIntent('tool.select'),
+        ConditionalActivator(LogicalKeyboardKey.keyW, vm, levelEditing: false, transformTool: true): const DispatchCommandIntent('tool.translate'),
+        ConditionalActivator(LogicalKeyboardKey.keyE, vm, levelEditing: false, transformTool: true): const DispatchCommandIntent('tool.rotate'),
+        ConditionalActivator(LogicalKeyboardKey.keyR, vm, levelEditing: false, transformTool: true): const DispatchCommandIntent('tool.scale'),
         ConditionalActivator(LogicalKeyboardKey.keyF, vm): const DispatchCommandIntent('view.focusSelected'),
         ConditionalActivator(LogicalKeyboardKey.delete, vm): const DispatchCommandIntent('edit.delete'),
         ConditionalActivator(LogicalKeyboardKey.f2, vm): const DispatchCommandIntent('outliner.rename'),

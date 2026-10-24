@@ -37,6 +37,18 @@ mixin _EditorSubEditorTabs on _EditorViewModelState {
   /// The active tab's Content Drawer when it is a sub-editor tab with one.
   SubEditorContentDrawer? get activeSubEditorDrawer =>
       _activeTabIndex <= 0 || _activeTabIndex >= _openTabs.length ? null : _subEditorDrawers[_openTabs[_activeTabIndex].id];
+  /// The tab categories whose editor follows the level's transform tool
+  /// (Q/W/E/R and the toolbar's tools drive their gizmo too).
+  static const Set<String> transformToolTabCategories = {'Blueprint', 'ACTOR', 'BLUEPRINT', 'Blueprint Editor'};
+
+  /// Whether Q/W/E/R apply in the active tab: the level, or an editor that
+  /// follows its transform tool. Elsewhere (Plugins, a Material) they would
+  /// change the hidden level's tool.
+  bool get activeTabUsesTransformTools {
+    if (_activeTabIndex <= 0 || _activeTabIndex >= _openTabs.length) return true;
+    return transformToolTabCategories.contains(_openTabs[_activeTabIndex].category);
+  }
+
   EditorTabInfo get currentTab {
     _syncLevelTabTitle();
     return _openTabs[_activeTabIndex];
