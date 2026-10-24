@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/theme/asset_type_style.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/cloth_settings_editor_view_model.dart';
@@ -93,21 +94,19 @@ class _ClothSettingsSubEditorState extends State<ClothSettingsSubEditor> {
 
   Widget _toolbar() {
     final style = AssetTypeStyle.of(AssetType.clothSettings);
-    return Container(
+    return SubEditorToolbar(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: const BoxDecoration(
-        color: EditorColors.cardHeader,
-        border: Border(bottom: BorderSide(color: EditorColors.border)),
-      ),
-      child: Row(
-        children: [
-          Icon(style.icon, size: 15, color: style.color),
-          const SizedBox(width: 8),
-          Text(
+      color: EditorColors.cardHeader,
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(style.icon, size: 15, color: style.color),
+const SizedBox(width: 8),
+Text(
             widget.assetName + (_vm.isDirty ? ' *' : ''),
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: EditorColors.foreground),
           ),
+          ])),
           const SizedBox(width: 8),
           Text(style.displayName, style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
           if (_vm.error != null) ...[
@@ -136,14 +135,13 @@ class _ClothSettingsSubEditorState extends State<ClothSettingsSubEditor> {
           ),
           if (widget.onClose != null) ...[
             const SizedBox(width: 8),
-            GhostButton(
+            SubEditorToolbarClose(child: GhostButton(
               density: ButtonDensity.iconDense,
               onPressed: widget.onClose,
               child: const Icon(LucideIcons.x, size: 14),
-            ),
-          ],
-        ],
-      ),
+            )),
+          ]
+      ],
     );
   }
 

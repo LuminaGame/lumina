@@ -1,6 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
@@ -230,13 +231,13 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
 
   Widget _buildToolbar(bool isDirty) {
     final vm = _viewModel;
-    return Container(
+    return SubEditorToolbar(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.card,
-      child: Row(
-        children: [
-          Container(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.indigo.withValues(alpha: 0.15),
@@ -244,11 +245,12 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
             ),
             child: const Text('SEQUENCER', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.indigo)),
           ),
-          const SizedBox(width: 8),
-          Text(
+const SizedBox(width: 8),
+Text(
             '${widget.assetName}${isDirty ? ' *' : ''}',
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: EditorColors.foreground),
           ),
+          ])),
           const SizedBox(width: 16),
 
           // Undo / Redo buttons
@@ -402,13 +404,12 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
           const SizedBox(width: 8),
 
           // Close Button
-          GhostButton(
+          SubEditorToolbarClose(child: GhostButton(
             size: ButtonSize.small,
             onPressed: widget.onClose,
             child: const Icon(LucideIcons.x, size: 14),
-          ),
-        ],
-      ),
+          ))
+      ],
     );
   }
 

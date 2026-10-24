@@ -6,6 +6,8 @@ import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_custom_style
 import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_preview_showcase.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_tree_panel.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 
 /// Sub-editor workspace for authoring and customizing UI Themes (.lmas).
 ///
@@ -84,15 +86,10 @@ class _ThemeSubEditorState extends State<ThemeSubEditor> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Top Toolbar
-          Container(
-            height: 38,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: colorScheme.card,
-              border: Border(bottom: BorderSide(color: colorScheme.border)),
-            ),
-            child: Row(
-              children: [
+          SubEditorToolbar(
+            color: colorScheme.card,
+            children: [
+                SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
                 const Icon(LucideIcons.palette, size: 15, color: EditorColors.assetTypeTheme),
                 const SizedBox(width: 8),
                 Text(
@@ -115,6 +112,7 @@ class _ThemeSubEditorState extends State<ThemeSubEditor> {
                     style: TextStyle(fontSize: 10, color: EditorColors.blendSpaceLabel, fontWeight: FontWeight.w600),
                   ),
                 ),
+                ])),
                 const Spacer(),
                 GhostButton(
                   density: ButtonDensity.compact,
@@ -150,32 +148,35 @@ class _ThemeSubEditorState extends State<ThemeSubEditor> {
                 ),
                 if (widget.onClose != null) ...[
                   const SizedBox(width: 8),
-                  GhostButton(
-                    density: ButtonDensity.iconDense,
-                    onPressed: widget.onClose,
-                    child: const Icon(LucideIcons.x, size: 14),
+                  SubEditorToolbarClose(
+                    child: GhostButton(
+                      density: ButtonDensity.iconDense,
+                      onPressed: widget.onClose,
+                      child: const Icon(LucideIcons.x, size: 14),
+                    ),
                   ),
                 ],
               ],
-            ),
           ),
 
           // Main Work Area Split View
+          // Islands on the ground, resizable: the token tree and inspector,
+          // the preview showcase.
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Left Panel: Tree & Inspector
-                SizedBox(
-                  width: 320,
-                  child: ThemeTreePanel(viewModel: _vm),
-                ),
-
-                // Right Panel: Showcase
-                Expanded(
-                  child: ThemePreviewShowcase(viewModel: _vm),
-                ),
-              ],
+            child: EditorIslandGround(
+              child: ResizablePanel.horizontal(
+                dividerBuilder: EditorIslandDividers.gap,
+                children: [
+                  ResizablePane(
+                    initialSize: 320,
+                    minSize: 220,
+                    child: EditorIsland(key: const ValueKey('theme_island_tree'), child: ThemeTreePanel(viewModel: _vm)),
+                  ),
+                  ResizablePane.flex(
+                    child: EditorIsland(key: const ValueKey('theme_island_preview'), child: ThemePreviewShowcase(viewModel: _vm)),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

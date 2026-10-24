@@ -162,8 +162,15 @@ The sub-editor shell docks the Content Browser as an island under the workspace 
 unpinned drawer as an island over the workspace's bottom. The plugin right dock is an island too, and a plugin's tab or
 asset editor is framed on one island on the ground by the host.
 
-Not in stage 4: the sub-editors keep their toolbar row (the artboards put the actions at the right of the tab bar);
-plugins get no island widgets of their own through `lumina_editor_api` yet (the host frames their panels and tabs).
+**The toolbar in the tab bar.** A sub-editor's toolbar is a `SubEditorToolbar`
+(`lib/ui/core/widgets/tab_bar_actions.dart`). In a workspace tab (`TabBarActionsScope`, put around each tab by
+`MainEditorView`) it draws no row: its controls go to the right end of the tab bar (`EditorTypedTabBar.trailing`,
+`TabBarActions` over the `TabBarActionsRegistry`) while its tab is active, so the editor's islands start right under the
+tabs. The `SubEditorToolbarTitle` (type badge and asset name) and `SubEditorToolbarClose` children are left out there, as
+the tab names and closes the asset, and a `Spacer` gives no room. The actions may take up to 60 % of the bar
+(`trailingShare`) and scroll from the right when they need more; the tabs take the rest. On its own (a sub-editor in a
+modal or a widget test) the toolbar is the editor's 38 px row as before. The level tab keeps its toolbar row (Play,
+Blueprints, the plugins' `EditorSlot`s).
 
 ## Verification
 

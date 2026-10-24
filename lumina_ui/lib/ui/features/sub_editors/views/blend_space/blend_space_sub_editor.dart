@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blend_space_editor_view_model.dart';
@@ -149,19 +150,20 @@ class BlendSpaceSubEditorState extends State<BlendSpaceSubEditor> {
 
   Widget _toolbar() {
     final tx = _vm.transactions;
-    return Container(
+    return SubEditorToolbar(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.card,
-      child: Row(
-        children: [
-          const OutlineBadge(child: Text('BLEND SPACE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-          const SizedBox(width: 8),
-          Flexible(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const OutlineBadge(child: Text('BLEND SPACE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+const SizedBox(width: 8),
+Flexible(
             child: Text('${widget.assetName}${_vm.isDirty ? ' *' : ''}',
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
           ),
+          ])),
           const SizedBox(width: 8),
           Text('${_vm.is2D ? '2D' : '1D'} · ${_vm.document.samples.length} samples · Target: ${_vm.targetMesh.split('/').last.replaceAll('.lmas', '')}',
               style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
@@ -184,9 +186,8 @@ class BlendSpaceSubEditorState extends State<BlendSpaceSubEditor> {
             child: const Text('Save', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 8),
-          GhostButton(size: ButtonSize.small, onPressed: widget.onClose, child: const Icon(LucideIcons.x, size: 14)),
-        ],
-      ),
+          SubEditorToolbarClose(child: GhostButton(size: ButtonSize.small, onPressed: widget.onClose, child: const Icon(LucideIcons.x, size: 14)))
+      ],
     );
   }
 

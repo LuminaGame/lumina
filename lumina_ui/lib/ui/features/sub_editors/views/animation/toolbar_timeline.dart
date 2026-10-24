@@ -8,13 +8,13 @@ mixin _AnimationToolbarTimeline on _AnimationSubEditorStateBase {
     final vm = _viewModel;
     final clips = vm.clips;
 
-    return Container(
+    return SubEditorToolbar(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.card,
-      child: Row(
-        children: [
-          Container(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.orange.withValues(alpha: 0.15),
@@ -22,11 +22,12 @@ mixin _AnimationToolbarTimeline on _AnimationSubEditorStateBase {
             ),
             child: const Text('ANIMATION', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.orange)),
           ),
-          const SizedBox(width: 8),
-          Text(
+const SizedBox(width: 8),
+Text(
             '${widget.assetName}${isDirty ? ' *' : ''}',
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: EditorColors.foreground),
           ),
+          ])),
           const SizedBox(width: 12),
 
           // Clips count badge
@@ -93,13 +94,12 @@ mixin _AnimationToolbarTimeline on _AnimationSubEditorStateBase {
           const SizedBox(width: 8),
 
           // Close Button
-          GhostButton(
+          SubEditorToolbarClose(child: GhostButton(
             size: ButtonSize.small,
             onPressed: widget.onClose,
             child: const Icon(LucideIcons.x, size: 14),
-          ),
-        ],
-      ),
+          ))
+      ],
     );
   }
 

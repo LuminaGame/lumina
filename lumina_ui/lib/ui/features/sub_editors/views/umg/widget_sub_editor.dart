@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/input/text_input_focus.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
@@ -206,24 +207,25 @@ class _UMGWidgetSubEditorState extends State<UMGWidgetSubEditor> {
 
   Widget _toolbar(UmgEditorViewModel vm) {
     final compile = vm.lastCompile;
-    return Container(
+    return SubEditorToolbar(
       height: 34,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       color: EditorColors.cardHeader,
-      child: Row(
-        children: [
-          Container(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(3)),
             child: const Text('UMG WIDGET', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.blue)),
           ),
-          const SizedBox(width: 8),
-          // The widget's name, without the .lmas extension.
+const SizedBox(width: 8),
+// The widget's name, without the .lmas extension.
           Text(widget.assetName.endsWith('.lmas') ? widget.assetName.substring(0, widget.assetName.length - 5) : widget.assetName, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
-          if (vm.isDirty) ...[
+if (vm.isDirty) ...[
             const SizedBox(width: 4),
             const Text('●', style: TextStyle(fontSize: 10, color: EditorColors.primary)),
           ],
+          ])),
           const SizedBox(width: 12),
           // The graph's own history in Graph mode.
           Tooltip(
@@ -328,10 +330,9 @@ class _UMGWidgetSubEditorState extends State<UMGWidgetSubEditor> {
           ),
           if (widget.onClose != null) ...[
             const SizedBox(width: 8),
-            GhostButton(onPressed: _handleClose, child: const Icon(LucideIcons.x, size: 14)),
-          ],
-        ],
-      ),
+            SubEditorToolbarClose(child: GhostButton(onPressed: _handleClose, child: const Icon(LucideIcons.x, size: 14))),
+          ]
+      ],
     );
   }
 

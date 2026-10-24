@@ -5,6 +5,7 @@ import 'package:lumina_editor_api/lumina_editor_api.dart' show ProjectSettingsSe
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';

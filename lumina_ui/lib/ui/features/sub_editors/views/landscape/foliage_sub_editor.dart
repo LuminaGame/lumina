@@ -5,6 +5,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/services/asset_picker_catalog.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/landscape_brush.dart';
@@ -164,13 +165,13 @@ class _LandscapeFoliageSubEditorState extends State<LandscapeFoliageSubEditor> {
   // --- Toolbar ---------------------------------------------------------------
 
   Widget _toolbar() {
-    return Container(
+    return SubEditorToolbar(
       height: 34,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       color: EditorColors.cardHeader,
-      child: Row(
-        children: [
-          Container(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.emerald.withValues(alpha: 0.2),
@@ -179,10 +180,10 @@ class _LandscapeFoliageSubEditorState extends State<LandscapeFoliageSubEditor> {
             child: const Text('LANDSCAPE',
                 style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.emerald)),
           ),
-          const SizedBox(width: 8),
-          Text(widget.assetName,
+const SizedBox(width: 8),
+Text(widget.assetName,
               style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
-          if (_vm.isDirty) ...[
+if (_vm.isDirty) ...[
             const SizedBox(width: 6),
             Container(
               width: 6,
@@ -190,6 +191,7 @@ class _LandscapeFoliageSubEditorState extends State<LandscapeFoliageSubEditor> {
               decoration: const BoxDecoration(color: Colors.amber, shape: BoxShape.circle),
             ),
           ],
+          ])),
           const Spacer(),
           GhostButton(
             key: const ValueKey('landscape_undo'),
@@ -209,10 +211,9 @@ class _LandscapeFoliageSubEditorState extends State<LandscapeFoliageSubEditor> {
           ),
           if (widget.onClose != null) ...[
             const SizedBox(width: 8),
-            GhostButton(onPressed: widget.onClose!, child: const Icon(LucideIcons.x, size: 14)),
-          ],
-        ],
-      ),
+            SubEditorToolbarClose(child: GhostButton(onPressed: widget.onClose!, child: const Icon(LucideIcons.x, size: 14))),
+          ]
+      ],
     );
   }
 

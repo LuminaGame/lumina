@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/pose_search_database_editor_view_model.dart';
@@ -89,19 +90,20 @@ class PoseSearchDatabaseSubEditorState extends State<PoseSearchDatabaseSubEditor
   Widget _toolbar() {
     final tx = _vm.transactions;
     final d = _vm.document;
-    return Container(
+    return SubEditorToolbar(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.card,
-      child: Row(
-        children: [
-          const OutlineBadge(child: Text('POSE SEARCH DATABASE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-          const SizedBox(width: 8),
-          Flexible(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const OutlineBadge(child: Text('POSE SEARCH DATABASE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+const SizedBox(width: 8),
+Flexible(
             child: Text('${widget.assetName}${_vm.isDirty ? ' *' : ''}',
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
           ),
+          ])),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
@@ -139,9 +141,8 @@ class PoseSearchDatabaseSubEditorState extends State<PoseSearchDatabaseSubEditor
             child: const Text('Save', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 8),
-          GhostButton(size: ButtonSize.small, onPressed: widget.onClose, child: const Icon(LucideIcons.x, size: 14)),
-        ],
-      ),
+          SubEditorToolbarClose(child: GhostButton(size: ButtonSize.small, onPressed: widget.onClose, child: const Icon(LucideIcons.x, size: 14)))
+      ],
     );
   }
 }

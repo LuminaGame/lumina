@@ -5,6 +5,7 @@ import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 import 'package:lumina_ui/ui/core/input/text_input_focus.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
@@ -181,19 +182,20 @@ class AnimBlueprintSubEditorState extends State<AnimBlueprintSubEditor> {
 
   Widget _toolbar() {
     final tx = _vm.transactions;
-    return Container(
+    return SubEditorToolbar(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.card,
-      child: Row(
-        children: [
-          const OutlineBadge(child: Text('ANIMATION BLUEPRINT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-          const SizedBox(width: 8),
-          Flexible(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const OutlineBadge(child: Text('ANIMATION BLUEPRINT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+const SizedBox(width: 8),
+Flexible(
             child: Text('${widget.assetName}${_vm.isDirty ? ' *' : ''}',
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
           ),
+          ])),
           const SizedBox(width: 8),
           Text('Target: ${AnimStatePoseEditor.shortName(_vm.document.targetMesh)}',
               style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
@@ -245,9 +247,8 @@ class AnimBlueprintSubEditorState extends State<AnimBlueprintSubEditor> {
             child: const Text('Save', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 8),
-          GhostButton(size: ButtonSize.small, onPressed: _close, child: const Icon(LucideIcons.x, size: 14)),
-        ],
-      ),
+          GhostButton(size: ButtonSize.small, onPressed: _close, child: const Icon(LucideIcons.x, size: 14))
+      ],
     );
   }
 

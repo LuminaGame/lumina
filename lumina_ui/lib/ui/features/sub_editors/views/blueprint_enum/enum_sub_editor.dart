@@ -1,6 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_enum_view_model.dart';
 
@@ -99,18 +100,19 @@ class BlueprintEnumSubEditorState extends State<BlueprintEnumSubEditor> {
 
   Widget _toolbar() {
     final tx = _vm.transactions;
-    return Container(
+    return SubEditorToolbar(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.card,
-      child: Row(
-        children: [
-          const OutlineBadge(child: Text('ENUMERATION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-          const SizedBox(width: 8),
-          Flexible(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const OutlineBadge(child: Text('ENUMERATION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+const SizedBox(width: 8),
+Flexible(
             child: Text('${_vm.name}${_vm.isDirty ? ' *' : ''}',
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: EditorColors.foreground), overflow: TextOverflow.ellipsis),
           ),
+          ])),
           const SizedBox(width: 8),
           Text('${_vm.values.length} value${_vm.values.length == 1 ? '' : 's'}', style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
           const Spacer(),
@@ -124,9 +126,8 @@ class BlueprintEnumSubEditorState extends State<BlueprintEnumSubEditor> {
             child: const Text('Save', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 8),
-          GhostButton(size: ButtonSize.small, onPressed: widget.onClose, child: const Icon(LucideIcons.x, size: 14)),
-        ],
-      ),
+          SubEditorToolbarClose(child: GhostButton(size: ButtonSize.small, onPressed: widget.onClose, child: const Icon(LucideIcons.x, size: 14)))
+      ],
     );
   }
 

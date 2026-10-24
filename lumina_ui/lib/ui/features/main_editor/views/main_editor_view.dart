@@ -8,6 +8,7 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/asset_type_style.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/typed_tab_bar.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/content_drawer.dart';
 import 'package:lumina_ui/ui/core/window/lumina_window.dart';
@@ -184,6 +185,7 @@ class _MainEditorViewState extends State<MainEditorView> {
   @override
   void dispose() {
     _window?.removeCloseGuard(_confirmWindowClose);
+    _tabBarActions.dispose();
     _lifecycle.dispose();
     if (viewModel.onLevelBlueprintSavePrompt == _promptLevelBlueprintSave) viewModel.onLevelBlueprintSavePrompt = null;
     if (widget.viewModel == null) {
@@ -295,6 +297,8 @@ class _MainEditorViewState extends State<MainEditorView> {
                 onSelect: viewModel.selectTab,
                 onClose: _requestCloseTab,
                 onAdd: () => viewModel.commands.execute('file.newAsset', context),
+                // The active sub-editor's toolbar, at the bar's right end.
+                trailing: TabBarActions(registry: _tabBarActions, tabId: viewModel.currentTab.id),
               ),
 
               // 3. The level viewport's toolbar, only while the level tab is
@@ -361,6 +365,9 @@ class _MainEditorViewState extends State<MainEditorView> {
   /// dock moves between its pane and the offstage parking spot.
   final GlobalKey _rightDockKey = GlobalKey(debugLabel: 'right_dock');
 
+  /// What each sub-editor tab shows at the tab bar's right end.
+  final TabBarActionsRegistry _tabBarActions = TabBarActionsRegistry();
+
   /// The document tabs (the level editor, then one per sub-editor) with the
   /// plugin right dock beside them. The dock is one subtree for every tab:
   /// it shows every open panel on the level tab and the "Always" ones on the
@@ -414,7 +421,10 @@ class _MainEditorViewState extends State<MainEditorView> {
         for (int i = 1; i < viewModel.openTabs.length; i++)
           RepaintBoundary(
             key: viewModel.mcpServer.subEditorBoundaryKeyFor(viewModel.openTabs[i].id),
-            child: SubEditorWorkspaceWidget(
+            child: TabBarActionsScope(
+              registry: _tabBarActions,
+              tabId: viewModel.openTabs[i].id,
+              child: SubEditorWorkspaceWidget(
               key: ValueKey(viewModel.openTabs[i].id),
               // The asset's name, never its `.lmas` file name: sub-editors show it in
               // their headers and append the extension themselves where they need a path.
@@ -424,6 +434,7 @@ class _MainEditorViewState extends State<MainEditorView> {
               editorViewModel: viewModel,
               tabId: viewModel.openTabs[i].id,
               onClose: () => _requestCloseTab(i),
+            ),
             ),
           ),
       ],

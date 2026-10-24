@@ -5,6 +5,7 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
@@ -194,24 +195,24 @@ class _BuildManagerSubEditorState extends State<BuildManagerSubEditor> {
   // --- toolbar ------------------------------------------------------------
 
   Widget _toolbar() {
-    return Container(
+    return SubEditorToolbar(
       height: 36,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.cardHeader,
-      child: Row(
-        children: [
-          const Icon(LucideIcons.hammer, size: 16, color: EditorColors.primary),
-          const SizedBox(width: 8),
-          const Text('Project Build & Cooking Manager',
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(LucideIcons.hammer, size: 16, color: EditorColors.primary),
+const SizedBox(width: 8),
+const Text('Project Build & Cooking Manager',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
+          ])),
           const SizedBox(width: 8),
           if (_vm.flutterVersion != null)
             OutlineBadge(child: Text(_vm.flutterVersion!, style: const TextStyle(fontSize: 8))),
           const Spacer(),
           if (widget.onClose != null)
-            GhostButton(onPressed: widget.onClose!, child: const Icon(LucideIcons.x, size: 14)),
-        ],
-      ),
+            SubEditorToolbarClose(child: GhostButton(onPressed: widget.onClose!, child: const Icon(LucideIcons.x, size: 14)))
+      ],
     );
   }
 

@@ -162,8 +162,15 @@ Alt editör kabuğu Content Browser'ı çalışma alanının altında bir ada ol
 çekmeceyi çalışma alanının altının üzerinde yüzen bir ada olarak açar. Eklentilerin sağ dock'u da bir adadır; bir
 eklentinin sekmesi ya da varlık editörü host tarafından zeminde tek bir adaya yerleştirilir.
 
-4. aşamada olmayanlar: alt editörler araç çubuğu satırlarını korur (artboard'larda eylemler sekme barının sağındadır);
-eklentiler `lumina_editor_api` üzerinden henüz kendi ada bileşenlerini almaz (host panellerini ve sekmelerini çerçeveler).
+**Sekme barında araç çubuğu.** Bir alt editörün araç çubuğu bir `SubEditorToolbar`'dır
+(`lib/ui/core/widgets/tab_bar_actions.dart`). Bir çalışma alanı sekmesinde (`MainEditorView`'ın her sekmenin çevresine
+koyduğu `TabBarActionsScope`) satır çizmez: sekmesi etkinken kontrolleri sekme barının sağ ucuna gider
+(`EditorTypedTabBar.trailing`, `TabBarActionsRegistry` üzerinde `TabBarActions`), böylece editörün adaları sekmelerin
+hemen altında başlar. Sekme asset'i adlandırıp kapattığı için `SubEditorToolbarTitle` (tür rozeti ve asset adı) ile
+`SubEditorToolbarClose` çocukları orada yer almaz ve `Spacer` yer kaplamaz. Eylemler barın en fazla %60'ını
+(`trailingShare`) alır, daha fazlası gerekirse sağdan kayar; sekmeler kalanını alır. Kendi başına (modal içindeki ya da
+widget testindeki bir alt editör) araç çubuğu eskisi gibi editörün 38 px'lik satırıdır. Seviye sekmesi araç çubuğu
+satırını korur (Play, Blueprints, eklentilerin `EditorSlot`'ları).
 
 ## Doğrulama
 

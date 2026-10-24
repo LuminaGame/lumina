@@ -8,6 +8,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/audio_editor_state.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/audio_wav_decoder_service.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
@@ -134,13 +135,13 @@ class _AudioSubEditorState extends State<AudioSubEditor> with SingleTickerProvid
   // --- toolbar -------------------------------------------------------------
 
   Widget _toolbar(AudioEditorViewModel vm) {
-    return Container(
+    return SubEditorToolbar(
       height: 36,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.cardHeader,
-      child: Row(
-        children: [
-          Container(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.blue.withValues(alpha: 0.15),
@@ -148,13 +149,14 @@ class _AudioSubEditorState extends State<AudioSubEditor> with SingleTickerProvid
             ),
             child: const Text('AUDIO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blue)),
           ),
-          const SizedBox(width: 8),
-          Text(widget.assetName,
+const SizedBox(width: 8),
+Text(widget.assetName,
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
-          if (vm.isDirty) ...[
+if (vm.isDirty) ...[
             const SizedBox(width: 6),
             const Text('*', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: EditorColors.primary)),
           ],
+          ])),
           const Spacer(),
           OutlineButton(
             key: const ValueKey('audio_play'),
@@ -185,9 +187,8 @@ class _AudioSubEditorState extends State<AudioSubEditor> with SingleTickerProvid
               widget.onClose?.call();
             },
             child: const Text('Save', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+          )
+      ],
     );
   }
 

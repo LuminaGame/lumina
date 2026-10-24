@@ -6,25 +6,26 @@ mixin _BlueprintSubEditorLayout on _BlueprintSubEditorStateBase {
 
   Widget _toolbar(bool isDirty) {
     final tx = _viewModel.transactions;
-    return Container(
+    return SubEditorToolbar(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.card,
-      child: Row(
-        children: [
-          OutlineBadge(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            OutlineBadge(
             key: const ValueKey('bp_mode_badge'),
             child: Text(_isLevel ? 'LEVEL BLUEPRINT · ${_viewModel.displayName}' : 'BLUEPRINT ACTOR',
                 style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(width: 8),
-          Flexible(
+const SizedBox(width: 8),
+Flexible(
             child: Text(
               '${_isLevel ? '${_viewModel.displayName} (Level Blueprint)' : widget.assetName}${isDirty ? ' *' : ''}',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: EditorColors.foreground),
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          ])),
           const SizedBox(width: 8),
           Text('Parent: ${_viewModel.document.parentClass}',
               style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
@@ -65,13 +66,12 @@ mixin _BlueprintSubEditorLayout on _BlueprintSubEditorStateBase {
             child: const Text('Save', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 8),
-          GhostButton(
+          SubEditorToolbarClose(child: GhostButton(
             size: ButtonSize.small,
             onPressed: _handleClose,
             child: const Icon(LucideIcons.x, size: 14),
-          ),
-        ],
-      ),
+          ))
+      ],
     );
   }
 

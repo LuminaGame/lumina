@@ -15,11 +15,8 @@ class ThemeTreePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: colorScheme.card,
-        border: Border(right: BorderSide(color: colorScheme.border)),
-      ),
+    // On its island: no fill or edge of its own.
+    return SizedBox.expand(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

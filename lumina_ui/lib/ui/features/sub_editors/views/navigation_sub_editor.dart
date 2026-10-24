@@ -7,6 +7,7 @@ import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/navigation_editor_state.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
@@ -181,13 +182,13 @@ class _NavigationSubEditorState extends State<NavigationSubEditor> {
   // ---------------------------------------------------------------- toolbar
 
   Widget _toolbar(NavigationEditorViewModel? vm) {
-    return Container(
+    return SubEditorToolbar(
       height: 32,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       color: EditorColors.cardHeader,
-      child: Row(
-        children: [
-          Container(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.green.withValues(alpha: 0.2),
@@ -195,12 +196,12 @@ class _NavigationSubEditorState extends State<NavigationSubEditor> {
             ),
             child: const Text('NAVIGATION', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.green)),
           ),
-          const SizedBox(width: 8),
-          Text(
+const SizedBox(width: 8),
+Text(
             vm != null ? '${vm.editor.activeLevelName} — Navigation' : widget.assetName,
             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground),
           ),
-          if (vm != null && vm.isDirty) ...[
+if (vm != null && vm.isDirty) ...[
             const SizedBox(width: 6),
             Container(
               key: const ValueKey('nav_dirty_indicator'),
@@ -209,6 +210,7 @@ class _NavigationSubEditorState extends State<NavigationSubEditor> {
               decoration: const BoxDecoration(color: EditorColors.primary, shape: BoxShape.circle),
             ),
           ],
+          ])),
           const SizedBox(width: 10),
           const OutlineBadge(
             child: Text(NavigationEditorViewModel.backendLabel, style: TextStyle(fontSize: 8)),
@@ -229,10 +231,9 @@ class _NavigationSubEditorState extends State<NavigationSubEditor> {
           ],
           if (widget.onClose != null) ...[
             const SizedBox(width: 8),
-            GhostButton(onPressed: _handleClose, child: const Icon(LucideIcons.x, size: 14)),
-          ],
-        ],
-      ),
+            SubEditorToolbarClose(child: GhostButton(onPressed: _handleClose, child: const Icon(LucideIcons.x, size: 14))),
+          ]
+      ],
     );
   }
 

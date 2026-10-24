@@ -41,7 +41,15 @@ class EditorTypedTabBar extends StatelessWidget {
     required this.onClose,
     this.onAdd,
     this.height = barHeight,
+    this.trailing,
   });
+
+  /// The active tab's actions at the bar's right end (its editor's toolbar),
+  /// given at most [trailingShare] of the bar; the tabs take the rest.
+  final Widget? trailing;
+
+  /// The share of the bar the [trailing] actions may take.
+  static const double trailingShare = 0.6;
 
   final List<EditorTypedTab> tabs;
   final int activeIndex;
@@ -75,6 +83,19 @@ class EditorTypedTabBar extends StatelessWidget {
       ),
       padding: const EdgeInsets.only(left: 8),
       child: LayoutBuilder(
+        builder: (context, bar) => Row(
+          children: [
+            Expanded(child: _tabs()),
+            if (trailing != null)
+              ConstrainedBox(constraints: BoxConstraints(maxWidth: bar.maxWidth * trailingShare), child: trailing!),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tabs() {
+    return LayoutBuilder(
         builder: (context, constraints) {
           final available = constraints.maxWidth - trailingWidth;
           var visible = (available / tabWidth).floor().clamp(1, tabs.length);
@@ -115,7 +136,6 @@ class EditorTypedTabBar extends StatelessWidget {
             ],
           );
         },
-      ),
     );
   }
 

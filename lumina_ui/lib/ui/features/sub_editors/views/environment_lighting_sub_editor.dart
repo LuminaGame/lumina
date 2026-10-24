@@ -10,6 +10,7 @@ import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/property_editors/color_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/environment_actor_properties.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/solar_math.dart';
@@ -158,13 +159,13 @@ class _EnvironmentLightingSubEditorState extends State<EnvironmentLightingSubEdi
   }
 
   Widget _toolbar(EnvironmentLightingViewModel? vm) {
-    return Container(
+    return SubEditorToolbar(
       height: 32,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       color: EditorColors.cardHeader,
-      child: Row(
-        children: [
-          Container(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.amber.withValues(alpha: 0.2),
@@ -172,12 +173,12 @@ class _EnvironmentLightingSubEditorState extends State<EnvironmentLightingSubEdi
             ),
             child: const Text('ENVIRONMENT', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.amber)),
           ),
-          const SizedBox(width: 8),
-          Text(
+const SizedBox(width: 8),
+Text(
             vm != null ? '${vm.editor.activeLevelName} — Atmosphere Mixer' : widget.assetName,
             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground),
           ),
-          if (vm != null && vm.isDirty) ...[
+if (vm != null && vm.isDirty) ...[
             const SizedBox(width: 6),
             Container(
               key: const ValueKey('env_dirty_indicator'),
@@ -186,6 +187,7 @@ class _EnvironmentLightingSubEditorState extends State<EnvironmentLightingSubEdi
               decoration: const BoxDecoration(color: EditorColors.primary, shape: BoxShape.circle),
             ),
           ],
+          ])),
           const SizedBox(width: 10),
           if (vm != null)
             Text(
@@ -212,13 +214,12 @@ class _EnvironmentLightingSubEditorState extends State<EnvironmentLightingSubEdi
           ],
           if (widget.onClose != null) ...[
             const SizedBox(width: 8),
-            GhostButton(
+            SubEditorToolbarClose(child: GhostButton(
               onPressed: _handleClose,
               child: const Icon(LucideIcons.x, size: 14),
-            ),
-          ],
-        ],
-      ),
+            )),
+          ]
+      ],
     );
   }
 

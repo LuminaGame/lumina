@@ -113,20 +113,21 @@ mixin _StaticMeshSubEditorToolbar on _StaticMeshSubEditorStateBase {
   }
 
   Widget _buildToolbar(bool isDirty) {
-    return Container(
+    return SubEditorToolbar(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.card,
-      child: Row(
-        children: [
-          const OutlineBadge(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const OutlineBadge(
             child: Text('STATIC MESH', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.cyan)),
           ),
-          const SizedBox(width: 8),
-          Text(
+const SizedBox(width: 8),
+Text(
             '${widget.assetName}${isDirty ? ' *' : ''}',
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: EditorColors.foreground),
           ),
+          ])),
           const SizedBox(width: 12),
 
           // Forced LOD Selector
@@ -198,13 +199,12 @@ mixin _StaticMeshSubEditorToolbar on _StaticMeshSubEditorStateBase {
           const SizedBox(width: 8),
 
           // Close Button
-          GhostButton(
+          SubEditorToolbarClose(child: GhostButton(
             size: ButtonSize.small,
             onPressed: widget.onClose,
             child: const Icon(LucideIcons.x, size: 14),
-          ),
-        ],
-      ),
+          ))
+      ],
     );
   }
 }

@@ -5,16 +5,17 @@ part of '../../project_settings_sub_editor.dart';
 mixin _ProjectSettingsLayout on _ProjectSettingsSubEditorStateBase {
 
   Widget _buildHeader() {
-    return Container(
+    return SubEditorToolbar(
       height: 36,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.cardHeader,
-      child: Row(
-        children: [
-          const LuminaMark(size: 18),
-          const SizedBox(width: 8),
-          const Text('Project Settings',
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const LuminaMark(size: 18),
+const SizedBox(width: 8),
+const Text('Project Settings',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
+          ])),
           const SizedBox(width: 16),
           // The field sizes itself: a fixed-height box clipped its text.
           SizedBox(
@@ -32,9 +33,8 @@ mixin _ProjectSettingsLayout on _ProjectSettingsSubEditorStateBase {
           ),
           const Spacer(),
           if (widget.onClose != null)
-            GhostButton(onPressed: widget.onClose!, child: const Icon(LucideIcons.x, size: 14)),
-        ],
-      ),
+            SubEditorToolbarClose(child: GhostButton(onPressed: widget.onClose!, child: const Icon(LucideIcons.x, size: 14)))
+      ],
     );
   }
 

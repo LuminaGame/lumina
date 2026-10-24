@@ -12,6 +12,7 @@ import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/vector_row.dart';
 import 'package:lumina_ui/ui/core/theme/asset_type_style.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart' show AuthoringRotation, TransformGizmoModel;
 import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';
@@ -123,21 +124,19 @@ class GarmentSubEditorState extends _GarmentEditorBase with _GarmentDetailsPanel
           : GhostButton(key: ValueKey(key), density: ButtonDensity.iconDense, onPressed: onPressed, child: Icon(icon, size: 13)),
     );
     final moving = vm.pickMode == GarmentPickMode.none;
-    return Container(
+    return SubEditorToolbar(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: const BoxDecoration(
-        color: EditorColors.cardHeader,
-        border: Border(bottom: BorderSide(color: EditorColors.border)),
-      ),
-      child: Row(
-        children: [
-          Icon(style.icon, size: 15, color: style.color),
-          const SizedBox(width: 8),
-          Text(
+      color: EditorColors.cardHeader,
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(style.icon, size: 15, color: style.color),
+const SizedBox(width: 8),
+Text(
             widget.assetName + (vm.isDirty ? ' *' : ''),
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: EditorColors.foreground),
           ),
+          ])),
           const SizedBox(width: 8),
           Text(style.displayName, style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
           const SizedBox(width: 16),
@@ -180,10 +179,9 @@ class GarmentSubEditorState extends _GarmentEditorBase with _GarmentDetailsPanel
           ),
           if (widget.onClose != null) ...[
             const SizedBox(width: 8),
-            GhostButton(density: ButtonDensity.iconDense, onPressed: widget.onClose, child: const Icon(LucideIcons.x, size: 14)),
-          ],
-        ],
-      ),
+            SubEditorToolbarClose(child: GhostButton(density: ButtonDensity.iconDense, onPressed: widget.onClose, child: const Icon(LucideIcons.x, size: 14))),
+          ]
+      ],
     );
   }
 

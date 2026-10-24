@@ -3,6 +3,7 @@ import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/glsl_editor_widget.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/graph_view.dart';
@@ -139,23 +140,24 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
       child: Column(
         children: [
           // Sub-Editor Workspace Header Toolbar
-          Container(
-            height: 38,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+          SubEditorToolbar(
             color: EditorColors.cardHeader,
-            child: Row(
-              children: [
-                const SecondaryBadge(
-                  child: Text('FILAMAT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${widget.assetName}${vm.isDirty ? ' *' : ''}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: EditorColors.foreground,
-                  ),
+            children: [
+                SubEditorToolbarTitle(
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const SecondaryBadge(
+                      child: Text('FILAMAT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${widget.assetName}${vm.isDirty ? ' *' : ''}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: EditorColors.foreground,
+                      ),
+                    ),
+                  ]),
                 ),
                 const SizedBox(width: 12),
 
@@ -204,12 +206,13 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
                 const SizedBox(width: 8),
 
                 // Close Button
-                GhostButton(
-                  onPressed: _handleClose,
-                  child: const Icon(LucideIcons.x, size: 14),
+                SubEditorToolbarClose(
+                  child: GhostButton(
+                    onPressed: _handleClose,
+                    child: const Icon(LucideIcons.x, size: 14),
+                  ),
                 ),
               ],
-            ),
           ),
           // The workspace: islands on the ground.
           Expanded(

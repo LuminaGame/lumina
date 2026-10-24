@@ -3,6 +3,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3, Vector4;
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/tab_bar_actions.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
@@ -128,13 +129,13 @@ class _ParticleSubEditorState extends _ParticleSubEditorStateBase
   // ---------------------------------------------------------------- toolbar
 
   Widget _toolbar() {
-    return Container(
+    return SubEditorToolbar(
       height: 36,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       color: EditorColors.cardHeader,
-      child: Row(
-        children: [
-          Container(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.red.withValues(alpha: 0.15),
@@ -143,10 +144,10 @@ class _ParticleSubEditorState extends _ParticleSubEditorStateBase
             child: const Text('PARTICLE VFX',
                 style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.red)),
           ),
-          const SizedBox(width: 8),
-          Text(widget.assetName,
+const SizedBox(width: 8),
+Text(widget.assetName,
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
-          if (vm.isDirty) ...[
+if (vm.isDirty) ...[
             const SizedBox(width: 6),
             Container(
               key: const ValueKey('particle_dirty_indicator'),
@@ -155,6 +156,7 @@ class _ParticleSubEditorState extends _ParticleSubEditorStateBase
               decoration: const BoxDecoration(color: EditorColors.primary, shape: BoxShape.circle),
             ),
           ],
+          ])),
           const SizedBox(width: 10),
           const OutlineBadge(
             child: Text(ParticleEditorViewModel.backendLabel, style: TextStyle(fontSize: 8)),
@@ -173,10 +175,9 @@ class _ParticleSubEditorState extends _ParticleSubEditorStateBase
           ),
           if (widget.onClose != null) ...[
             const SizedBox(width: 8),
-            GhostButton(onPressed: widget.onClose, child: const Icon(LucideIcons.x, size: 14)),
-          ],
-        ],
-      ),
+            SubEditorToolbarClose(child: GhostButton(onPressed: widget.onClose, child: const Icon(LucideIcons.x, size: 14))),
+          ]
+      ],
     );
   }
 

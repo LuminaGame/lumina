@@ -8,13 +8,13 @@ mixin _PhysicsAssetToolbarWorkspace on _PhysicsAssetSubEditorStateBase {
 
   Widget _buildToolbar() {
     final errors = _viewModel.validationErrors;
-    return Container(
+    return SubEditorToolbar(
       height: 34,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       color: EditorColors.cardHeader,
-      child: Row(
-        children: [
-          Container(
+      children: [
+          SubEditorToolbarTitle(child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Colors.purple.withValues(alpha: 0.2),
@@ -22,14 +22,15 @@ mixin _PhysicsAssetToolbarWorkspace on _PhysicsAssetSubEditorStateBase {
             ),
             child: const Text('PHYSICS', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.purple)),
           ),
-          const SizedBox(width: 8),
-          Text(widget.assetName,
+const SizedBox(width: 8),
+Text(widget.assetName,
               style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
-          if (_viewModel.isDirty)
+if (_viewModel.isDirty)
             const Padding(
               padding: EdgeInsets.only(left: 4),
               child: Text('*', style: TextStyle(fontSize: 12, color: Colors.orange)),
             ),
+          ])),
           const SizedBox(width: 12),
           SizedBox(
             width: 170,
@@ -76,14 +77,13 @@ mixin _PhysicsAssetToolbarWorkspace on _PhysicsAssetSubEditorStateBase {
           ),
           if (widget.onClose != null) ...[
             const SizedBox(width: 6),
-            GhostButton(
+            SubEditorToolbarClose(child: GhostButton(
               key: const ValueKey('physics_close'),
               onPressed: widget.onClose!,
               child: const Icon(LucideIcons.x, size: 14),
-            ),
-          ],
-        ],
-      ),
+            )),
+          ]
+      ],
     );
   }
 
