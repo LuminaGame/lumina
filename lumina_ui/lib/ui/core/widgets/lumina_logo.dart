@@ -1,3 +1,4 @@
+// design-token-exempt: the Prism L brand blues are the logo, not the theme
 import 'package:flutter/widgets.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

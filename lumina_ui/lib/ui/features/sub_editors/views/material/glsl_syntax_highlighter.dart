@@ -1,3 +1,4 @@
+// design-token-exempt: the GLSL syntax palette follows the code editor convention, independent of the editor theme
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// What a stretch of `.mat` source is, for colouring.

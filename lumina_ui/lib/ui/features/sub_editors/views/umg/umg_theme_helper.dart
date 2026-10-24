@@ -1,3 +1,4 @@
+// design-token-exempt: the fallbacks are a UI Theme document's defaults (the game's UI), not editor chrome
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -121,12 +122,12 @@ class UmgThemeHelper {
           fg = theme.colorOf('secondaryForeground');
           break;
         case 'outline':
-          bg = const Color(0x00000000);
+          bg = Colors.transparent;
           fg = theme.colorOf('foreground');
           border = Border.all(color: theme.colorOf('border'));
           break;
         case 'ghost':
-          bg = const Color(0x00000000);
+          bg = Colors.transparent;
           fg = theme.colorOf('foreground');
           break;
         case 'destructive':

@@ -1,3 +1,4 @@
+// design-token-exempt: overlay hues drawn in the 3D viewport over the mesh (ghost, seam, IK target, pole, root path), chosen apart from the chrome palette so they read over any model
 part of '../animation_sub_editor.dart';
 
 /// The Pose tab of an authored sequence and its viewport overlays: onion

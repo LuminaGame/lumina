@@ -48,6 +48,9 @@ import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/outliner_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/viewport_widget.dart';
 import 'package:lumina_ui/ui/core/widgets/lumina_logo.dart';
+import 'package:lumina_ui/ui/core/widgets/typed_tab_bar.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/static_mesh_sub_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/skeletal_mesh/skeletal_mesh_sub_editor.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
 import 'package:lumina_ui/ui/features/launcher/views/launcher_view.dart';
 import 'package:lumina_ui/ui/features/launcher/views/lumina_splash_screen.dart';
@@ -56,22 +59,27 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 /// The prototype's retired predecessors. None of these may survive anywhere in
 /// the editor's chrome.
 const Map<String, int> retiredPalette = <String, int>{
-  'old background #0F0F12': 0x0F0F12,
-  'old panel #16161B': 0x16161B,
+  // The pre-prototype #0F0F12 and #16161B are left out: they sit within two
+  // steps of the Aurora ramp (#0F1013, #15171B), so antialiased edges
+  // between Aurora surfaces land on them and they no longer tell anything.
   'old border #282832': 0x282832,
   'old accent #FF8C00': 0xFF8C00,
+  // The lifted grey ramp and orange that Aurora replaced.
+  'grey ramp background #1C1C1C': 0x1C1C1C,
+  'grey ramp card #373737': 0x373737,
+  'grey ramp header #2E2E2E': 0x2E2E2E,
+  'grey ramp primary #FB7C01': 0xFB7C01,
 };
 
-/// The tokens that are actually painted as flat fills: the
-/// grey ramp (which replaced the prototype's near-black surfaces) and the
-/// prototype's orange.
+/// The tokens that are actually painted as flat fills: the Aurora ramp and
+/// its amber.
 Map<String, int> paintedTokens() => <String, int>{
       'background': EditorColors.background.toARGB32() & 0xFFFFFF,
       'sidebar (tab strips)': EditorColors.sidebar.toARGB32() & 0xFFFFFF,
       'card': EditorColors.card.toARGB32() & 0xFFFFFF,
       'panel header': EditorColors.cardHeader.toARGB32() & 0xFFFFFF,
       'rail': EditorColors.rail.toARGB32() & 0xFFFFFF,
-      '--primary oklch(0.72 0.185 52)': EditorColors.primary.toARGB32() & 0xFFFFFF,
+      'primary (amber)': EditorColors.primary.toARGB32() & 0xFFFFFF,
     };
 
 /// An exact-colour histogram of [png], skipping every pixel inside [exclude].
@@ -152,6 +160,23 @@ List<String> darkSurfaces(Map<int, int> hist, {int minArea = 2000}) {
       .toList();
 }
 
+/// Deletes a smoke's temp project. On Windows a level save that the view
+/// model's dispose started may still hold a file in it, so the delete waits
+/// and retries for a few seconds instead of failing a passed scenario.
+Future<void> deleteTempProject(Directory dir) async {
+  for (int attempt = 0; attempt < 20; attempt++) {
+    if (!dir.existsSync()) return;
+    try {
+      dir.deleteSync(recursive: true);
+      return;
+    } on FileSystemException {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+  }
+  // ignore: avoid_print
+  print('The temp project ${dir.path} is still locked; left for the OS to clean up.');
+}
+
 String hex(int rgb) => '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
 
 Future<void> settle(WidgetTester tester, {int frames = 60}) async {
@@ -167,7 +192,7 @@ void main() {
       IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-      'Design System Smoke: the main view is painted in the prototype\'s palette',
+      'Design System Smoke: the main view is painted in the Aurora palette',
       (WidgetTester tester) async {
     // --- a real project on disk, with real assets --------------------------
     final Directory tempDir =
@@ -177,9 +202,7 @@ void main() {
     Directory('${pDir.path}/contents/meshes').createSync(recursive: true);
     Directory('${pDir.path}/contents/levels').createSync(recursive: true);
     File('${pDir.path}/DesignSystemSmoke.lmproject').writeAsStringSync('{}');
-    addTearDown(() {
-      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-    });
+    addTearDown(() => deleteTempProject(tempDir));
 
     const List<String> assetRels = <String>[
       'Props/AC_units/roof_aircon_unit_150x150_a.glb',
@@ -307,9 +330,8 @@ void main() {
           '(expected ${hex(EditorColors.rail.toARGB32() & 0xFFFFFF)})');
     }
 
-    // Every named surface must be hueless, the way `oklch(L 0 0)` is. The
-    // retired neutrals were tinted blue by 3–10/255 per channel, so any
-    // non-zero chroma here means they are back.
+    // Every named surface carries at most the Obsidian cast (blue a few
+    // steps over red, at most 8/255); a real hue means another palette is back.
     final Map<String, int> namedSurfaces = <String, int>{
       'World Outliner header': header.rgb,
       if (rail != null) 'Content Browser sources rail': rail.rgb,
@@ -318,7 +340,7 @@ void main() {
     namedSurfaces.forEach((String name, int rgb) {
       final int c = chromaOf(rgb);
       report.writeln('  chroma of $name ${hex(rgb)}: $c');
-      if (c != 0) tintedSurfaces.add('$name ${hex(rgb)} chroma=$c');
+      if (c > 8) tintedSurfaces.add('$name ${hex(rgb)} chroma=$c');
     });
 
     // ignore: avoid_print
@@ -326,7 +348,7 @@ void main() {
 
     // --- evidence ----------------------------------------------------------
     SmokeArtifacts.saveScreenshot(
-      'Design System Smoke: the main view is painted in the prototype\'s palette',
+      'Design System Smoke: the main view is painted in the Aurora palette',
       png,
       usedAssets: usedAssets,
     );
@@ -340,7 +362,7 @@ void main() {
     await settle(tester, frames: 6);
     await rec.hold(const Duration(milliseconds: 2500));
     rec.save(
-      'Design System Smoke: the main view is painted in the prototype\'s palette',
+      'Design System Smoke: the main view is painted in the Aurora palette',
       usedAssets: usedAssets,
     );
 
@@ -352,14 +374,14 @@ void main() {
         reason: 'the retired palette is still on screen:\n'
             '${survivors.join('\n')}\n$report');
     expect(tintedSurfaces, isEmpty,
-        reason: 'the prototype\'s neutrals carry no hue at all:\n'
+        reason: 'the Aurora neutrals carry only the Obsidian cast:\n'
             '${tintedSurfaces.join('\n')}\n$report');
     expect(header.rgb, EditorColors.cardHeader.toARGB32() & 0xFFFFFF,
         reason: 'the World Outliner header strip must be EditorColors.cardHeader\n$report');
   }, timeout: const Timeout(Duration(minutes: 8)));
 
-  testWidgets('Design System Smoke: custom chrome and lifted surfaces', (WidgetTester tester) async {
-    const String testName = 'Design System Smoke: custom chrome and lifted surfaces';
+  testWidgets('Design System Smoke: custom chrome and Aurora surfaces', (WidgetTester tester) async {
+    const String testName = 'Design System Smoke: custom chrome and Aurora surfaces';
     // --- a real project on disk, with real assets --------------------------
     final Directory tempDir = Directory.systemTemp.createTempSync('design_system_chrome_smoke_');
     final Directory pDir = Directory('${tempDir.path}/ChromeSmoke')..createSync(recursive: true);
@@ -367,9 +389,7 @@ void main() {
     Directory('${pDir.path}/contents/levels').createSync(recursive: true);
     File('${pDir.path}/ChromeSmoke.lmproject').writeAsStringSync('{}');
     final Directory configDir = Directory('${tempDir.path}/config')..createSync();
-    addTearDown(() {
-      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-    });
+    addTearDown(() => deleteTempProject(tempDir));
     const List<String> assetRels = <String>[
       'Props/Access_cards/access_card_blue.glb',
       'Props/Barrels/fuel_barrel_red.glb',
@@ -447,24 +467,23 @@ void main() {
     // --- 1. menu row with our own window controls -------------------------
     final Uint8List full = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
     final Rect menuRow = tester.getRect(find.byType(MenuBarWidget).first);
-    final Rect menuBar = Rect.fromLTWH(menuRow.left, menuRow.top, menuRow.width, 30);
+    final Rect menuBar = Rect.fromLTWH(menuRow.left, menuRow.top, menuRow.width, MenuBarWidget.height);
     for (final String k in <String>['window_control_minimize', 'window_control_maximize', 'window_control_fullscreen', 'window_control_close']) {
       expect(find.byKey(ValueKey<String>(k)), findsOneWidget, reason: '$k in the menu row');
     }
     final Rect close = tester.getRect(find.byKey(const ValueKey<String>('window_control_close')));
     report.writeln('  close button right edge ${close.right.toStringAsFixed(0)} of menu row ${menuBar.right.toStringAsFixed(0)}');
-    measure('menu row (title bar)', full, Rect.fromLTWH(menuBar.left + 700, menuBar.top + 4, 200, 22), EditorColors.cardHeader);
+    measure('menu row (title bar)', full, Rect.fromLTWH(menuBar.left + 560, menuBar.top + 4, 80, 40), EditorColors.rail);
     SmokeArtifacts.saveScreenshot('$testName — menu row with window controls', crop(full, menuBar), usedAssets: usedAssets);
 
-    // --- 2. the tab strip: the active tab has no bottom edge ---------------
+    // --- 2. the typed tab strip: the active tab on the island fill with
+    // the level type's underline; the strip itself on the rail.
     final Rect tab = tester.getRect(find.byKey(const ValueKey<String>('workspace_tab_0')));
-    final Rect strip = Rect.fromLTWH(menuBar.left, tab.top - 4, menuBar.width, 28);
-    measure('workspace tab strip', full, Rect.fromLTWH(tab.right + 20, strip.top + 2, 300, strip.height - 6), EditorColors.sidebar);
-    measure('active workspace tab fill', full, Rect.fromLTWH(tab.left + 2, tab.top + 3, tab.width - 4, tab.height - 4), EditorColors.cardHeader);
-    // The last pixel row of the active tab is the toolbar's colour, not a
-    // border line; under an inactive stretch of the strip the line is there.
-    measure('bottom row under the active tab', full, Rect.fromLTWH(tab.left + 3, tab.bottom - 1, tab.width - 6, 1), EditorColors.cardHeader);
-    SmokeArtifacts.saveScreenshot('$testName — tab strip, active tab without bottom edge',
+    final Rect strip = tester.getRect(find.byType(EditorTypedTabBar));
+    measure('workspace tab strip', full, Rect.fromLTWH(tab.right + 60, strip.top + 2, 300, strip.height - 6), EditorColors.rail);
+    measure('active workspace tab fill', full, Rect.fromLTWH(tab.left + 2, tab.top + 3, tab.width - 4, tab.height - 6), EditorColors.sidebar);
+    measure('underline under the active tab', full, Rect.fromLTWH(tab.left + 3, tab.bottom - 2, tab.width - 6, 2), EditorColors.assetTypeLevel);
+    SmokeArtifacts.saveScreenshot('$testName — typed tab strip, the level tab underlined',
         crop(full, Rect.fromLTWH(strip.left, strip.top - 2, 700, strip.height + 40)), usedAssets: usedAssets);
 
     // --- 3. the lifted panels ----------------------------------------------
@@ -562,9 +581,9 @@ void main() {
     Directory('${pDir.path}/contents/levels').createSync(recursive: true);
     File('${pDir.path}/ThemeSmoke.lmproject').writeAsStringSync('{}');
     final Directory configDir = Directory('${tempDir.path}/config')..createSync();
-    addTearDown(() {
+    addTearDown(() async {
       EditorTheme.apply(EditorThemeData.luminaDark);
-      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+      await deleteTempProject(tempDir);
     });
     const List<String> assetRels = <String>[
       'Props/Barrels/fuel_barrel_red.glb',
@@ -637,19 +656,22 @@ void main() {
           png, Rect.fromLTWH(outliner.left + 2, outliner.top + 2, outliner.width - 4, EditorDensity.panelHeaderHeight - 4), dpr: dpr);
       final Rect menuRow = tester.getRect(find.byType(MenuBarWidget).first);
       final ({int rgb, int count, int total}) title = dominantColorIn(
-          png, Rect.fromLTWH(menuRow.left + 700, menuRow.top + 4, 200, 22), dpr: dpr);
+          png, Rect.fromLTWH(tester.getRect(find.byKey(const ValueKey<String>('menu_bar_command_field'))).left - 20, menuRow.top + 4, 12, 40), dpr: dpr);
       final Rect tab = tester.getRect(find.byKey(const ValueKey<String>('workspace_tab_0')));
       final ({int rgb, int count, int total}) tabFill = dominantColorIn(
-          png, Rect.fromLTWH(tab.left + 3, tab.top + 4, tab.width - 6, tab.height - 6), dpr: dpr);
+          png, Rect.fromLTWH(tab.left + 3, tab.top + 4, tab.width - 6, tab.height - 8), dpr: dpr);
       final int wantBody = theme.color('background').toARGB32() & 0xFFFFFF;
       final int wantHeader = theme.color('cardHeader').toARGB32() & 0xFFFFFF;
       report.writeln('  ${theme.name}: outliner body ${hex(body.rgb)} (${body.count}/${body.total}, expected ${hex(wantBody)}), '
           'header ${hex(header.rgb)} (expected ${hex(wantHeader)}), title bar ${hex(title.rgb)}');
       if (body.rgb != wantBody) failures.add('${theme.name}: outliner body ${hex(body.rgb)} != ${hex(wantBody)}');
       if (header.rgb != wantHeader) failures.add('${theme.name}: outliner header ${hex(header.rgb)} != ${hex(wantHeader)}');
-      if (title.rgb != wantHeader) failures.add('${theme.name}: title bar ${hex(title.rgb)} != ${hex(wantHeader)}');
+      // The menu bar sits on the rail; the active typed tab on the island fill.
+      final int wantRail = theme.color('rail').toARGB32() & 0xFFFFFF;
+      final int wantIsland = theme.color('sidebar').toARGB32() & 0xFFFFFF;
+      if (title.rgb != wantRail) failures.add('${theme.name}: title bar ${hex(title.rgb)} != ${hex(wantRail)}');
       report.writeln('    active workspace tab (BoxDecoration) ${hex(tabFill.rgb)} (${tabFill.count}/${tabFill.total})');
-      if (tabFill.rgb != wantHeader) failures.add('${theme.name}: active tab fill ${hex(tabFill.rgb)} != ${hex(wantHeader)}');
+      if (tabFill.rgb != wantIsland) failures.add('${theme.name}: active tab fill ${hex(tabFill.rgb)} != ${hex(wantIsland)}');
     }
     themes.activate(EditorThemeData.luminaDark.name);
     await settle(tester, frames: 20);
@@ -669,9 +691,7 @@ void main() {
     Directory('${pDir.path}/contents/meshes').createSync(recursive: true);
     Directory('${pDir.path}/contents/levels').createSync(recursive: true);
     File('${pDir.path}/LogoSmoke.lmproject').writeAsStringSync('{}');
-    addTearDown(() {
-      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-    });
+    addTearDown(() => deleteTempProject(tempDir));
     final List<String> usedAssets = <String>[];
     final File barrel = File('${SmokeArtifacts.testAssetsDir.path}/Props/Barrels/fuel_barrel_red.glb');
     if (barrel.existsSync()) {
@@ -771,4 +791,130 @@ void main() {
     print(report);
     expect(failures, isEmpty, reason: '${failures.join('\n')}\n$report');
   }, timeout: const Timeout(Duration(minutes: 8)));
+
+  // Stage 1 of the Aurora design language on the real editor: the Obsidian
+  // tokens, Manrope and JetBrains Mono, the 48 px Prism L menu bar and the
+  // typed workspace tabs. A barrel and the mannequin are imported through
+  // the real pipeline; the Static Mesh and Skeletal Mesh editors open as
+  // typed tabs (cyan and magenta), the tab switches are on video with the
+  // viewport orbiting between them.
+  testWidgets('Design System Smoke: aurora design language', (WidgetTester tester) async {
+    const String testName = 'Design System Smoke: aurora design language';
+    final Directory tempDir = Directory.systemTemp.createTempSync('design_system_aurora_smoke_');
+    final Directory pDir = Directory('${tempDir.path}/AuroraSmoke')..createSync(recursive: true);
+    Directory('${pDir.path}/contents/levels').createSync(recursive: true);
+    File('${pDir.path}/AuroraSmoke.lmproject').writeAsStringSync('{}');
+    addTearDown(() => deleteTempProject(tempDir));
+    final String barrel = '${SmokeArtifacts.testAssetsDir.path}/Props/Barrels/fuel_barrel_red.glb';
+    final String manny = '${SmokeArtifacts.testAssetsDir.path}/mannequin/SKM_Manny_Simple.glb';
+    final List<String> usedAssets = <String>[barrel, manny];
+    expect(File(barrel).existsSync(), isTrue, reason: 'the smoke loads real models from test-assets/');
+
+    final EditorViewModel vm = EditorViewModel(
+      initialProject: LuminaProject(
+        projectName: 'AuroraSmoke',
+        activeLevel: 'contents/levels/L_Main.lmas',
+        settings: EngineScalabilitySettings(targetFps: 60),
+      ),
+      projectLocation: tempDir.path,
+    );
+    addTearDown(vm.dispose);
+    await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+    await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: barrel));
+    await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: manny));
+    vm.refreshAssets();
+    final RealAssetInfo barrelAsset = vm.realAssets.firstWhere((a) => a.type == AssetType.filamesh && a.fileName.startsWith('fuel_barrel'));
+    final RealAssetInfo mannyAsset = vm.realAssets.firstWhere(
+        (a) => (a.type == AssetType.filameshSk || a.type == AssetType.filamesh) && a.fileName.startsWith('SKM_Manny'));
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final GlobalKey boundaryKey = GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(
+      key: boundaryKey,
+      child: ShadcnApp(theme: luminaEditorTheme(), home: Scaffold(child: MainEditorView(viewModel: vm))),
+    ));
+    await settle(tester);
+    await tester.runAsync(() => vm.spawnActorFromAsset(barrelAsset, location: [0, 0, 0]));
+    await settle(tester, frames: 30);
+    final SmokeRecorder rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+    await rec.hold(const Duration(seconds: 2));
+
+    final double dpr = tester.view.devicePixelRatio;
+    Uint8List crop(Uint8List png, Rect r) {
+      final img.Image im = img.decodePng(png)!;
+      final int x = (r.left * dpr).round().clamp(0, im.width - 1);
+      final int y = (r.top * dpr).round().clamp(0, im.height - 1);
+      final int w = (r.width * dpr).round().clamp(1, im.width - x);
+      final int h = (r.height * dpr).round().clamp(1, im.height - y);
+      return Uint8List.fromList(img.encodePng(img.copyCrop(im, x: x, y: y, width: w, height: h)));
+    }
+    final StringBuffer report = StringBuffer('MEASURE aurora stage 1:\n');
+    final List<String> failures = <String>[];
+    void measure(String name, Uint8List png, Rect r, Color expected) {
+      final ({int rgb, int count, int total}) d = dominantColorIn(png, r, dpr: dpr);
+      final int want = expected.toARGB32() & 0xFFFFFF;
+      report.writeln('  $name: ${hex(d.rgb)} on ${d.count}/${d.total} px (expected ${hex(want)})');
+      if (d.rgb != want) failures.add('$name is ${hex(d.rgb)}, expected ${hex(want)}');
+    }
+
+    // 1. The menu bar: 48 px on the rail, lockup, menus, command field, chip, window controls.
+    Uint8List png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    // The bar itself: under it the widget may carry the source-control or
+    // units banner.
+    final Rect barRect = tester.getRect(find.byKey(const ValueKey<String>('window_title_drag_area')));
+    final Rect menuRow = Rect.fromLTWH(0, barRect.top, tester.getRect(find.byType(MenuBarWidget).first).width, MenuBarWidget.height);
+    expect(barRect.height, closeTo(MenuBarWidget.height - 1, 0.5), reason: 'the 48 px row (its last pixel is the border)');
+    final Rect field = tester.getRect(find.byKey(const ValueKey<String>('menu_bar_command_field')));
+    measure('menu bar rail', png, Rect.fromLTWH(field.left - 90, menuRow.top + 4, 60, 40), EditorColors.rail);
+    measure('command field', png, Rect.fromLTWH(field.left + 160, field.top + 4, 30, field.height - 8), EditorColors.card);
+    final Rect chip = tester.getRect(find.byKey(const ValueKey<String>('menu_bar_project_chip')));
+    measure('project chip', png, Rect.fromLTWH(chip.left + 2, chip.top + 2, 4, chip.height - 4), EditorColors.sidebar);
+    SmokeArtifacts.saveScreenshot('$testName — menu bar', crop(png, menuRow), usedAssets: usedAssets);
+
+    // 2. The typed tab strip with the level tab.
+    final Rect strip = tester.getRect(find.byType(EditorTypedTabBar));
+    final Rect levelTab = tester.getRect(find.byKey(const ValueKey<String>('workspace_tab_0')));
+    measure('tab strip rail', png, Rect.fromLTWH(levelTab.right + 60, strip.top + 2, 200, strip.height - 6), EditorColors.rail);
+    measure('level tab underline', png, Rect.fromLTWH(levelTab.left + 3, levelTab.bottom - 2, levelTab.width - 6, 2), EditorColors.assetTypeLevel);
+
+    // 3. Static Mesh and Skeletal Mesh editors as typed tabs.
+    vm.openSubEditorTab('Mesh', asset: barrelAsset);
+    await settle(tester, frames: 40);
+    expect(find.byType(StaticMeshSubEditor), findsOneWidget);
+    await rec.hold(const Duration(milliseconds: 1500));
+    png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    final Rect meshTab = tester.getRect(find.byKey(const ValueKey<String>('workspace_tab_1')));
+    measure('static mesh tab underline', png, Rect.fromLTWH(meshTab.left + 3, meshTab.bottom - 2, meshTab.width - 6, 2), EditorColors.assetTypeStaticMesh);
+    SmokeArtifacts.saveScreenshot('$testName — typed tabs, Static Mesh editor', crop(png, Rect.fromLTWH(strip.left, menuRow.top, 900, strip.bottom - menuRow.top + 2)), usedAssets: usedAssets);
+
+    vm.openSubEditorTab('SKELETAL', asset: mannyAsset);
+    await settle(tester, frames: 40);
+    expect(find.byType(SkeletalMeshSubEditor), findsOneWidget);
+    await rec.hold(const Duration(milliseconds: 1500));
+    png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    final Rect skelTab = tester.getRect(find.byKey(const ValueKey<String>('workspace_tab_2')));
+    measure('skeletal mesh tab underline', png, Rect.fromLTWH(skelTab.left + 3, skelTab.bottom - 2, skelTab.width - 6, 2), EditorColors.assetTypeSkeletalMesh);
+    SmokeArtifacts.saveScreenshot('$testName — typed tabs, Skeletal Mesh editor', crop(png, Rect.fromLTWH(strip.left, menuRow.top, 900, strip.bottom - menuRow.top + 2)), usedAssets: usedAssets);
+    SmokeArtifacts.saveScreenshot(testName, png, usedAssets: usedAssets);
+
+    // 4. On video: back to the level, orbit, through the tabs again.
+    for (final int i in <int>[0, 1, 2, 0]) {
+      vm.selectTab(i);
+      await settle(tester, frames: 12);
+      await rec.hold(const Duration(milliseconds: 900));
+      if (i == 0) {
+        final Rect viewport = tester.getRect(find.byType(ViewportWidget));
+        await rec.drag(viewport.center + const Offset(-120, 0), viewport.center + const Offset(120, 20), steps: 45);
+        await rec.hold(const Duration(milliseconds: 600));
+      }
+    }
+    await rec.hold(const Duration(seconds: 2));
+    rec.save(testName, usedAssets: usedAssets);
+    // ignore: avoid_print
+    print(report);
+    expect(failures, isEmpty, reason: '${failures.join('\n')}\n$report');
+  }, timeout: const Timeout(Duration(minutes: 10)));
 }

@@ -31,9 +31,9 @@ void main() {
       });
     }
 
-    test('Lumina Dark is the grey ramp and Lumina Classic the prototype\'s near-black', () {
-      expect(EditorThemeData.luminaDark.color('background').toARGB32(), 0xFF1C1C1C);
-      expect(EditorThemeData.luminaDark.color('card').toARGB32(), 0xFF373737);
+    test('Lumina Dark is the Aurora ramp and Lumina Classic the prototype\'s near-black', () {
+      expect(EditorThemeData.luminaDark.color('background').toARGB32(), 0xFF141518);
+      expect(EditorThemeData.luminaDark.color('card').toARGB32(), 0xFF1A1B1F);
       expect(EditorThemeData.luminaClassic.color('background').toARGB32(), 0xFF020202);
       expect(EditorThemeData.luminaClassic.color('mutedForeground').toARGB32(), 0xFF696969);
       expect(EditorThemeData.luminaLight.brightness, Brightness.light);
@@ -106,7 +106,7 @@ void main() {
     expect(theme.colorScheme.brightness, Brightness.light);
     expect(theme.colorScheme.background.toARGB32(), EditorThemeData.luminaLight.color('background').toARGB32());
     EditorTheme.apply(EditorThemeData.luminaDark);
-    expect(EditorColors.background.toARGB32(), 0xFF1C1C1C);
+    expect(EditorColors.background.toARGB32(), 0xFF141518);
     expect(luminaEditorTheme().colorScheme.brightness, Brightness.dark);
   });
 
@@ -123,7 +123,7 @@ void main() {
     expect(context, isA<EditorThemeHost>());
     final EditorThemeAccess theme = (context as EditorThemeHost).theme;
     expect(theme.name, 'Lumina Dark');
-    expect(theme.color('card').toARGB32(), 0xFF373737);
+    expect(theme.color('card').toARGB32(), 0xFF1A1B1F);
     expect(theme.tokens, contains('pinExec'));
     expect(() => theme.color('sparkle'), throwsArgumentError);
     var heard = 0;

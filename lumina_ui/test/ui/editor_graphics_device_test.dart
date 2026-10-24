@@ -5,6 +5,7 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_graphics_preferences.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/graphics_device_preferences_page.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 void main() {
   tearDown(
@@ -47,6 +48,7 @@ void main() {
       addTearDown(() => config.deleteSync(recursive: true));
       await tester.pumpWidget(
         ShadcnApp(
+          theme: luminaEditorTheme(),
           home: Scaffold(
             child: GraphicsDevicePreferencesPage(
               configDir: config,

@@ -89,7 +89,7 @@ class _SlotButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: state.active ? activeColor.withValues(alpha: 0.18) : null,
         borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: state.active ? activeColor : const Color(0x00000000)),
+        border: Border.all(color: state.active ? activeColor : Colors.transparent),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

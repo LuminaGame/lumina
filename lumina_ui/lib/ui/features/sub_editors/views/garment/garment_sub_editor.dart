@@ -161,7 +161,7 @@ class GarmentSubEditorState extends _GarmentEditorBase with _GarmentDetailsPanel
           if (vm.error != null) ...[
             const SizedBox(width: 12),
             Flexible(
-              child: Text(vm.error!, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Color(0xFFEF4444))),
+              child: Text(vm.error!, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: EditorColors.destructive)),
             ),
           ],
           const Spacer(),

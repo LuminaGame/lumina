@@ -1,5 +1,6 @@
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Full-featured, shadcn_flutter styled audio player widget for Lumina Studio.
 ///
@@ -58,9 +59,9 @@ class _LuminaAudioPlayerWidgetState extends State<LuminaAudioPlayerWidget> {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFF131317),
+            color: EditorColors.sidebar,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0x22FFFFFF)),
+            border: Border.all(color: EditorColors.border),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -68,7 +69,7 @@ class _LuminaAudioPlayerWidgetState extends State<LuminaAudioPlayerWidget> {
             children: [
               Row(
                 children: [
-                  const Icon(LucideIcons.music, size: 14, color: Color(0xFF3B82F6)),
+                  const Icon(LucideIcons.music, size: 14, color: EditorColors.accent),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -87,7 +88,7 @@ class _LuminaAudioPlayerWidgetState extends State<LuminaAudioPlayerWidget> {
                     style: const TextStyle(
                       fontSize: 11,
                       fontFamily: 'monospace',
-                      color: Color(0xFF9CA3AF),
+                      color: EditorColors.mutedForeground,
                     ),
                   ),
                 ],
@@ -125,7 +126,7 @@ class _LuminaAudioPlayerWidgetState extends State<LuminaAudioPlayerWidget> {
                     child: Icon(
                       value.volume == 0 ? LucideIcons.volumeX : LucideIcons.volume2,
                       size: 14,
-                      color: value.volume == 0 ? const Color(0xFFEF4444) : Colors.white,
+                      color: value.volume == 0 ? EditorColors.destructive : Colors.white,
                     ),
                   ),
                   SizedBox(
@@ -145,7 +146,7 @@ class _LuminaAudioPlayerWidgetState extends State<LuminaAudioPlayerWidget> {
                     child: Icon(
                       LucideIcons.repeat,
                       size: 13,
-                      color: value.isLooping ? const Color(0xFF3B82F6) : const Color(0xFF6B7280),
+                      color: value.isLooping ? EditorColors.accent : EditorColors.mutedForeground,
                     ),
                   ),
                   const SizedBox(width: 6),

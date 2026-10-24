@@ -42,6 +42,7 @@ class TimelineRulerPainter extends CustomPainter {
     final r1 = x(rangeEnd).clamp(0.0, size.width);
     if (r1 > r0) canvas.drawRect(Rect.fromLTRB(r0, size.height - 3, r1, size.height), Paint()..color = EditorColors.primary.withValues(alpha: 0.55));
     final endX = x(length);
+    // The out-of-range band: a black scrim over the track colours.
     if (endX < size.width) canvas.drawRect(Rect.fromLTRB(math.max(0, endX), 0, size.width, size.height), Paint()..color = const Color(0x55000000));
     final tick = Paint()
       ..color = EditorColors.mutedForeground.withValues(alpha: 0.6)

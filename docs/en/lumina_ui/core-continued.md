@@ -686,9 +686,9 @@ Colours are CSS hex, `#RRGGBB` or `#RRGGBBAA`. A token that is missing takes the
 | :--- | :--- | :--- |
 | `version` | `static const int version` |  |
 | `defaultRadius` | `static const double defaultRadius` |  |
-| `defaultSans` | `static const String defaultSans` |  |
+| `defaultSans` | `static const String defaultSans` | `Manrope`: the Aurora design language's UI face. |
 | `defaultMono` | `static const String defaultMono` |  |
-| `sansFamilies` | `static const List<String> sansFamilies` | The fonts the editor bundles (shadcn_flutter's Geist family and JetBrains Mono under `assets/fonts/`); a theme may pick among these. |
+| `sansFamilies` | `static const List<String> sansFamilies` | The fonts the editor bundles (Manrope and JetBrains Mono under `assets/fonts/`, shadcn_flutter's Geist family); a theme may pick among these. |
 | `monoFamilies` | `static const List<String> monoFamilies` |  |
 | `minDensity` | `static const double minDensity` | Density is shadcn_flutter's `ThemeData.scaling`: < 1 is compact. |
 | `maxDensity` | `static const double maxDensity` |  |
@@ -713,8 +713,8 @@ Colours are CSS hex, `#RRGGBB` or `#RRGGBBAA`. A token that is missing takes the
 | `groups` | `static const List<String> groups` |  |
 | `tokens` | `static const List<EditorThemeToken> tokens` | The theme's colour slots, in the order they are written. |
 | `tokenKeys` | `static final Set<String> tokenKeys` |  |
-| `luminaDark` | `static final EditorThemeData luminaDark` | The lifted grey ramp — the default. |
-| `luminaClassic` | `static final EditorThemeData luminaClassic` | The Figma Make prototype's near-black palette, as the editor looked before the lifted grey ramp. |
+| `luminaDark` | `static final EditorThemeData luminaDark` | The Aurora (Obsidian) ramp and amber accent: the default. See [The Aurora design language](design-system.md). |
+| `luminaClassic` | `static final EditorThemeData luminaClassic` | The Figma Make prototype's near-black palette and orange, as the editor looked before Aurora. |
 | `luminaLight` | `static final EditorThemeData luminaLight` | A light counterpart: the same accents on a hueless light ramp. |
 | `builtIns` | `static final List<EditorThemeData> builtIns` |  |
 | `isBuiltInName` | `static bool isBuiltInName(String name)` |  |

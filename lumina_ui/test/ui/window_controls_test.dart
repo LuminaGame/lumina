@@ -129,17 +129,20 @@ void main() {
     expect(native.maximized, isFalse);
     expect(find.byKey(const ValueKey('window_control_maximize_icon')), findsOneWidget);
 
+    // The command field sits in the middle of the drag area: double-click
+    // on the empty stretch beside it.
     final drag = find.byKey(const ValueKey('window_title_drag_area'));
-    await tester.tap(drag);
+    final spot = tester.getTopLeft(drag) + const Offset(MenuBarWidget.dragMargin / 2, 24);
+    await tester.tapAt(spot);
     await tester.pump(const Duration(milliseconds: 50));
-    await tester.tap(drag);
+    await tester.tapAt(spot);
     await settle(tester, frames: 30);
     expect(native.maximized, isTrue, reason: 'double-click on the title bar maximizes');
     expect(find.byKey(const ValueKey('window_control_restore_icon')), findsOneWidget);
 
-    await tester.tap(drag);
+    await tester.tapAt(spot);
     await tester.pump(const Duration(milliseconds: 50));
-    await tester.tap(drag);
+    await tester.tapAt(spot);
     await settle(tester, frames: 30);
     expect(native.maximized, isFalse, reason: 'and double-click again restores');
   });

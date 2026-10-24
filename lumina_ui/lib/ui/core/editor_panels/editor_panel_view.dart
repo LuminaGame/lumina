@@ -191,6 +191,7 @@ class _EditorPanelViewState extends State<EditorPanelView> {
           key: const ValueKey('editor_panel_pick_asset_barrier'),
           behavior: HitTestBehavior.opaque,
           onTap: () => done(null),
+          // A scrim over any surface: black at 20%, not a theme surface.
           child: const ColoredBox(color: Color(0x33000000)),
         ),
       ),

@@ -127,6 +127,8 @@ class _EditorShortcutsScopeState extends State<EditorShortcutsScope> {
         ConditionalActivator(LogicalKeyboardKey.keyD, vm, control: true): const DispatchCommandIntent('edit.duplicate'),
         const SingleActivator(LogicalKeyboardKey.keyP, alt: true): const DispatchCommandIntent('debug.togglePie'),
         const SingleActivator(LogicalKeyboardKey.keyP, control: true): const DispatchCommandIntent('shell.quickOpen'),
+        // The menu bar's command field: Ctrl K opens the same palette.
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true): const DispatchCommandIntent('shell.quickOpen'),
         // Blueprints ▸ Open Level Blueprint.
         const SingleActivator(LogicalKeyboardKey.keyB, control: true, shift: true): const DispatchCommandIntent('edit.levelBlueprint'),
         // File ▸ Import Asset Folder…

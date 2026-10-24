@@ -5,6 +5,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/theme_editor_view_
 import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_custom_style_dialog.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_preview_showcase.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_tree_panel.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Sub-editor workspace for authoring and customizing UI Themes (.lmas).
 ///
@@ -92,26 +93,26 @@ class _ThemeSubEditorState extends State<ThemeSubEditor> {
             ),
             child: Row(
               children: [
-                const Icon(LucideIcons.palette, size: 15, color: Color(0xFF8B5CF6)),
+                const Icon(LucideIcons.palette, size: 15, color: EditorColors.assetTypeTheme),
                 const SizedBox(width: 8),
                 Text(
                   widget.assetName + (_vm.isDirty ? ' *' : ''),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: _vm.isDirty ? const Color(0xFFF59E0B) : colorScheme.foreground,
+                    color: _vm.isDirty ? EditorColors.warning : colorScheme.foreground,
                   ),
                 ),
                 const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                   decoration: BoxDecoration(
-                    color: const Color(0x338B5CF6),
+                    color: EditorColors.assetTypeTheme.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
                     'UI Theme',
-                    style: TextStyle(fontSize: 10, color: Color(0xFFA78BFA), fontWeight: FontWeight.w600),
+                    style: TextStyle(fontSize: 10, color: EditorColors.blendSpaceLabel, fontWeight: FontWeight.w600),
                   ),
                 ),
                 const Spacer(),

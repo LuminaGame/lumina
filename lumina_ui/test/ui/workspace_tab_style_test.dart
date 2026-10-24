@@ -12,8 +12,9 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../helpers/blueprint_test_project.dart';
 
-/// The selected tab joins the content under it — tinted top and side outline, no bottom edge, and the same fill as
-/// the content below; inactive tabs stay flat.
+/// The selected bottom-panel or graph tab joins the content under it — tinted top and side outline, no bottom edge,
+/// and the same fill as the content below; inactive tabs stay flat. The workspace strip above them is the typed tab
+/// bar, whose active tab carries its type's underline instead.
 void main() {
   Future<void> settle(WidgetTester tester, {int frames = 10}) async {
     for (var i = 0; i < frames; i++) {
@@ -69,9 +70,15 @@ void main() {
     await tester.pumpWidget(ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)));
     await settle(tester);
 
-    // The level tab is the only (and active) workspace tab; the toolbar
-    // under the strip is cardHeader.
-    expectAttached(decorationOf(tester, find.byKey(const ValueKey('workspace_tab_0'))), EditorColors.cardHeader, 'level tab');
+    // The workspace strip is the typed tab bar: the level tab (the only
+    // and active one) sits on the island fill with a 2 px underline in the
+    // level type's colour, and no top or side outline.
+    final BoxDecoration level = decorationOf(tester, find.byKey(const ValueKey('workspace_tab_0')));
+    expect(level.color!.toARGB32(), EditorColors.sidebar.toARGB32(), reason: 'level tab: the island fill');
+    final Border levelBorder = level.border! as Border;
+    expect(levelBorder.bottom.width, 2, reason: 'level tab: the type underline');
+    expect(levelBorder.bottom.color.toARGB32(), EditorColors.assetTypeLevel.toARGB32());
+    expect(levelBorder.top, BorderSide.none);
 
     // Bottom panel: Content Browser active (its toolbar is the rail), the
     // other two flat.

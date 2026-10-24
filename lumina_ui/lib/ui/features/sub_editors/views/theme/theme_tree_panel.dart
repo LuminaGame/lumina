@@ -2,6 +2,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/theme_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_custom_style_dialog.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_property_inspector.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Left panel of the Theme Sub-Editor: Tree view of theme objects, tokens,
 /// and custom styles on top, with property inspector on the bottom.
@@ -107,7 +108,7 @@ class ThemeTreePanel extends StatelessWidget {
                       padding: EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                       child: Text(
                         'No custom styles authored yet.',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF71717A)),
+                        style: TextStyle(fontSize: 11, color: EditorColors.mutedForeground),
                       ),
                     )
                   else
@@ -137,7 +138,7 @@ class ThemeTreePanel extends StatelessWidget {
           fontSize: 10,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.5,
-          color: Color(0xFF9CA3AF),
+          color: EditorColors.mutedForeground,
         ),
       ),
     );
@@ -167,12 +168,12 @@ class ThemeTreePanel extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0x223B82F6) : null,
+            color: isSelected ? EditorColors.selectionBg : null,
             borderRadius: BorderRadius.circular(4),
           ),
           child: Row(
             children: [
-              Icon(icon, size: 14, color: isSelected ? const Color(0xFF38BDF8) : const Color(0xFF9CA3AF)),
+              Icon(icon, size: 14, color: isSelected ? EditorColors.accent : EditorColors.mutedForeground),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -180,7 +181,7 @@ class ThemeTreePanel extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected ? const Color(0xFFFFFFFF) : const Color(0xFFD4D4D8),
+                    color: isSelected ? EditorColors.accentForeground : EditorColors.foreground,
                   ),
                 ),
               ),
@@ -205,7 +206,7 @@ class ThemeTreePanel extends StatelessWidget {
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
         decoration: BoxDecoration(
-          color: hasStyle ? const Color(0x3322C55E) : const Color(0x2271717A),
+          color: hasStyle ? EditorColors.success.withValues(alpha: 0.2) : EditorColors.mutedForeground.withValues(alpha: 0.13),
           borderRadius: BorderRadius.circular(3),
         ),
         child: Text(
@@ -213,7 +214,7 @@ class ThemeTreePanel extends StatelessWidget {
           style: TextStyle(
             fontSize: 9,
             fontWeight: FontWeight.w600,
-            color: hasStyle ? const Color(0xFF22C55E) : const Color(0xFF71717A),
+            color: hasStyle ? EditorColors.success : EditorColors.mutedForeground,
           ),
         ),
       ),
@@ -233,12 +234,12 @@ class ThemeTreePanel extends StatelessWidget {
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
         decoration: BoxDecoration(
-          color: const Color(0x338B5CF6),
+          color: EditorColors.assetTypeTheme.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(3),
         ),
         child: Text(
           target,
-          style: const TextStyle(fontSize: 9, color: Color(0xFFA78BFA), fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 9, color: EditorColors.blendSpaceLabel, fontWeight: FontWeight.w600),
         ),
       ),
     );

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_ui/ui/core/plugin_3d_viewport_mesh_loader.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_editor_data/lumina_editor.dart'
     show LuminaAxes, LuminaUmgInstanceBinding, LuminaUmgInstanceScope, LuminaUmgViewport, LuminaViewportController, LuminaViewportNodeKind, LuminaViewportScene, LuminaWidgetEvents;
 
@@ -210,7 +211,7 @@ class _Plugin3DViewportContainerState extends State<Plugin3DViewportContainer> {
           left: 8,
           top: 6,
           child: IgnorePointer(
-            child: Text(widget.options.title, style: const TextStyle(fontSize: 10, color: Color(0xFFB0B6C2))),
+            child: Text(widget.options.title, style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
           ),
         ),
         ?hud,

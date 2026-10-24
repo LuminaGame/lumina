@@ -5,7 +5,9 @@ import 'dart:ui' show AppExitResponse, AppExitType;
 import 'package:flutter/services.dart' show ServicesBinding;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
+import 'package:lumina_ui/ui/core/theme/asset_type_style.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/typed_tab_bar.dart';
 import 'package:lumina_ui/ui/core/window/lumina_window.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
@@ -279,94 +281,18 @@ class _MainEditorViewState extends State<MainEditorView> {
                   onRestart: () => viewModel.commands.execute('editor.restart'),
                 ),
 
-              // 2. Main Workspace Tab Bar (window tabs).
-              // The active tab is attached to the toolbar
-              // under it (same fill, no bottom edge); the strip's bottom line
-              // runs under the inactive tabs only.
-              Container(
-                height: 28,
-                color: EditorColors.sidebar,
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    EditorTabStyle.stripBottomLine(),
-                    Positioned.fill(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: viewModel.openTabs.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final tab = entry.value;
-                            final active = viewModel.activeTabIndex == index;
-
-                            final rawTitle = tab.title;
-                            final cleanTitle = rawTitle.endsWith('.lmas')
-                                ? rawTitle.substring(0, rawTitle.length - 5)
-                                : rawTitle;
-                            final displayTitle = tab.isDirty ? '$cleanTitle*' : cleanTitle;
-
-                            return Tooltip(
-                              tooltip: (context) => TooltipContainer(child: Text(cleanTitle)),
-                              child: Listener(
-                                onPointerDown: (event) {
-                                  if (event.buttons == 4 && index > 0) { // kMiddleMouseButton
-                                    _requestCloseTab(index);
-                                  }
-                                },
-                                child: GestureDetector(
-                                  onTap: () => viewModel.selectTab(index),
-                                  child: Container(
-                                    key: ValueKey('workspace_tab_$index'),
-                                    height: 24,
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    margin: const EdgeInsets.only(right: 2),
-                                    // The toolbar right under the strip is cardHeader.
-                                    decoration: EditorTabStyle.decoration(active: active, content: EditorColors.cardHeader),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          tab.category == 'level'
-                                              ? LucideIcons.map
-                                              : (viewModel.extensionRegistry.findTab(tab.category)?.icon ?? LucideIcons.fileCode),
-                                          size: 11,
-                                          color: active ? EditorColors.primary : EditorColors.mutedForeground,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        ConstrainedBox(
-                                          constraints: const BoxConstraints(maxWidth: 160),
-                                          child: Text(
-                                            displayTitle,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 9,
-                                              fontWeight: active ? FontWeight.bold : FontWeight.normal,
-                                              color: active ? EditorColors.primary : EditorColors.foreground,
-                                            ),
-                                          ),
-                                        ),
-                                        if (index > 0) ...[
-                                          const SizedBox(width: 6),
-                                          GestureDetector(
-                                            onTap: () => _requestCloseTab(index),
-                                            child: const Icon(LucideIcons.x, size: 10, color: EditorColors.mutedForeground),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              // 2. The workspace tab bar: typed tabs (the asset type's
+              // icon and colour, an underline in that colour when active,
+              // the unsaved dot), the new-tab button and the overflow menu.
+              EditorTypedTabBar(
+                tabs: [
+                  for (final (index, tab) in viewModel.openTabs.indexed)
+                    _typedTabFor(index, tab),
+                ],
+                activeIndex: viewModel.activeTabIndex,
+                onSelect: viewModel.selectTab,
+                onClose: _requestCloseTab,
+                onAdd: () => viewModel.commands.execute('file.newAsset', context),
               ),
 
               // 3. The level viewport's toolbar, only while the level tab is
@@ -402,6 +328,30 @@ class _MainEditorViewState extends State<MainEditorView> {
       Positioned.fill(child: QuitProgressOverlay(status: viewModel.quitStatus)),
       ],
       ),
+    );
+  }
+
+  static String _withoutLmas(String name) => name.endsWith('.lmas') ? name.substring(0, name.length - 5) : name;
+
+  /// The typed tab of workspace tab [index]: the level tab carries the
+  /// level's icon and colour, an asset tab its asset type's, a document tab
+  /// (Plugins, Project Settings, …) the registry's icon in the muted grey.
+  EditorTypedTab _typedTabFor(int index, EditorTabInfo tab) {
+    final rawTitle = tab.title;
+    final title = rawTitle.endsWith('.lmas') ? rawTitle.substring(0, rawTitle.length - 5) : rawTitle;
+    final asset = tab.asset;
+    final AssetTypeStyle? style = tab.category == 'level'
+        ? AssetTypeStyle.of(AssetType.level)
+        : asset != null
+            ? AssetTypeStyle.of(asset.type)
+            : null;
+    return EditorTypedTab(
+      key: ValueKey('workspace_tab_$index'),
+      title: title,
+      icon: style?.icon ?? viewModel.extensionRegistry.findTab(tab.category)?.icon ?? LucideIcons.fileCode,
+      color: style?.color,
+      dirty: tab.isDirty,
+      closable: index > 0,
     );
   }
 
@@ -484,7 +434,9 @@ class _MainEditorViewState extends State<MainEditorView> {
             key: viewModel.mcpServer.subEditorBoundaryKeyFor(viewModel.openTabs[i].id),
             child: SubEditorWorkspaceWidget(
               key: ValueKey(viewModel.openTabs[i].id),
-              assetName: viewModel.openTabs[i].asset?.fileName ?? viewModel.openTabs[i].title,
+              // The asset's name, never its `.lmas` file name: sub-editors show it in
+              // their headers and append the extension themselves where they need a path.
+              assetName: _withoutLmas(viewModel.openTabs[i].asset?.fileName ?? viewModel.openTabs[i].title),
               assetType: viewModel.openTabs[i].category,
               asset: viewModel.openTabs[i].asset,
               editorViewModel: viewModel,

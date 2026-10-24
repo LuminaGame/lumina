@@ -11,7 +11,6 @@ import 'package:lumina_ui/ui/core/theme/editor_theme_data.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme_store.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
-import 'package:lumina_ui/ui/features/main_editor/views/menu_bar_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/outliner_widget.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/appearance_preferences_page.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -106,10 +105,10 @@ void main() {
     final vm = await pumpEditor(tester);
     final outliner = tester.getRect(find.byType(OutlinerWidget));
     final body = Rect.fromLTWH(outliner.left + 6, outliner.bottom - 50, outliner.width - 12, 40);
-    final title = tester.getRect(find.text('Lumina Studio'));
+    final title = tester.getRect(find.text('LUMINA'));
     var shot = await capture(tester);
     expect(await dominant(tester, shot, body), rgbOf(EditorThemeData.luminaDark, 'background'));
-    final darkHeader = rgbOf(EditorThemeData.luminaDark, 'cardHeader');
+    final darkHeader = rgbOf(EditorThemeData.luminaDark, 'rail');
     expect(await dominant(tester, shot, title, excluding: darkHeader), rgbOf(EditorThemeData.luminaDark, 'foreground'));
 
     await openAppearance(tester, vm);
@@ -124,18 +123,18 @@ void main() {
     shot = await capture(tester);
     expect(await dominant(tester, shot, body), rgbOf(EditorThemeData.luminaLight, 'background'),
         reason: 'the outliner body is repainted in the new theme');
-    final lightHeader = rgbOf(EditorThemeData.luminaLight, 'cardHeader');
+    final lightHeader = rgbOf(EditorThemeData.luminaLight, 'rail');
     expect(await dominant(tester, shot, title, excluding: lightHeader), rgbOf(EditorThemeData.luminaLight, 'foreground'),
         reason: 'the menu bar text is re-laid out in the new foreground (a paragraph keeps the colour it was built with)');
-    // A box decoration caches its Paint: the menu bar's level chip (a const
-    // BoxDecoration filled with background, so the rebuilt widget compares
-    // equal and keeps its painter) must be repainted too.
-    final chip = tester.getRect(find.ancestor(
-      of: find.descendant(of: find.byType(MenuBarWidget), matching: find.byIcon(LucideIcons.map)),
+    // A box decoration caches its Paint: the menu bar's project · level chip
+    // (a BoxDecoration filled with the island colour, so the rebuilt widget
+    // compares equal and keeps its painter) must be repainted too.
+    final chip = tester.getRect(find.descendant(
+      of: find.byKey(const ValueKey('menu_bar_project_chip')),
       matching: find.byType(Container),
     ).first);
     expect(await dominant(tester, shot, Rect.fromLTWH(chip.left + 2, chip.top + 2, 5, chip.height - 4)),
-        rgbOf(EditorThemeData.luminaLight, 'background'),
+        rgbOf(EditorThemeData.luminaLight, 'sidebar'),
         reason: 'decorated boxes drop their cached paint on a theme switch');
     final prefs = jsonDecode(File('${config.path}/editor_preferences.json').readAsStringSync()) as Map;
     expect(prefs['theme'], 'Lumina Light', reason: 'remembered for the next start');

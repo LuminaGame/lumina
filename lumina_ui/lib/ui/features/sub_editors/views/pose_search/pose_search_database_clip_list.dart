@@ -110,9 +110,9 @@ class PoseSearchDatabaseClipList extends StatelessWidget {
   Widget _stats(PoseSearchDatabaseEditorViewModel vm) {
     final r = vm.report;
     final state = switch (vm.cacheState) {
-      PoseSearchCacheState.upToDate => ('Feature cache up to date', const Color(0xFF4CAF50)),
-      PoseSearchCacheState.stale => ('Feature cache out of date: Build', const Color(0xFFFFB300)),
-      PoseSearchCacheState.missing => ('Not built yet: Build', const Color(0xFFFFB300)),
+      PoseSearchCacheState.upToDate => ('Feature cache up to date', EditorColors.success),
+      PoseSearchCacheState.stale => ('Feature cache out of date: Build', EditorColors.warning),
+      PoseSearchCacheState.missing => ('Not built yet: Build', EditorColors.warning),
     };
     const muted = TextStyle(fontSize: 10, color: EditorColors.mutedForeground);
     return Container(
@@ -143,7 +143,7 @@ class PoseSearchDatabaseClipList extends StatelessWidget {
             if (r.stats.staticRootClips.isNotEmpty)
               Text('No root motion (in place): ${r.stats.staticRootClips.join(', ')}', overflow: TextOverflow.ellipsis, style: muted),
           ],
-          if (vm.error != null) Text(vm.error!, style: const TextStyle(fontSize: 10, color: Color(0xFFEF5350))),
+          if (vm.error != null) Text(vm.error!, style: const TextStyle(fontSize: 10, color: EditorColors.destructive)),
         ],
       ),
     );

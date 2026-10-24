@@ -1,3 +1,4 @@
+// design-token-exempt: previews a UI Theme document in its own colours; the fallbacks are the document defaults, not editor chrome
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/theme_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_custom_style_dialog.dart';

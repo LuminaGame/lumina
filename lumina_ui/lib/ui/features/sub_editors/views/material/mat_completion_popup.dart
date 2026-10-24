@@ -55,6 +55,7 @@ class MatCompletionPopup extends StatelessWidget {
         color: EditorColors.sidebar,
         border: Border.all(color: EditorColors.borderSolid),
         borderRadius: BorderRadius.circular(3),
+        // A drop shadow: black at 40%, not a theme surface.
         boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 8, offset: Offset(0, 2))],
       ),
       child: ListView.builder(

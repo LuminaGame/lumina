@@ -140,7 +140,7 @@ The level's World Partition settings (shown when nothing is selected; `details_w
 
 ### `class MenuBarWidget`
 
-`MenuBarWidget`: shadcn_flutter UI component rendering interface elements and listening to interactions.
+The editor's menu bar, which is also the window's title bar: the Aurora 48 px row on the rail with the Prism L lockup, the nine menus, the Ctrl K command field (`EditorCommandField`), source control, undo, redo, the `Project · Level` chip (amber dot while unsaved) and the window controls. See [The Aurora design language](design-system.md#the-menu-bar).
 
 **Functions, Methods & Accessors:**
 
@@ -150,6 +150,10 @@ The level's World Partition settings (shown when nothing is selected; `details_w
 | `activeLevelName` | `String activeLevelName` | Holds the `activeLevelName` property or configuration state. |
 | `onSave` | `VoidCallback onSave` | Holds the `onSave` property or configuration state. |
 | `viewModel` | `EditorViewModel? viewModel` | Holds the `viewModel` property or configuration state. |
+| `height` | `static const double height` | 48: the row's height. |
+| `menuTitles` | `static const List<String> menuTitles` | File, Edit, View, Build, Debug, Tools, Plugins, Window, Help, in order. |
+| `dragMargin` | `static const double dragMargin` | The empty title-bar stretch kept on each side of the command field (24). |
+| `chipMaxWidth` | `static const double chipMaxWidth` | The project · level chip's maximum width (240); long names ellipsize. |
 | `build` | `Widget build(BuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
 
 ## `lib/ui/features/main_editor/views/new_level_dialog.dart`

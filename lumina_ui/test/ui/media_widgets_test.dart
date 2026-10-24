@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/widgets/media/editor_media_widgets.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 void main() {
   group('LuminaVideoPlayerWidget UI tests', () {
@@ -14,6 +15,7 @@ void main() {
 
       await tester.pumpWidget(
         ShadcnApp(
+          theme: luminaEditorTheme(),
           home: Scaffold(
             child: SizedBox(
               width: 800,
@@ -52,6 +54,7 @@ void main() {
 
       await tester.pumpWidget(
         ShadcnApp(
+          theme: luminaEditorTheme(),
           home: Scaffold(
             child: SizedBox(
               width: 400,

@@ -365,7 +365,7 @@ class MaterialGlslEditorWidgetState extends State<MaterialGlslEditorWidget> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontFamily: EditorTypography.monoFamily,
-                                color: hasIssue ? theme.colorScheme.destructive : const Color(0xFF858585),
+                                color: hasIssue ? theme.colorScheme.destructive : EditorColors.mutedForeground,
                               ),
                             ),
                           ],
@@ -391,7 +391,7 @@ class MaterialGlslEditorWidgetState extends State<MaterialGlslEditorWidget> {
                         filled: false,
                         border: const Border(),
                         padding: EdgeInsets.zero,
-                        cursorColor: const Color(0xFFAEAFAD),
+                        cursorColor: EditorColors.foreground,
                         style: _codeStyle,
                         // Every line exactly as tall as a gutter row.
                         strutStyle: const StrutStyle(

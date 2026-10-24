@@ -3,33 +3,29 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme_data.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme_store.dart';
 
-/// Lumina Studio's palette.
+/// Lumina Studio's palette: the **Aurora** design language.
 ///
-/// The accents, text colours, radius and type scale are the Figma Make design
-/// prototype's (`Design Lumina Game Engine UI/src/index.css`), converted from
-/// its OKLCH to sRGB and keeping its token names so the two can be compared.
+/// The surfaces are the Obsidian ramp the user approved on the design canvas
+/// ("Lumina Studio UI Concepts", artboard 3 · Aurora): a near-black family
+/// with a faint cool cast, separated by 1 px borders and 12 px radii rather
+/// than by big lightness steps, with amber as the one accent.
 ///
-/// The **surfaces** are a deliberate departure: the
-/// prototype's near-black ramp (`oklch(0.086…0.155 0 0)`, `#020202`–`#0C0C0C`)
-/// made the panels read as one black sheet, so they were lifted onto a
-/// hueless grey ramp whose neighbours differ by at least 4 L* and on which
-/// [foreground] keeps 7:1 and [mutedForeground] 4.5:1 (see
-/// `test/ui/theme_surface_contrast_test.dart`):
+/// | token               | value     | used for                                   |
+/// |---------------------|-----------|--------------------------------------------|
+/// | [rail]              | `#0F1013` | the menu bar, the tab bar, graph canvases   |
+/// | [sidebar]           | `#111215` | islands (every docked panel), HUD pills     |
+/// | [background]        | `#141518` | the window behind the islands               |
+/// | [cardHeader]        | `#15171B` | panel header strips, toolbars               |
+/// | [card]              | `#1A1B1F` | fields, tiles, popovers                     |
+/// | [muted]             | `#1F2126` | muted fills                                 |
+/// | [secondary]         | `#24262C` | pressed/secondary button faces              |
+/// | [border]            | `#26282E` | island and panel borders (solid)            |
+/// | [fieldBorder]       | `#2C2E34` | input outlines                              |
 ///
-/// | token        | value     | L*   | used for                                  |
-/// |--------------|-----------|------|-------------------------------------------|
-/// | [rail]       | `#131313` |  5.9 | filter strips, sources column, toolbars   |
-/// | [background] | `#1C1C1C` | 10.3 | the window, panel bodies                  |
-/// | [sidebar]    | `#252525` | 14.7 | tab strips (workspace, bottom panel)      |
-/// | [cardHeader] | `#2E2E2E` | 18.9 | menu bar, main toolbar, panel headers     |
-/// | [card]       | `#373737` | 23.1 | Details sections, asset tiles, cards      |
-/// | [popover]    | `#414141` | 27.5 | menus, popovers, [muted]                  |
-///
-/// [viewportBackdrop] stays below the ramp (`#0E0E0E`) so the 3D view reads as
-/// recessed, and the neutrals still carry no hue.
-///
-/// `tool/design_tokens.dart` regenerates the prototype-derived values from the
-/// prototype's CSS.
+/// [viewportBackdrop] (`#1B1D22`) sits just above the islands so the 3D view
+/// reads as a lit surface inside its frame. [foreground] keeps 7:1 and
+/// [mutedForeground] 4.5:1 on every surface
+/// (`test/ui/theme_surface_contrast_test.dart`).
 ///
 /// **Themes.** Every colour token below except the
 /// transform axes is an [EditorThemeColor]: a `const` colour whose value is
@@ -45,72 +41,72 @@ class EditorColors {
 
   /// The window behind everything and the body of most panels (World
   /// Outliner, Details). Was the prototype's `--background` `#020202`.
-  static const Color background = EditorThemeColor('background', 0xFF1C1C1C);
+  static const Color background = EditorThemeColor('background', 0xFF141518);
 
   /// The tab strips: the workspace tabs under the menu bar and the bottom
   /// panel's Content Browser / Output Log / Blueprint row. Was `--sidebar`
   /// `#050505`.
-  static const Color sidebar = EditorThemeColor('sidebar', 0xFF252525);
+  static const Color sidebar = EditorThemeColor('sidebar', 0xFF111215);
 
   /// Panels and cards that sit on the background (Details sections, asset
   /// tiles). Was `--card` `#070707`.
-  static const Color card = EditorThemeColor('card', 0xFF373737);
+  static const Color card = EditorThemeColor('card', 0xFF1A1B1F);
 
   /// Menus and popovers (`--popover` / `--muted`). Was `#0C0C0C`.
-  static const Color popover = EditorThemeColor('popover', 0xFF414141);
-  static const Color muted = EditorThemeColor('muted', 0xFF414141);
+  static const Color popover = EditorThemeColor('popover', 0xFF1A1B1F);
+  static const Color muted = EditorThemeColor('muted', 0xFF1F2126);
 
   /// A panel's header strip, the menu bar and the main toolbar. Still darker
   /// than the [card] under it, as in the prototype. Was `#040404`.
-  static const Color cardHeader = EditorThemeColor('cardHeader', 0xFF2E2E2E);
+  static const Color cardHeader = EditorThemeColor('cardHeader', 0xFF15171B);
 
   /// The header strip under the pointer.
-  static const Color cardHeaderHover = EditorThemeColor('cardHeaderHover', 0xFF353535);
+  static const Color cardHeaderHover = EditorThemeColor('cardHeaderHover', 0xFF1C1E23);
 
   /// The rails and filter strips that frame a panel — the outliner's filter
   /// row, the Content Browser's sources column and its toolbar. The darkest
   /// step of the ramp. Was `#030303`.
-  static const Color rail = EditorThemeColor('rail', 0xFF131313);
+  static const Color rail = EditorThemeColor('rail', 0xFF0F1013);
 
   /// The colour behind the native 3D surface, visible only until the viewport
   /// produces its first frame. Deliberately below the whole panel ramp, so the
   /// 3D view reads as recessed.
-  static const Color viewportBackdrop = EditorThemeColor('viewportBackdrop', 0xFF0E0E0E);
+  static const Color viewportBackdrop = EditorThemeColor('viewportBackdrop', 0xFF1B1D22);
 
   /// A HUD chip floating over the 3D render: [background] at the opacity the
   /// viewport's overlays use, so the render shows through.
-  static const Color hudSurface = EditorThemeColor('hudSurface', 0xCC1C1C1C);
+  static const Color hudSurface = EditorThemeColor('hudSurface', 0xE0111215);
 
   /// The same chip where the text on it has to stay readable over a bright
   /// render.
-  static const Color hudSurfaceStrong = EditorThemeColor('hudSurfaceStrong', 0xEE1C1C1C);
+  static const Color hudSurfaceStrong = EditorThemeColor('hudSurfaceStrong', 0xF4111215);
 
   /// The Blueprint / Anim Graph canvas backdrop (graph grey), and so
   /// the fill of the selected graph tab above it.
-  static const Color graphCanvas = EditorThemeColor('graphCanvas', 0xFF16171A);
+  static const Color graphCanvas = EditorThemeColor('graphCanvas', 0xFF0F1013);
 
   /// The scrollbar thumb, well above [popover].
-  static const Color scrollbar = EditorThemeColor('scrollbar', 0xFF5E5E5E);
+  static const Color scrollbar = EditorThemeColor('scrollbar', 0xFF3A3D45);
 
   /// Pressed/secondary button faces (`--secondary`), a step above [popover].
-  static const Color secondary = EditorThemeColor('secondary', 0xFF4A4A4A);
+  static const Color secondary = EditorThemeColor('secondary', 0xFF24262C);
 
   // --- Text -----------------------------------------------------------------
 
   /// `--foreground`, `oklch(0.875 0 0)`.
-  static const Color foreground = EditorThemeColor('foreground', 0xFFD6D6D6);
+  static const Color foreground = EditorThemeColor('foreground', 0xFFE6E6E8);
 
   /// Text on [secondary] faces. Lifted from the prototype's `oklch(0.78 0 0)`
   /// `#B7B7B7` so it stays above [mutedForeground].
-  static const Color secondaryForeground = EditorThemeColor('secondaryForeground', 0xFFC4C4C4);
+  static const Color secondaryForeground = EditorThemeColor('secondaryForeground', 0xFFC9CAD0);
 
   /// Labels, units, inactive tabs. Lifted from the prototype's
   /// `oklch(0.52 0 0)` `#696969`: on the grey ramp it must
   /// still reach 4.5:1 on the lightest surface, [popover].
-  static const Color mutedForeground = EditorThemeColor('mutedForeground', 0xFFAEAEAE);
+  static const Color mutedForeground = EditorThemeColor('mutedForeground', 0xFF9A9CA3);
 
   /// `--primary-foreground`, `oklch(0.1 0 0)`: text on top of [primary].
-  static const Color primaryForeground = EditorThemeColor('primaryForeground', 0xFF030303);
+  static const Color primaryForeground = EditorThemeColor('primaryForeground', 0xFF0B1D22);
 
   /// `--accent-foreground`, `oklch(0.96 0 0)`.
   static const Color accentForeground = EditorThemeColor('accentForeground', 0xFFF2F2F2);
@@ -118,17 +114,17 @@ class EditorColors {
   // --- Accents --------------------------------------------------------------
 
   /// `--primary` / `--ring`, `oklch(0.72 0.185 52)`: Lumina's orange.
-  static const Color primary = EditorThemeColor('primary', 0xFFFB7C01);
+  static const Color primary = EditorThemeColor('primary', 0xFFF2A93B);
 
   /// `--accent`, `oklch(0.62 0.16 220)`: the secondary, cyan-blue accent.
-  static const Color accent = EditorThemeColor('accent', 0xFF0099C8);
+  static const Color accent = EditorThemeColor('accent', 0xFF39C6E0);
 
   /// `--destructive`, `oklch(0.62 0.22 27)`.
-  static const Color destructive = EditorThemeColor('destructive', 0xFFEE3533);
+  static const Color destructive = EditorThemeColor('destructive', 0xFFFF7B72);
 
   /// A selected row's fill: [primary] at the prototype's selection opacity
   /// (`bg-primary/20`).
-  static const Color selectionBg = EditorThemeColor('selectionBg', 0x33FB7C01);
+  static const Color selectionBg = EditorThemeColor('selectionBg', 0x33F2A93B);
 
   /// A row under the pointer, `hover:bg-white/4`.
   static const Color rowHover = EditorThemeColor('rowHover', 0x0AFFFFFF);
@@ -140,57 +136,65 @@ class EditorColors {
   // from here rather than inventing a colour.
 
   /// `--chart-1`, the same orange as [primary].
-  static const Color chart1 = EditorThemeColor('chart1', 0xFFFB7C01);
+  static const Color chart1 = EditorThemeColor('chart1', 0xFFF2A93B);
 
   /// `--chart-2`, the same blue as [accent].
-  static const Color chart2 = EditorThemeColor('chart2', 0xFF0099C8);
+  static const Color chart2 = EditorThemeColor('chart2', 0xFF39C6E0);
 
   /// `--chart-3`, `oklch(0.65 0.15 140)`: green.
-  static const Color chart3 = EditorThemeColor('chart3', 0xFF58A547);
+  static const Color chart3 = EditorThemeColor('chart3', 0xFF7FE0A4);
 
   /// `--chart-4`, `oklch(0.68 0.17 280)`: violet.
   static const Color chart4 = EditorThemeColor('chart4', 0xFF8688FE);
 
   /// `--chart-5`, the same red as [destructive].
-  static const Color chart5 = EditorThemeColor('chart5', 0xFFEE3533);
+  static const Color chart5 = EditorThemeColor('chart5', 0xFFFF7B72);
 
   /// Amber. The prototype's ramp has no yellow, but a warning that reads as a
   /// selection is worse than a sixth hue, so the log and the "modified"/locked
   /// states keep one. Tailwind `amber-400`, which is what the prototype's own
   /// `text-yellow-400` folder icon uses.
-  static const Color warning = EditorThemeColor('warning', 0xFFFBBF24);
+  static const Color warning = EditorThemeColor('warning', 0xFFE3B341);
+
+  /// A state that went right: a passed build, a connected device, a saved
+  /// asset. Mint, so it never reads as the amber selection.
+  static const Color success = EditorThemeColor('success', 0xFF7FE0A4);
 
   // --- Lines ----------------------------------------------------------------
 
   /// White at 12% (the prototype's `--border` is 9%, raised with the lifted
   /// surfaces so panel edges stay visible), not a solid grey, so it keeps its
   /// weight over any surface it is drawn on.
-  static const Color border = EditorThemeColor('border', 0x1FFFFFFF);
+  static const Color border = EditorThemeColor('border', 0xFF26282E);
 
   /// Input outlines, white at 15% (prototype `--input`: 11%).
-  static const Color input = EditorThemeColor('input', 0x26FFFFFF);
+  static const Color input = EditorThemeColor('input', 0xFF2C2E34);
+
+  /// The outline of a field, a step above [border] so an input reads as an
+  /// input on an island.
+  static const Color fieldBorder = EditorThemeColor('fieldBorder', 0xFF2C2E34);
 
   /// [border] composited over [background], as a solid colour for the places
   /// that need one (native painters and anything drawn without a backdrop to
   /// blend with).
-  static const Color borderSolid = EditorThemeColor('borderSolid', 0xFF383838);
+  static const Color borderSolid = EditorThemeColor('borderSolid', 0xFF26282E);
 
   // --- Output log -----------------------------------------------------------
   // The log keeps its own hues: these are states, not surfaces, and the
   // prototype's chart ramp is what it uses for them.
 
   /// `--chart-2`, the accent blue.
-  static const Color logInfo = EditorThemeColor('logInfo', 0xFF0099C8);
+  static const Color logInfo = EditorThemeColor('logInfo', 0xFF39C6E0);
 
   /// [warning]; kept distinct from [primary] so a warning does not read as a
   /// selection.
-  static const Color logWarning = EditorThemeColor('logWarning', 0xFFFBBF24);
+  static const Color logWarning = EditorThemeColor('logWarning', 0xFFE3B341);
 
   /// `--chart-5` / `--destructive`.
-  static const Color logError = EditorThemeColor('logError', 0xFFEE3533);
+  static const Color logError = EditorThemeColor('logError', 0xFFFF7B72);
 
   /// `--chart-3`.
-  static const Color logSuccess = EditorThemeColor('logSuccess', 0xFF58A547);
+  static const Color logSuccess = EditorThemeColor('logSuccess', 0xFF7FE0A4);
 
   // --- Graph taxonomies ----------------------------------------------------
   // Colours that name a kind of value in a graph editor rather than a piece of
@@ -209,7 +213,7 @@ class EditorColors {
   static const Color pinRotator = EditorThemeColor('pinRotator', 0xFFB39DDB);
   static const Color pinObject = EditorThemeColor('pinObject', 0xFF0099C8);
   static const Color pinTransform = EditorThemeColor('pinTransform', 0xFF26C6DA);
-  static const Color pinStruct = EditorThemeColor('pinStruct', 0xFFFBBF24);
+  static const Color pinStruct = EditorThemeColor('pinStruct', 0xFFE3B341);
   static const Color pinColor = EditorThemeColor('pinColor', 0xFF1E88E5);
   static const Color pinArray = EditorThemeColor('pinArray', 0xFF0099C8);
   static const Color pinHitResult = EditorThemeColor('pinHitResult', 0xFF26C6DA);
@@ -321,6 +325,7 @@ class EditorColors {
     'border': border,
     'input': input,
     'borderSolid': borderSolid,
+    'fieldBorder': fieldBorder,
     'rowHover': rowHover,
     'placeholderFill': placeholderFill,
     'foreground': foreground,
@@ -333,6 +338,7 @@ class EditorColors {
     'selectionBg': selectionBg,
     'destructive': destructive,
     'warning': warning,
+    'success': success,
     'logInfo': logInfo,
     'logWarning': logWarning,
     'logError': logError,
@@ -437,12 +443,17 @@ const ColorScheme luminaDarkColorScheme = ColorScheme(
 class EditorTypography {
   const EditorTypography._();
 
-  /// `--font-sans: 'Geist Variable'`. shadcn_flutter already bundles the whole
-  /// Geist family under this name, so nothing is shipped for it here. The
-  /// prototype loads the variable cut and this is the static one, which means
-  /// the weights are the designed instances rather than interpolations — the
-  /// shapes are the same at 400/500/600/700, which is all the editor uses.
-  static const String sansFamily = 'GeistSans';
+  /// The UI face: Manrope (SIL OFL), bundled under `assets/fonts/` at
+  /// 400/500/600/700/800. Every label, menu, tab and heading is set in it;
+  /// numbers, paths and stats are set in [monoFamily].
+  static const String uiFamily = 'Manrope';
+
+  /// [uiFamily]: the family the theme's `font.sans` names by default.
+  static const String sansFamily = uiFamily;
+
+  /// shadcn_flutter's bundled Geist, still selectable from a theme JSON
+  /// (`"sans": "GeistSans"`).
+  static const String geistFamily = 'GeistSans';
   static const String sansPackage = 'shadcn_flutter';
 
   /// `--font-mono: 'JetBrains Mono', monospace`, bundled under
@@ -464,6 +475,24 @@ class EditorTypography {
 
   /// `text-[8px]` — asset sizes, viewport axis gizmo letters.
   static const double microSize = 8;
+
+  /// 12 px — section headers (semi-bold), menu-bar menus, tab titles.
+  static const double titleSize = 12;
+
+  /// 15 px — dialog titles and the one display size the editor uses.
+  static const double displaySize = 15;
+
+  /// The Aurora scale: 9 / 10 / 11 / 12 / 15 px.
+  static const List<double> scale = [captionSize, labelSize, bodySize, titleSize, displaySize];
+
+  /// A UI label in [uiFamily]: the one way to spell a themed text style.
+  static TextStyle ui({
+    double fontSize = bodySize,
+    FontWeight fontWeight = FontWeight.w500,
+    Color? color,
+    double? letterSpacing,
+  }) =>
+      TextStyle(fontFamily: uiFamily, fontSize: fontSize, fontWeight: fontWeight, color: color, letterSpacing: letterSpacing);
 
   /// Tailwind `tracking-widest` is `0.1em`; Flutter's `letterSpacing` is in
   /// logical pixels, so at [panelTitleSize] that is 1.0.
@@ -647,8 +676,8 @@ ThemeData luminaEditorTheme({bool light = false}) {
   final mono = theme.monoFamily == 'GeistMono'
       ? const TextStyle(fontFamily: 'GeistMono', package: 'shadcn_flutter')
       : TextStyle(fontFamily: theme.monoFamily);
-  final sans = theme.sansFamily == EditorTypography.sansFamily
-      ? const TextStyle(fontFamily: EditorTypography.sansFamily, package: EditorTypography.sansPackage)
+  final sans = theme.sansFamily == EditorTypography.geistFamily
+      ? const TextStyle(fontFamily: EditorTypography.geistFamily, package: EditorTypography.sansPackage)
       : TextStyle(fontFamily: theme.sansFamily);
   return ThemeData(
     colorScheme: luminaColorSchemeFor(theme),

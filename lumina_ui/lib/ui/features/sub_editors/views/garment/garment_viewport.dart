@@ -244,6 +244,7 @@ mixin _GarmentViewport on _GarmentEditorBase {
                       decoration: BoxDecoration(
                         color: EditorColors.card.withValues(alpha: 0.92),
                         borderRadius: BorderRadius.circular(6),
+                        // The pick-mode outline matches the landmark hues drawn in the 3D viewport (garment amber, body cyan).
                         border: Border.all(color: vm.pickMode == GarmentPickMode.garment ? const Color(0xFFF59E0B) : const Color(0xFF22D3EE)),
                       ),
                       child: Text(hint, style: const TextStyle(fontSize: 11, color: EditorColors.foreground)),

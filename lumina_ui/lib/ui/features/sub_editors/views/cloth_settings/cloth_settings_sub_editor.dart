@@ -113,7 +113,7 @@ class _ClothSettingsSubEditorState extends State<ClothSettingsSubEditor> {
             const SizedBox(width: 12),
             Flexible(
               child: Text(_vm.error!,
-                  overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Color(0xFFEF4444))),
+                  overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: EditorColors.destructive)),
             ),
           ],
           const Spacer(),

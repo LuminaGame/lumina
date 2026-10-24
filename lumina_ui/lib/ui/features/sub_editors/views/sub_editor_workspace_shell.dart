@@ -169,6 +169,7 @@ class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
               decoration: const BoxDecoration(
                 boxShadow: [
                   BoxShadow(
+                    // A scrim over the workspace: black at 27%, not a theme surface.
                     color: Color(0x44000000),
                     blurRadius: 10,
                     offset: Offset(0, -3),
@@ -191,6 +192,7 @@ class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: EditorColors.border, width: 0.8),
                   boxShadow: const [
+                    // A drop shadow: black at 20%, not a theme surface.
                     BoxShadow(color: Color(0x33000000), blurRadius: 4, offset: Offset(0, 2)),
                   ],
                 ),

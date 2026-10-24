@@ -48,12 +48,13 @@ class EditorThemeData {
 
   static const int version = 1;
   static const double defaultRadius = 0.1875;
-  static const String defaultSans = 'GeistSans';
+  static const String defaultSans = 'Manrope';
   static const String defaultMono = 'JetBrains Mono';
 
-  /// The fonts the editor bundles (shadcn_flutter's Geist family and
-  /// JetBrains Mono under `assets/fonts/`); a theme may pick among these.
-  static const List<String> sansFamilies = ['GeistSans', 'JetBrains Mono'];
+  /// The fonts the editor bundles (Manrope and JetBrains Mono under
+  /// `assets/fonts/`, shadcn_flutter's Geist family); a theme may pick among
+  /// these.
+  static const List<String> sansFamilies = ['Manrope', 'GeistSans', 'JetBrains Mono'];
   static const List<String> monoFamilies = ['JetBrains Mono', 'GeistMono'];
 
   /// Density is shadcn_flutter's `ThemeData.scaling`: < 1 is compact.
@@ -107,6 +108,7 @@ class EditorThemeData {
     EditorThemeToken('border', surfaces, 'Borders (translucent)'),
     EditorThemeToken('input', surfaces, 'Input outlines (translucent)'),
     EditorThemeToken('borderSolid', surfaces, 'Borders where nothing blends'),
+    EditorThemeToken('fieldBorder', surfaces, 'Input outlines'),
     EditorThemeToken('rowHover', surfaces, 'A row under the pointer'),
     EditorThemeToken('placeholderFill', surfaces, 'Empty image slots'),
     EditorThemeToken('foreground', text, 'Text'),
@@ -119,6 +121,7 @@ class EditorThemeData {
     EditorThemeToken('selectionBg', accents, 'A selected row'),
     EditorThemeToken('destructive', status, 'Errors, delete, close hover'),
     EditorThemeToken('warning', status, 'Warnings, modified state'),
+    EditorThemeToken('success', status, 'Passed builds, connected devices'),
     EditorThemeToken('logInfo', status, 'Output Log info'),
     EditorThemeToken('logWarning', status, 'Output Log warning'),
     EditorThemeToken('logError', status, 'Output Log error'),
@@ -177,44 +180,46 @@ class EditorThemeData {
 
   // --- built-ins -------------------------------------------------------------
 
-  /// The lifted grey ramp — the default.
+  /// The Aurora (Obsidian) ramp — the default.
   static final EditorThemeData luminaDark = EditorThemeData(
     name: 'Lumina Dark',
     brightness: Brightness.dark,
     colors: _hex(const {
-      'background': 0xFF1C1C1C,
-      'sidebar': 0xFF252525,
-      'card': 0xFF373737,
-      'cardHeader': 0xFF2E2E2E,
-      'cardHeaderHover': 0xFF353535,
-      'rail': 0xFF131313,
-      'popover': 0xFF414141,
-      'muted': 0xFF414141,
-      'secondary': 0xFF4A4A4A,
-      'viewportBackdrop': 0xFF0E0E0E,
-      'hudSurface': 0xCC1C1C1C,
-      'hudSurfaceStrong': 0xEE1C1C1C,
-      'scrollbar': 0xFF5E5E5E,
-      'border': 0x1FFFFFFF,
-      'input': 0x26FFFFFF,
-      'borderSolid': 0xFF383838,
+      'background': 0xFF141518,
+      'sidebar': 0xFF111215,
+      'card': 0xFF1A1B1F,
+      'cardHeader': 0xFF15171B,
+      'cardHeaderHover': 0xFF1C1E23,
+      'rail': 0xFF0F1013,
+      'popover': 0xFF1A1B1F,
+      'muted': 0xFF1F2126,
+      'secondary': 0xFF24262C,
+      'viewportBackdrop': 0xFF1B1D22,
+      'hudSurface': 0xE0111215,
+      'hudSurfaceStrong': 0xF4111215,
+      'scrollbar': 0xFF3A3D45,
+      'border': 0xFF26282E,
+      'input': 0xFF2C2E34,
+      'borderSolid': 0xFF26282E,
+      'fieldBorder': 0xFF2C2E34,
       'rowHover': 0x0AFFFFFF,
       'placeholderFill': 0x11FFFFFF,
-      'foreground': 0xFFD6D6D6,
-      'secondaryForeground': 0xFFC4C4C4,
-      'mutedForeground': 0xFFAEAEAE,
-      'primaryForeground': 0xFF030303,
+      'foreground': 0xFFE6E6E8,
+      'secondaryForeground': 0xFFC9CAD0,
+      'mutedForeground': 0xFF9A9CA3,
+      'primaryForeground': 0xFF0B1D22,
       'accentForeground': 0xFFF2F2F2,
-      'primary': 0xFFFB7C01,
-      'accent': 0xFF0099C8,
-      'selectionBg': 0x33FB7C01,
-      'destructive': 0xFFEE3533,
-      'warning': 0xFFFBBF24,
-      'logInfo': 0xFF0099C8,
-      'logWarning': 0xFFFBBF24,
-      'logError': 0xFFEE3533,
-      'logSuccess': 0xFF58A547,
-      'graphCanvas': 0xFF16171A,
+      'primary': 0xFFF2A93B,
+      'accent': 0xFF39C6E0,
+      'selectionBg': 0x33F2A93B,
+      'destructive': 0xFFFF7B72,
+      'warning': 0xFFE3B341,
+      'success': 0xFF7FE0A4,
+      'logInfo': 0xFF39C6E0,
+      'logWarning': 0xFFE3B341,
+      'logError': 0xFFFF7B72,
+      'logSuccess': 0xFF7FE0A4,
+      'graphCanvas': 0xFF0F1013,
       'pinExec': 0xFFFFFFFF,
       'pinBoolean': 0xFFEE3533,
       'pinInteger': 0xFF43A047,
@@ -226,7 +231,7 @@ class EditorThemeData {
       'pinRotator': 0xFFB39DDB,
       'pinObject': 0xFF0099C8,
       'pinTransform': 0xFF26C6DA,
-      'pinStruct': 0xFFFBBF24,
+      'pinStruct': 0xFFE3B341,
       'pinColor': 0xFF1E88E5,
       'pinArray': 0xFF0099C8,
       'pinHitResult': 0xFF26C6DA,
@@ -242,11 +247,11 @@ class EditorThemeData {
       'materialPinTexture': 0xFFBA68C8,
       'materialPinUnknown': 0xFF78909C,
       'blendSpaceLabel': 0xFFC084FC,
-      'chart1': 0xFFFB7C01,
-      'chart2': 0xFF0099C8,
-      'chart3': 0xFF58A547,
+      'chart1': 0xFFF2A93B,
+      'chart2': 0xFF39C6E0,
+      'chart3': 0xFF7FE0A4,
       'chart4': 0xFF8688FE,
-      'chart5': 0xFFEE3533,
+      'chart5': 0xFFFF7B72,
       'assetTypeAnimation': 0xFF3FA33A,
       'assetTypeSkeletalMesh': 0xFFE040E0,
       'assetTypeStaticMesh': 0xFF00C8C8,
@@ -289,8 +294,17 @@ class EditorThemeData {
         'border': 0x17FFFFFF,
         'input': 0x1CFFFFFF,
         'borderSolid': 0xFF1C1C1C,
+        'fieldBorder': 0xFF1C1C1C,
+        'foreground': 0xFFD6D6D6,
         'secondaryForeground': 0xFFB7B7B7,
         'mutedForeground': 0xFF696969,
+        'primaryForeground': 0xFF030303,
+        'primary': 0xFFFB7C01,
+        'accent': 0xFF0099C8,
+        'selectionBg': 0x33FB7C01,
+        'destructive': 0xFFEE3533,
+        'warning': 0xFFFBBF24,
+        'graphCanvas': 0xFF16171A,
       }),
     },
   );
@@ -318,6 +332,7 @@ class EditorThemeData {
         'border': 0x24000000,
         'input': 0x2E000000,
         'borderSolid': 0xFFD0D0D0,
+        'fieldBorder': 0xFFC4C4C4,
         'rowHover': 0x0D000000,
         'placeholderFill': 0x14000000,
         'foreground': 0xFF1F1F1F,

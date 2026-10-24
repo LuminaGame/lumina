@@ -1,3 +1,4 @@
+// design-token-exempt: landmark hues drawn in the 3D viewport over the garment and the body
 part of 'garment_sub_editor.dart';
 
 /// The right panel: the landmarks as tree rows (a garment point and a body

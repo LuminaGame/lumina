@@ -318,6 +318,7 @@ mixin _ViewportCameraControls on _ViewportWidgetStateBase {
     };
     final color = !supported
         ? EditorColors.mutedForeground
+        // NVIDIA's brand green marks the active DLSS toggle.
         : (active ? const Color(0xFF76B900) : EditorColors.foreground);
     final tooltip = supported ? tooltipOn.replaceFirst('{state}', active ? 'on' : 'off') : tooltipOff;
     return Tooltip(

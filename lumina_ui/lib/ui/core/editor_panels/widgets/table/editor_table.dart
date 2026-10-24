@@ -381,7 +381,7 @@ class EditorTableState extends State<EditorTable> {
         color: selected ? EditorColors.selectionBg : EditorColors.sidebar,
         border: Border(
           bottom: const BorderSide(color: EditorColors.border),
-          left: BorderSide(color: row.tone == PluginTableRowTone.normal ? const Color(0x00000000) : tone, width: 2),
+          left: BorderSide(color: row.tone == PluginTableRowTone.normal ? Colors.transparent : tone, width: 2),
         ),
       ),
       child: Row(children: [

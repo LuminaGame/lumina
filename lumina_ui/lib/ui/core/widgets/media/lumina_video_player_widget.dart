@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Full-featured, shadcn_flutter styled video player widget for Lumina Studio.
 ///
@@ -102,7 +103,7 @@ class _LuminaVideoPlayerWidgetState extends State<LuminaVideoPlayerWidget> {
         return MouseRegion(
           onHover: (_) => _onPointerHover(),
           child: Container(
-            color: const Color(0xFF0B0B0E),
+            color: EditorColors.viewportBackdrop,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -197,8 +198,8 @@ class _LuminaVideoPlayerWidgetState extends State<LuminaVideoPlayerWidget> {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
       decoration: const BoxDecoration(
-        color: Color(0xEE131317),
-        border: Border(top: BorderSide(color: Color(0x22FFFFFF))),
+        color: EditorColors.hudSurfaceStrong,
+        border: Border(top: BorderSide(color: EditorColors.border)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -242,7 +243,7 @@ class _LuminaVideoPlayerWidgetState extends State<LuminaVideoPlayerWidget> {
                 style: const TextStyle(
                   fontSize: 11,
                   fontFamily: 'monospace',
-                  color: Color(0xFF9CA3AF),
+                  color: EditorColors.mutedForeground,
                 ),
               ),
               const Spacer(),
@@ -253,7 +254,7 @@ class _LuminaVideoPlayerWidgetState extends State<LuminaVideoPlayerWidget> {
                 child: Icon(
                   value.volume == 0 ? LucideIcons.volumeX : LucideIcons.volume2,
                   size: 14,
-                  color: value.volume == 0 ? const Color(0xFFEF4444) : Colors.white,
+                  color: value.volume == 0 ? EditorColors.destructive : Colors.white,
                 ),
               ),
               SizedBox(
@@ -279,7 +280,7 @@ class _LuminaVideoPlayerWidgetState extends State<LuminaVideoPlayerWidget> {
                 child: Icon(
                   LucideIcons.repeat,
                   size: 13,
-                  color: value.isLooping ? const Color(0xFF3B82F6) : const Color(0xFF6B7280),
+                  color: value.isLooping ? EditorColors.accent : EditorColors.mutedForeground,
                 ),
               ),
               const SizedBox(width: 6),

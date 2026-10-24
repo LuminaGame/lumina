@@ -1,6 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/theme_editor_view_model.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Component preview builders for the Theme Sub-Editor showcase.
 class ThemePreviewComponents {
@@ -293,7 +294,7 @@ class ThemePreviewComponents {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: const Color(0x15FFFFFF),
+            color: EditorColors.placeholderFill,
             borderRadius: BorderRadius.circular(doc.radius * 0.8),
           ),
           child: Text('Inactive Tab 1', style: TextStyle(fontSize: 12, color: doc.colorOf('mutedForeground'))),
@@ -342,7 +343,7 @@ class ThemePreviewComponents {
                   color: doc.colorOf('popoverForeground'),
                 ),
               ),
-              const Icon(LucideIcons.x, size: 14, color: Color(0xFF9CA3AF)),
+              const Icon(LucideIcons.x, size: 14, color: EditorColors.mutedForeground),
             ],
           ),
           const SizedBox(height: 10),

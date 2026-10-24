@@ -84,7 +84,7 @@ class EditorTableCell extends StatelessWidget {
             width: 12,
             height: 12,
             decoration: BoxDecoration(
-              color: editorWidgetColor(value is String ? value as String : null, const Color(0x00000000)),
+              color: editorWidgetColor(value is String ? value as String : null, Colors.transparent),
               border: Border.all(color: EditorColors.border),
               borderRadius: BorderRadius.circular(2),
             ),

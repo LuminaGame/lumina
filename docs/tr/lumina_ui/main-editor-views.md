@@ -140,7 +140,7 @@ Seviyenin World Partition ayarları (hiçbir şey seçili değilken görünür; 
 
 ### `class MenuBarWidget`
 
-`MenuBarWidget`: Kullanıcı arayüzünü (UI) oluşturan ve kullanıcı etkileşimlerini dinleyen shadcn_flutter bileşenidir.
+Editörün menü barı, aynı zamanda pencerenin başlık çubuğu: rail üzerinde Aurora 48 px satırı; Prism L kilidi, dokuz menü, Ctrl K komut alanı (`EditorCommandField`), kaynak denetimi, geri al, yinele, `Proje · Seviye` çipi (kaydedilmemişken amber nokta) ve pencere denetimleri. Bkz. [Aurora tasarım dili](design-system.md#menü-barı).
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -150,6 +150,10 @@ Seviyenin World Partition ayarları (hiçbir şey seçili değilken görünür; 
 | `activeLevelName` | `String activeLevelName` | `activeLevelName` alanını (field/property) ve ilişkili veriyi saklar. |
 | `onSave` | `VoidCallback onSave` | `onSave` alanını (field/property) ve ilişkili veriyi saklar. |
 | `viewModel` | `EditorViewModel? viewModel` | `viewModel` alanını (field/property) ve ilişkili veriyi saklar. |
+| `height` | `static const double height` | 48: satırın yüksekliği. |
+| `menuTitles` | `static const List<String> menuTitles` | Sırasıyla File, Edit, View, Build, Debug, Tools, Plugins, Window, Help. |
+| `dragMargin` | `static const double dragMargin` | Komut alanının iki yanında boş bırakılan başlık çubuğu şeridi (24). |
+| `chipMaxWidth` | `static const double chipMaxWidth` | Proje · seviye çipinin en büyük genişliği (240); uzun adlar kısaltılır. |
 | `build` | `Widget build(BuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
 
 ## `lib/ui/features/main_editor/views/new_level_dialog.dart`

@@ -23,6 +23,7 @@
 | [App shell and shared UI](core.md) | App entry, built-in plugin, plugin extension registry, theme, property editors, scene services. |
 | [App shell and shared UI (continued, part 1)](core-continued.md) | More files under `lib/`, `lib/testing/`, `lib/ui/core/`, `lib/ui/core/host/`, `lib/ui/core/property_editors/`, `lib/ui/core/services/`, `lib/ui/core/theme/`, `lib/ui/core/widgets/`. |
 | [App shell and shared UI (continued, part 2)](core-continued-2.md) | More files under `lib/ui/core/window/`, the media players and declarative plugin panels (`PluginViewRenderer`). |
+| [The Aurora design language](design-system.md) | The tokens, type, menu bar and typed tabs of stage 1, and the stages still to come. |
 | [Brand: the Prism L](brand.md) | The mark's geometry and colours, the lockup, and every app icon rendered from one SVG (`tool/brand/render_icons.dart`). |
 | [Main editor: views](main-editor-views.md) | Viewport, outliner, details, content browser, toolbar, menu bar, output log, dialogs. |
 | [Main editor: views (continued)](main-editor-views-continued.md) | More files under `lib/ui/features/main_editor/views/`. |

@@ -20,6 +20,7 @@ class QuitProgressOverlay extends StatelessWidget {
         return AbsorbPointer(
           key: const ValueKey('quit_progress_overlay'),
           child: ColoredBox(
+            // The quit scrim: black at 60% over the editor.
             color: const Color(0x99000000),
             child: Center(
               child: SizedBox(

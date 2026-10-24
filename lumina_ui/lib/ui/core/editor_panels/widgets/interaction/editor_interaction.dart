@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:lumina_editor_api/lumina_editor_api.dart' show PluginViewEventPhase;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// One event a native editor widget (timeline, table, canvas) sends.
 ///
@@ -140,8 +141,8 @@ class EditorWidgetStateError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        color: const Color(0x22EE3533),
+        color: EditorColors.destructive.withValues(alpha: 0.13),
         padding: const EdgeInsets.all(6),
-        child: Text(message, style: const TextStyle(fontSize: 10, color: Color(0xFFEE3533))),
+        child: Text(message, style: const TextStyle(fontSize: 10, color: EditorColors.destructive)),
       );
 }

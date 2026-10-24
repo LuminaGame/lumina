@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-/// The panel surfaces are lifted off pure black onto a grey
-/// ramp whose steps can actually be told apart, while text stays readable on
-/// every one of them.
+/// The Aurora surfaces are an ordered near-black ramp with a faint cool
+/// cast, separated by solid borders rather than by big lightness steps; text
+/// stays readable on every one of them.
 ///
 /// L* is CIE 1976 lightness (D65, from relative luminance); contrast is the
 /// WCAG 2.x ratio `(L1 + 0.05) / (L2 + 0.05)`.
@@ -30,36 +30,42 @@ void main() {
   String hex(Color c) =>
       '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
 
-  final Map<String, Color> surfaces = <String, Color>{
-    'background': EditorColors.background,
-    'sidebar': EditorColors.sidebar,
-    'card': EditorColors.card,
-    'cardHeader': EditorColors.cardHeader,
-    'rail': EditorColors.rail,
-    'popover': EditorColors.popover,
-  };
+  // Darkest to lightest, as the ramp is meant to read.
+  final List<MapEntry<String, Color>> ramp = <MapEntry<String, Color>>[
+    const MapEntry<String, Color>('rail', EditorColors.rail),
+    const MapEntry<String, Color>('sidebar', EditorColors.sidebar),
+    const MapEntry<String, Color>('background', EditorColors.background),
+    const MapEntry<String, Color>('cardHeader', EditorColors.cardHeader),
+    const MapEntry<String, Color>('card', EditorColors.card),
+    const MapEntry<String, Color>('muted', EditorColors.muted),
+    const MapEntry<String, Color>('secondary', EditorColors.secondary),
+  ];
+  final Map<String, Color> surfaces = Map<String, Color>.fromEntries(ramp)
+    ..['popover'] = EditorColors.popover
+    ..['viewportBackdrop'] = EditorColors.viewportBackdrop;
 
-  test('every surface is opaque and hueless', () {
+  test('every surface is opaque and carries at most the faint Obsidian cast', () {
     surfaces.forEach((String name, Color c) {
       expect(c.a, 1.0, reason: '$name must be opaque');
-      expect(c.r, c.g, reason: '$name ${hex(c)} must carry no hue');
-      expect(c.g, c.b, reason: '$name ${hex(c)} must carry no hue');
+      // Blue leads red by a few steps: the cast, never a hue.
+      final int r = (c.r * 255).round(), g = (c.g * 255).round(), b = (c.b * 255).round();
+      expect(b - r, inInclusiveRange(0, 8), reason: '$name ${hex(c)} carries more than the cast');
+      expect((g - r).abs(), lessThanOrEqualTo(4), reason: '$name ${hex(c)} carries more than the cast');
     });
   });
 
-  test('adjacent surfaces on the lightness ramp differ by at least 4 L*', () {
-    final List<MapEntry<String, Color>> ramp = surfaces.entries.toList()
-      ..sort((MapEntry<String, Color> a, MapEntry<String, Color> b) =>
-          lStar(a.value).compareTo(lStar(b.value)));
-    final List<String> tooClose = <String>[];
+  test('the ramp is strictly ordered, each step at least 0.7 L* apart', () {
+    final List<String> wrong = <String>[];
     for (int i = 1; i < ramp.length; i++) {
       final double step = lStar(ramp[i].value) - lStar(ramp[i - 1].value);
-      if (step < 4) {
-        tooClose.add('${ramp[i - 1].key} ${hex(ramp[i - 1].value)} → '
+      if (step < 0.7) {
+        wrong.add('${ramp[i - 1].key} ${hex(ramp[i - 1].value)} → '
             '${ramp[i].key} ${hex(ramp[i].value)}: ${step.toStringAsFixed(2)} L*');
       }
     }
-    expect(tooClose, isEmpty, reason: tooClose.join('\n'));
+    expect(wrong, isEmpty, reason: wrong.join('\n'));
+    // Islands sit on the window, and fields on the islands: 2+ L* in all.
+    expect(lStar(EditorColors.card) - lStar(EditorColors.sidebar), greaterThan(2));
   });
 
   test('foreground reaches 7:1 and mutedForeground 4.5:1 on every surface', () {
@@ -73,21 +79,17 @@ void main() {
     expect(failures, isEmpty, reason: failures.join('\n'));
   });
 
-  test('no surface is darker than #121212; the viewport backdrop stays darker', () {
-    final double floor = lStar(const Color(0xFF121212));
-    surfaces.forEach((String name, Color c) {
-      expect(lStar(c), greaterThanOrEqualTo(floor), reason: '$name ${hex(c)} is near-black');
-    });
-    final double darkest = surfaces.values.map(lStar).reduce(math.min);
-    expect(lStar(EditorColors.viewportBackdrop), lessThan(darkest),
-        reason: 'the 3D view reads as recessed below every panel');
+  test('borders separate the islands: the border is lighter than every surface it frames', () {
+    for (final String name in <String>['rail', 'sidebar', 'background', 'cardHeader', 'card']) {
+      expect(lStar(EditorColors.border), greaterThan(lStar(surfaces[name]!) + 2),
+          reason: 'border ${hex(EditorColors.border)} must stand off $name ${hex(surfaces[name]!)}');
+    }
+    expect(lStar(EditorColors.fieldBorder), greaterThan(lStar(EditorColors.card) + 2));
   });
 
-  test('borders stay visible over the lifted surfaces', () {
-    // Translucent white, so it keeps its weight on each surface; the solid
-    // variant is that border composited over the background.
-    expect(EditorColors.border.a, lessThan(1.0));
-    expect(EditorColors.border.a, greaterThanOrEqualTo(0x1F / 255 - 1e-6));
-    expect(lStar(EditorColors.borderSolid) - lStar(EditorColors.background), greaterThanOrEqualTo(8));
+  test('the viewport backdrop sits just above the islands, and the amber reads dark text', () {
+    expect(lStar(EditorColors.viewportBackdrop), greaterThan(lStar(EditorColors.sidebar)));
+    expect(lStar(EditorColors.viewportBackdrop), lessThan(lStar(EditorColors.muted)));
+    expect(contrast(EditorColors.primaryForeground, EditorColors.primary), greaterThan(7));
   });
 }

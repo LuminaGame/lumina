@@ -25,6 +25,7 @@ mixin _ViewportHudOverlays on _ViewportWidgetStateBase, _ViewportCameraControls 
             // Drop shadow under a HUD chip: an opacity, not a surface colour.
             boxShadow: const [
               BoxShadow(
+                // A black scrim over the render, so the HUD reads over any scene.
                 color: Color(0xAA000000),
                 blurRadius: 12,
               ),
@@ -68,6 +69,7 @@ mixin _ViewportHudOverlays on _ViewportWidgetStateBase, _ViewportCameraControls 
             // Drop shadow under a HUD chip: an opacity, not a surface colour.
             boxShadow: const [
               BoxShadow(
+                // A black scrim over the render, so the HUD reads over any scene.
                 color: Color(0xAA000000),
                 blurRadius: 12,
               ),
@@ -114,6 +116,7 @@ mixin _ViewportHudOverlays on _ViewportWidgetStateBase, _ViewportCameraControls 
             // Drop shadow under a HUD chip: an opacity, not a surface colour.
             boxShadow: const [
               BoxShadow(
+                // A lighter black scrim over the render for secondary HUD chips.
                 color: Color(0x8A000000),
                 blurRadius: 10,
               ),
@@ -162,6 +165,7 @@ mixin _ViewportHudOverlays on _ViewportWidgetStateBase, _ViewportCameraControls 
             // Drop shadow under a HUD chip: an opacity, not a surface colour.
             boxShadow: const [
               BoxShadow(
+                // A black scrim over the render, so the HUD reads over any scene.
                 color: Color(0x8A000000),
                 blurRadius: 8,
               ),

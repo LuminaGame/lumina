@@ -26,6 +26,7 @@ class CrashReportOverlay extends StatelessWidget {
             if (report != null)
               Positioned.fill(
                 child: ColoredBox(
+                  // The crash screen scrim: black at 70% over whatever was on screen.
                   color: const Color(0xB3000000),
                   child: Center(
                     child: CrashReportView(

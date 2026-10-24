@@ -69,9 +69,9 @@ MenuItem _group(String title, String key) => MenuLabel(
 MenuItem _deviceRow(AndroidDevice d, AndroidDeviceList list, bool runActive, void Function(AndroidDevice) onChoose) {
   final hint = d.hint;
   final dot = switch (d.state) {
-    AndroidDeviceState.online => const Color(0xFF22C55E),
-    AndroidDeviceState.stopped => const Color(0x00000000),
-    _ => const Color(0xFFF59E0B),
+    AndroidDeviceState.online => EditorColors.success,
+    AndroidDeviceState.stopped => Colors.transparent,
+    _ => EditorColors.warning,
   };
   return MenuButton(
     key: ValueKey('play_on_device_${d.id}'),
@@ -107,7 +107,7 @@ MenuItem _deviceRow(AndroidDevice d, AndroidDeviceList list, bool runActive, voi
         if (hint != null)
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 260),
-            child: Text(hint, style: const TextStyle(fontSize: 9, color: Color(0xFFF59E0B))),
+            child: Text(hint, style: const TextStyle(fontSize: 9, color: EditorColors.warning)),
           ),
       ],
     ),

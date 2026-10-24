@@ -1,6 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/theme_editor_view_model.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Property inspector showing all editable properties for the active tree selection.
 class ThemePropertyInspector extends StatelessWidget {
@@ -158,7 +159,7 @@ class ThemePropertyInspector extends StatelessWidget {
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: const Color(0x33FFFFFF)),
+            border: Border.all(color: EditorColors.fieldBorder),
           ),
         ),
         const SizedBox(width: 10),
@@ -170,7 +171,7 @@ class ThemePropertyInspector extends StatelessWidget {
         ),
         Text(
           hex,
-          style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: Color(0xFF9CA3AF)),
+          style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: EditorColors.mutedForeground),
         ),
         const SizedBox(width: 8),
         OutlineButton(
@@ -333,16 +334,16 @@ class ThemePropertyInspector extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Text('Target Component: ', style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
+            const Text('Target Component: ', style: TextStyle(fontSize: 12, color: EditorColors.mutedForeground)),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0x338B5CF6),
+                color: EditorColors.assetTypeTheme.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 custom.targetComponent,
-                style: const TextStyle(fontSize: 11, color: Color(0xFFA78BFA), fontWeight: FontWeight.w600),
+                style: const TextStyle(fontSize: 11, color: EditorColors.blendSpaceLabel, fontWeight: FontWeight.w600),
               ),
             ),
           ],

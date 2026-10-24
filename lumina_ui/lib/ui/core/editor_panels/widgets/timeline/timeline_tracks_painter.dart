@@ -51,12 +51,14 @@ class TimelineTracksPainter extends CustomPainter {
       if (r.isGroup) {
         canvas.drawRect(band, Paint()..color = EditorColors.cardHeader);
       } else if (r.track!.locked) {
+        // Alternating track bands: white at 5% over any track colour.
         canvas.drawRect(band, Paint()..color = const Color(0x0DFFFFFF));
       }
       canvas.drawLine(Offset(0, r.bottom - 0.5), Offset(size.width, r.bottom - 0.5), line);
     }
     // A line per second.
     if (fps > 0 && fps * l.zoom >= 24) {
+      // The grid: white at 6%, drawn over any track colour.
       final grid = Paint()..color = const Color(0x10FFFFFF);
       for (var f = (l.scroll / fps).floor() * fps; f <= length; f += fps) {
         final x = l.xOf(f);
@@ -65,6 +67,7 @@ class TimelineTracksPainter extends CustomPainter {
       }
     }
     final endX = l.xOf(length);
+    // The out-of-range band: a black scrim over the track colours.
     if (endX < size.width) canvas.drawRect(Rect.fromLTRB(math.max(0, endX), 0, size.width, size.height), Paint()..color = const Color(0x44000000));
     for (final c in clips) {
       _clip(canvas, size, c);
@@ -129,6 +132,7 @@ class TimelineTracksPainter extends CustomPainter {
     final stroke = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
+      // Key text on a coloured key: near-black for contrast on every key hue.
       ..color = selected ? EditorColors.accentForeground : const Color(0xFF111111);
     const s = 5.0;
     switch (k.style) {
