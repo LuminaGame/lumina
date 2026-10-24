@@ -21,7 +21,11 @@ void main() {
       // The editor compiles the material on open, which mounts a live Filament
       // preview — a tree with a running 3D preview never settles, so pump
       // frames instead of waiting for quiet.
-      for (var i = 0; i < 30; i++) {
+      // The compile itself is real work off the test's fake clock: wait for
+      // it in real time.
+      final clock = Stopwatch()..start();
+      while (find.textContaining('Compile OK').evaluate().isEmpty && clock.elapsed < const Duration(seconds: 30)) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
         await tester.pump(const Duration(milliseconds: 16));
       }
 
