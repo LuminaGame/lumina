@@ -616,25 +616,29 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
                     ),
                   )
             else
+              // Scaled down in a small view instead of overflowing it.
               Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.view_in_ar,
-                      size: 64,
-                      color: Colors.deepOrangeAccent,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _status,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.view_in_ar,
+                        size: 64,
+                        color: Colors.deepOrangeAccent,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      Text(
+                        _status,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 

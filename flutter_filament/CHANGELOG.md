@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `FilamentWidget`'s status placeholder (shown until the first frame) scales down in a small view instead of
+  overflowing it.
 - `FilamentStallAudit` (`lib/src/stall_audit.dart`): named sections of engine work on the calling isolate, reported
   through `recent` and `stalls` when longer than `threshold` (8 ms). `FilamentRenderer.readPixelsAsync` reads the
   swap chain back through a fence instead of blocking, `readPixelsFromRenderTarget` awaits the GPU the same way, and
