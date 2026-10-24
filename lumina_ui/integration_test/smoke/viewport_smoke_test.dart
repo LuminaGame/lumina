@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kProfileMode, kReleaseMode;
 import 'package:flutter/gestures.dart' show kSecondaryMouseButton, PointerDeviceKind;
