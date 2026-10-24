@@ -80,6 +80,11 @@ class LuminaWindow extends ChangeNotifier with WindowListener {
   /// placement over [options] (whose `titleBarStyle` is the app's), turns the
   /// window manager's close into a request, and shows the window.
   Future<void> startup(WindowOptions options) async {
+    // The plugin binds the Flutter view's top-level window here: on Windows
+    // every later call is a no-op on no window until it has (not visible,
+    // never maximized, bounds with null fields). Idempotent, so a host that
+    // already initialized the plugin loses nothing.
+    await _guard(_wm.ensureInitialized);
     final saved = store.load();
     final restored = WindowOptions(
       size: saved?.bounds.size ?? options.size,

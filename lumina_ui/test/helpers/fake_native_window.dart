@@ -11,7 +11,15 @@ class FakeNativeWindow {
   FakeNativeWindow({
     this.bounds = const Rect.fromLTWH(100, 80, 1280, 720),
     this.screen = const Rect.fromLTWH(0, 0, 2560, 1440),
+    this.bindsOnInitialize = false,
   });
+
+  /// When true the window answers as the Windows plugin does: it holds no
+  /// window until `ensureInitialized` binds the Flutter view's top-level
+  /// window, and until then every call is a no-op — not visible, not
+  /// maximized, bounds with null fields, maximize ignored.
+  final bool bindsOnInitialize;
+  bool _bound = false;
 
   static const MethodChannel channel = MethodChannel('window_manager');
 
@@ -59,6 +67,17 @@ class FakeNativeWindow {
 
   Future<Object?> _handle(MethodCall call) async {
     calls.add(call);
+    if (call.method == 'ensureInitialized') {
+      _bound = true;
+      return true;
+    }
+    if (bindsOnInitialize && !_bound) {
+      return switch (call.method) {
+        'getBounds' => <String, Object?>{'x': null, 'y': null, 'width': null, 'height': null},
+        'isMaximized' || 'isFullScreen' || 'isMinimized' || 'isVisible' || 'isFocused' || 'isPreventClose' => false,
+        _ => null,
+      };
+    }
     final Map<Object?, Object?> args = call.arguments is Map ? call.arguments as Map<Object?, Object?> : const {};
     switch (call.method) {
       case 'isMaximized':

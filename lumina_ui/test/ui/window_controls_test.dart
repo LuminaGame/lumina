@@ -36,6 +36,21 @@ void main() {
     if (configDir.existsSync()) configDir.deleteSync(recursive: true);
   });
 
+  // The Windows plugin drives no window until ensureInitialized binds it:
+  // a host that starts the window without having initialized the plugin
+  // (an integration test) must still get a window that maximizes.
+  test('startup binds the native window first, so maximize and the bounds reach it', () async {
+    native.uninstall();
+    final unbound = FakeNativeWindow(bindsOnInitialize: true)..install();
+    addTearDown(unbound.uninstall);
+    await window.startup(const WindowOptions(titleBarStyle: TitleBarStyle.hidden));
+    expect(unbound.methods.first, 'ensureInitialized', reason: 'the window is bound before anything drives it');
+    await window.toggleMaximize();
+    await Future<void>.delayed(Duration.zero);
+    expect(unbound.maximized, isTrue, reason: 'the maximize reached the bound window');
+    expect(window.isMaximized, isTrue);
+  });
+
   Future<void> settle(WidgetTester tester, {int frames = 10}) async {
     for (var i = 0; i < frames; i++) {
       await tester.pump(const Duration(milliseconds: 16));

@@ -423,8 +423,9 @@ void main() {
     expect(usedAssets, isNotEmpty, reason: 'the smoke must load real models from test-assets/');
 
     // --- the real window, through the real window_manager plugin ----------
-    // The integration test app runs on the same GTK runner as the editor, so
-    // this hides the WM title bar for real; the placement store is a temp dir.
+    // The integration test app runs on the same runner as the editor (GTK on
+    // Linux, Win32 on Windows), so this hides the title bar for real; the
+    // placement store is a temp dir.
     final LuminaWindow window = LuminaWindow(store: WindowStateStore(configDir: configDir));
     addTearDown(window.dispose);
     await tester.runAsync(() => window.startup(const WindowOptions(titleBarStyle: TitleBarStyle.hidden)));
@@ -546,7 +547,7 @@ void main() {
     final bool maximized = await waitFor(() => window.isMaximized);
     await settle(tester, frames: 20);
     report.writeln('  maximize button → window.isMaximized=$maximized (from the plugin\'s event)');
-    expect(maximized, isTrue, reason: 'the real GTK window reports maximize');
+    expect(maximized, isTrue, reason: 'the real window reports maximize');
     expect(find.byKey(const ValueKey<String>('window_control_restore_icon')), findsOneWidget);
     await rec.hold(const Duration(seconds: 2));
     SmokeArtifacts.saveScreenshot('$testName — maximized, restore icon',
