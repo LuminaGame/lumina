@@ -250,7 +250,7 @@ void _auroraStages34Scenarios(IntegrationTestWidgetsFlutterBinding binding) {
       report.writeln('  (no animation asset from MM_Idle.glb: the Animation editor is not shown)');
     }
     await openAndCheck('Material', 'Material', assetNamed('M_Rust', (RealAssetInfo a) => a.type == AssetType.filamat),
-        <String>['material_island_preview', 'material_island_settings', 'material_island_graph', 'material_island_compiler_log', 'material_island_parameters'],
+        <String>['material_island_preview', 'material_island_details', 'material_island_graph', 'material_island_compiler_log', 'material_island_parameters'],
         'material_island_parameters');
     await openAndCheck('Blueprint', 'Blueprint', assetNamed('BP_Door', (RealAssetInfo a) => a.type == AssetType.actor),
         <String>['blueprint_island_components', 'blueprint_island_my_blueprint', 'blueprint_island_graph', 'blueprint_island_results', 'blueprint_island_details'],

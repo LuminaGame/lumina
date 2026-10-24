@@ -7,7 +7,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_vi
 import 'package:lumina_ui/ui/features/sub_editors/views/material/glsl_editor_widget.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/graph_view.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart';
-import 'package:lumina_ui/ui/features/sub_editors/views/material/parameter_panel.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/material/material_settings_section.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/material_preview_pane.dart';
 
 class MaterialSubEditor extends StatefulWidget {
@@ -353,11 +353,11 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
                   ),
                 ),
 
-                // Right Pane: parameters and texture slots
+                // Right Pane: the material's details (its header settings)
                 ResizablePane(
-                  initialSize: 260,
+                  initialSize: 280,
                   minSize: 200,
-                  child: MaterialParameterPanel(viewModel: _viewModel),
+                  child: MaterialSettingsSection(viewModel: _viewModel),
                 ),
               ],
             ),

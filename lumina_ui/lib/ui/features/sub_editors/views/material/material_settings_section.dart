@@ -5,7 +5,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_vi
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// The material header's settings (domain, blend mode, shading model, two
-/// sided), shown under the Material Editor's 3D preview.
+/// sided): the Details island at the Material Editor's right.
 class MaterialSettingsSection extends StatelessWidget {
   final MaterialEditorViewModel viewModel;
 
@@ -18,11 +18,12 @@ class MaterialSettingsSection extends StatelessWidget {
       builder: (context, _) {
         final vm = viewModel;
         return EditorIsland(
-          key: const ValueKey('material_island_settings'),
-          header: const EditorIslandHeader(title: 'Material settings'),
+          key: const ValueKey('material_island_details'),
+          header: const EditorIslandHeader(title: 'Details'),
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             children: [
+              const EditorIslandSectionLabel('Material', padding: EdgeInsets.only(bottom: 8)),
 
               // Material Domain
               _buildSettingRow(

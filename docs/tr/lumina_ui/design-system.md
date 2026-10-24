@@ -142,7 +142,7 @@ anahtar verir), `EditorIslandSectionLabel` (ada içinde büyük harfli 10 px bö
 | Static Mesh | LODs / Hierarchy üstte, Mesh stats altta · viewport · Details |
 | Skeletal Mesh | Skeleton tree (kemik ve soket sayısı, + soket) üstte, Morphs / RigLogic altta · viewport (Show · Bones, Weights, Sockets) · Details |
 | Animation | Properties / Bone Tracks / Notifies · kare kartı ve altında transport çubuğu olan viewport, altında Dope sheet · Key details / Curves / BlendSpace / Pose |
-| Material | Preview üstte, Material settings altta · GLSL Source / Node Graph üstte, Compiler log altta · Parameters & uniforms |
+| Material | Preview üstte, Parameters & uniforms altta · GLSL Source / Node Graph üstte, Compiler log altta · Details (materyalin başlık ayarları) |
 | Blueprint | Components üstte, My Blueprint altta · graph sekmeleri ve tuval üstte, derleme sonuçları altta · Details |
 | Sequencer | Track outliner · 3D Viewport / Curves · Key details; altta transport ve zaman çizelgesi |
 | UMG | Palette üstte, Hierarchy altta · tasarımcı · Details |
@@ -155,8 +155,8 @@ anahtar verir), `EditorIslandSectionLabel` (ada içinde büyük harfli 10 px bö
 Skeletal Mesh editörünün Show Bones, Display Sockets ve Skin Weight Heatmap araç çubuğu düğmeleri viewport'un `Show`
 menüsüne taşındı (Bones, Weights, Sockets). Static Mesh, Skeletal Mesh ve Physics Asset viewport'larının bilgi kutuları
 pill yüzeyinde sol altta durur (sol üst pill sırasına ve araç sütununa ait); Animation kare kartı pill sırasının altında,
-araç sütununun yanında durur ve root motion anahtarı Reset View'ın altında bir pill'dir. Material editörü ayarlarını
-önizlemenin altında, parametreleri sağda tutar (önizleme görevinin kurduğu düzen), adalar üzerinde.
+araç sütununun yanında durur ve root motion anahtarı Reset View'ın altında bir pill'dir. Material editörü
+artboard'unu izler: parametreler önizlemenin altında, materyalin ayarları sağdaki Details adasında.
 
 Alt editör kabuğu Content Browser'ı çalışma alanının altında bir ada olarak sabitler (arada tutamaç) ve sabitlenmemiş
 çekmeceyi çalışma alanının altının üzerinde yüzen bir ada olarak açar. Eklentilerin sağ dock'u da bir adadır; bir

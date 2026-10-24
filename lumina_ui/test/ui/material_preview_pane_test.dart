@@ -45,7 +45,7 @@ void main() {
     }, skip: haveAssets ? false : 'test-assets missing');
   });
 
-  testWidgets('settings sit under the preview, the viewport HUD is gone, Plane and Custom drive the viewport',
+  testWidgets('parameters sit under the preview, settings at the right, the viewport HUD is gone, Plane and Custom drive the viewport',
       (tester) async {
     final project = Directory.systemTemp.createTempSync('mat_pane_');
     addTearDown(() => project.deleteSync(recursive: true));
@@ -67,6 +67,11 @@ void main() {
     );
     expect(await tester.runAsync(() => vm.compile()), isTrue);
 
+    // The editor-sized window the layout below is laid out in.
+    tester.view.physicalSize = const Size(1400, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       ShadcnApp(
         theme: luminaEditorTheme(),
@@ -77,18 +82,17 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 100));
 
-    // Settings live in the left column, under the preview; the right panel keeps the parameters.
-    expect(find.descendant(of: find.byType(MaterialPreviewPane), matching: find.byType(MaterialSettingsSection)),
-        findsOneWidget);
-    expect(find.descendant(of: find.byType(MaterialParameterPanel), matching: find.text('MATERIAL SETTINGS')),
-        findsNothing);
-    expect(find.text('MATERIAL SETTINGS'), findsOneWidget);
+    // The parameters live in the left column, under the preview; the
+    // material's settings are the Details island at the right.
+    expect(find.descendant(of: find.byType(MaterialPreviewPane), matching: find.byType(MaterialParameterPanel)), findsOneWidget);
+    expect(find.descendant(of: find.byType(MaterialPreviewPane), matching: find.byType(MaterialSettingsSection)), findsNothing);
+    expect(find.descendant(of: find.byType(MaterialSettingsSection), matching: find.text('MATERIAL')), findsOneWidget);
 
     // The preview over the settings, the source over the compiler log, the
     // parameters.
     expectIslands(tester, {
       'material_island_preview': 'PREVIEW',
-      'material_island_settings': 'MATERIAL SETTINGS',
+      'material_island_details': 'DETAILS',
       'material_island_graph': 'Node Graph',
       'material_island_compiler_log': 'COMPILER LOG',
       'material_island_parameters': 'PARAMETERS & UNIFORMS',

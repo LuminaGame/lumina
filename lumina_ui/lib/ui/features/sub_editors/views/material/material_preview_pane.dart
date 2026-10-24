@@ -5,14 +5,14 @@ import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_island.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
-import 'package:lumina_ui/ui/features/sub_editors/views/material/material_settings_section.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/material/parameter_panel.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 import 'package:path/path.dart' as p;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// The Material Editor's left column: the 3D preview (a primitive, or a
-/// project mesh with the material on one of its slots) above the material
-/// settings, two islands split by the grip.
+/// project mesh with the material on one of its slots) above the
+/// parameters and texture slots, two islands split by the grip.
 class MaterialPreviewPane extends StatefulWidget {
   final MaterialEditorViewModel viewModel;
 
@@ -203,9 +203,9 @@ class _MaterialPreviewPaneState extends State<MaterialPreviewPane> {
           ),
         ),
         ResizablePane(
-          initialSize: 190,
-          minSize: 120,
-          child: MaterialSettingsSection(viewModel: widget.viewModel),
+          initialSize: 300,
+          minSize: 140,
+          child: MaterialParameterPanel(viewModel: widget.viewModel),
         ),
       ],
     );

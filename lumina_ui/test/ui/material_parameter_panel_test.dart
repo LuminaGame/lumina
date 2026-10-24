@@ -58,7 +58,7 @@ fragment {
       ),
     );
 
-    // The header settings moved under the preview (MaterialSettingsSection).
+    // The header settings are the Details island at the right (MaterialSettingsSection).
     expect(find.text('MATERIAL SETTINGS'), findsNothing);
     expect(find.text('PARAMETERS & UNIFORMS'), findsOneWidget);
     expect(find.text('roughness'), findsOneWidget);

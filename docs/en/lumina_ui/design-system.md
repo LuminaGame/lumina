@@ -142,7 +142,7 @@ an optional trailing widget) and `editorIslandGroundGrip` (the grip under a pane
 | Static Mesh | LODs / Hierarchy over Mesh stats · viewport · Details |
 | Skeletal Mesh | Skeleton tree (bone and socket counts, + socket) over Morphs / RigLogic · viewport (Show · Bones, Weights, Sockets) · Details |
 | Animation | Properties / Bone Tracks / Notifies · viewport with the frame card and the transport bar along its bottom, over the Dope sheet · Key details / Curves / BlendSpace / Pose |
-| Material | Preview over Material settings · GLSL Source / Node Graph over the Compiler log · Parameters & uniforms |
+| Material | Preview over Parameters & uniforms · GLSL Source / Node Graph over the Compiler log · Details (the material's header settings) |
 | Blueprint | Components over My Blueprint · the graph tabs and canvas over the compiler results · Details |
 | Sequencer | Track outliner · 3D Viewport / Curves · Key details; the transport over the timeline below |
 | UMG | Palette over Hierarchy · designer · Details |
@@ -156,7 +156,7 @@ The Skeletal Mesh editor's Show Bones, Display Sockets and Skin Weight Heatmap t
 `Show` menu (Bones, Weights, Sockets). The overlay boxes of the Static Mesh, Skeletal Mesh and Physics Asset viewports
 sit bottom-left on the pill surface (the pill row and the tool column own the top-left); the Animation frame card sits
 under the pill row beside the tool column and the root motion toggle is a pill under Reset View. The Material editor
-keeps its settings under the preview and the parameters at the right (the arrangement its preview task set), on islands.
+follows its artboard: the parameters under the preview, the material's settings in the Details island at the right.
 
 The sub-editor shell docks the Content Browser as an island under the workspace (the grip between) and floats the
 unpinned drawer as an island over the workspace's bottom. The plugin right dock is an island too, and a plugin's tab or

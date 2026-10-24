@@ -213,7 +213,7 @@ Materyal başlığının ayarları; Materyal editörünün 3B önizlemesinin alt
 
 ### `class MaterialPreviewPane`
 
-Materyal editörünün sol sütunu: Material settings adasının ([MaterialSettingsSection]) üstündeki Preview adası; ikisi tutamaçla bölünür (`EditorIslandDividers.grip` ile `ResizablePanel.vertical`; ayarlar adası 190 px ile başlar, en az 120 px). Önizleme derlenmiş materyali bir Sphere, Cube, Cylinder veya Plane üzerinde ya da bir proje mesh'i (Custom) üzerinde gösterir ve bir Grid anahtarı sunar; viewport'un kendi araç çubuğunu ve şekil seçicisini gizler.
+Materyal editörünün sol sütunu: Parameters & uniforms adasının ([MaterialParameterPanel]) üstündeki Preview adası; ikisi tutamaçla bölünür (`EditorIslandDividers.grip` ile `ResizablePanel.vertical`; parametre adası 300 px ile başlar, en az 140 px). Başlık ayarları ([MaterialSettingsSection]) editörün sağındaki Details adasıdır. Önizleme derlenmiş materyali bir Sphere, Cube, Cylinder veya Plane üzerinde ya da bir proje mesh'i (Custom) üzerinde gösterir ve bir Grid anahtarı sunar; viewport'un kendi araç çubuğunu ve şekil seçicisini gizler.
 
 Custom, projenin mesh varlıklarını (statik ve iskeletli) arka plan isolate'inde tarar ve bir varlık seçicide sunar. Seçilen mesh diskten yüklenir (hâlâ süren eski bir yüklemeye karşı en yeni seçim kazanır); mesh'in birden fazla materyal yuvası varsa bir **Material slot** seçicisi düzenlenen materyali hangi yuvanın giyeceğini belirler, diğer bölümler mesh'in kendi materyallerini korur.
 
