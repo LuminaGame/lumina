@@ -89,7 +89,7 @@ Usage: dart tool/release/release_info.dart <command> [options]
   pins                     Print the SHA each sibling repo is pinned to.
   overrides [--out <file>] Write pubspec_overrides.yaml for sibling checkouts.
   filament-dir             Print flutter_filament's filament_dir (repo-relative).
-  changelog --tag <tag>    Generate categorized markdown release notes between tags.
+  changelog --tag <tag>    Print tool/release/notes/<tag>.md, or generate categorized notes between tags.
 
 Options: --root <dir>, --from <tag>, --out <file>, --github-output
 ''';
@@ -345,7 +345,12 @@ String filamentDir(String root) {
 // ---------------------------------------------------------------- changelog
 
 /// Generates categorized markdown release notes from git commits between tags.
+///
+/// A hand-written `tool/release/notes/<tag>.md` wins over the commit
+/// subjects: it describes the changes in words for the release page.
 String generateChangelog(String root, String tag, {String? fromTag}) {
+  final curated = File('$root/tool/release/notes/$tag.md');
+  if (curated.existsSync()) return curated.readAsStringSync();
   var prev = fromTag;
   if (prev == null || prev.isEmpty) {
     final res = Process.runSync(
