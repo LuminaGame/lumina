@@ -168,7 +168,9 @@ runs:
         sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
         ndk="$sdk/ndk/28.2.13676358"
         if [ ! -d "$ndk" ]; then
-          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install 'ndk;28.2.13676358' > /dev/null
+          # `yes` ends on SIGPIPE once sdkmanager stops reading; pipefail would
+          # count that as the step failing.
+          { yes || true; } | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install 'ndk;28.2.13676358' > /dev/null
         fi
         [ -d "$ndk" ] || { echo "::error::NDK 28.2.13676358 is not installed in $sdk." >&2; exit 1; }
         echo "ANDROID_NDK=$ndk" >> "$GITHUB_ENV"
