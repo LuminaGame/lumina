@@ -61,9 +61,9 @@ void main() {
     expect(find.text('SM_UnitCube'), findsOneWidget);
 
     // Verify real stats (NO MOCK DATA 17352/15162)
-    expect(find.text('Triangles: '), findsOneWidget);
+    expect(find.text('Triangles'), findsOneWidget);
     expect(find.text('12'), findsOneWidget);
-    expect(find.text('Vertices: '), findsOneWidget);
+    expect(find.text('Vertices'), findsOneWidget);
     expect(find.text('8'), findsOneWidget);
     expect(find.textContaining('17352'), findsNothing);
     expect(find.textContaining('15162'), findsNothing);
