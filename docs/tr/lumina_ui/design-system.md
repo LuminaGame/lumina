@@ -70,7 +70,8 @@ menüsüne katlanır ve etkin sekme her zaman görünür tutulur.
 
 ## Adalar (2. aşama)
 
-`EditorIsland` (`lib/ui/core/widgets/editor_island.dart`) yerleşik bir paneldir: ada dolgusu (`sidebar`), 1 px
+`EditorIsland` (`lib/ui/core/widgets/editor_island.dart`) (eklenti panelleri aynı bileşeni kullansın diye eklenti API'sinin, `lumina_editor_api`'nin adalarını
+dışa aktarır; editörün temasıyla `EditorIslandThemeData.active` üzerinden boyanır) yerleşik bir paneldir: ada dolgusu (`sidebar`), 1 px
 `border` ve 12 px yarıçap; içeriği köşelere kırpılır, üstte isteğe bağlı bir `EditorIslandHeader` bulunur (36 px,
 başlık büyük harfle 11 px kalın ve hafif harf aralıklı, sağ uçta isteğe bağlı mono `trailingInfo` ve `actions`, altında
 1 px kenarlık). `EditorIslandStyle` ölçüleri tutar (`radius` 12, `gap` 8, `gripGap` 10, `headerHeight` 36, `rowHeight`

@@ -585,6 +585,41 @@ Implemented by the context a running Lumina Studio hands to `LuminaEditorPlugin.
 | :--- | :--- | :--- |
 | `theme` | `EditorThemeAccess get theme` |  |
 
+## `lib/src/editor_island.dart`
+
+Lumina Studio'nun panellerini dizdiği adalar, eklenti panelleri ve sekmeleri için de; böylece editörünkiler gibi
+görünürler (PANEL_AND_TREE_UNIFORMITY). Host editör onları canlı temasıyla boyar; editör dışında (bir eklentinin widget
+testi) Lumina Dark değerlerini kullanırlar.
+
+### `class EditorIslandThemeData`
+
+Adaların boyadığı renkler ve yazı: `island`, `ground`, `border`, `fieldBorder`, `foreground`, `secondaryForeground`,
+`mutedForeground`, `muted`, `primary`, `primaryForeground`, `rowHover`, `uiFamily` (Manrope), `monoFamily`
+(JetBrains Mono); `ui()` ve `mono()` bunlardan yazı stilleri kurar. `EditorIslandThemeData.active` adaların şu an
+boyadığıdır: Lumina Studio açılışta onu tema token'larına ayarlar, böylece bir eklenti adası tema değişimini izler;
+`aurora` başladığı Lumina Dark değerlerini tutar. Bir eklenti onu okur, ayarlamaz.
+
+### `class EditorIsland`, `EditorIslandHeader`, `EditorIslandTabHeader`, `EditorIslandSectionLabel`, `EditorIslandGround`
+
+| Widget | Çizdiği |
+| :--- | :--- |
+| `EditorIsland({header, child, color})` | Ada dolgusu, 1 px kenarlık, 12 px yarıçap, köşelere kırpılan içerik, üstte isteğe bağlı başlık. |
+| `EditorIslandHeader({title, leading, trailingInfo, actions})` | 36 px başlık: büyük harfli başlık (11 px kalın), isteğe bağlı ikon, mono sayı, sağda eylemler. |
+| `EditorIslandTabHeader({tabs, active, onSelect, actions, keyPrefix, tabKeys})` | Sekmeleri adanın görünümünü değiştiren başlık: etkin olan `muted` çip üzerinde kalın; dar ada etiketleri kısaltır. |
+| `EditorIslandSectionLabel(label, {trailing, padding})` | Ada içinde bölüm etiketi: büyük harf, 10 px kalın, soluk. |
+| `EditorIslandGround({child, padding})` | Bir sıra adanın altındaki pencere zemini, 8 px boşlukla. |
+
+### `abstract final class EditorIslandStyle`, `EditorIslandDividers`, `EditorTreeRowStyle`
+
+`EditorIslandStyle` ölçüleri (`radius` 12, `gap` 8, `gripGap` 10, `headerHeight` 36, `rowHeight` 24, `rowRadius` 6,
+`indentStep` 14) ve `decoration()`'ı tutar. `EditorIslandDividers.gap` / `.grip` / `.groundGrip` adalar arasındaki bir
+`ResizablePanel`'in `dividerBuilder`'larıdır (panelin yeniden boyutlandırma tutamacı üzerlerinde durur, adalar
+yeniden boyutlanabilir kalır). `EditorTreeRowStyle.margin(depth)`, `decoration(selected:, dropTarget:, hover:)` ve
+`foreground(selected:)` seçimi kendi girintisinden başlayan bir ağaç satırı çizer.
+
+Lumina Studio'da bir eklentinin sağ dock paneli ve bir eklentinin sekmesi ya da varlık editörü zaten host'un çizdiği
+bir adada durur: panelin kendi bölümlerini bunlarla kurun (bir alt görünüm için başlık, bölüm etiketleri, ağaçlar).
+
 ## `lib/src/plugin_storage.dart`
 
 ### `class PluginStorage`

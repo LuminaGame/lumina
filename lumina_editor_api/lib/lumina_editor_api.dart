@@ -9,6 +9,7 @@ export 'package:lumina_widgets/lumina_widgets.dart'
         LuminaAudioPlayer,
         LuminaAudioPlayerValue;
 export 'package:lumina_editor_api/src/api_types.dart';
+export 'package:lumina_editor_api/src/editor_island.dart';
 export 'package:lumina_editor_api/src/editor_level.dart';
 export 'package:lumina_editor_api/src/dialogs/plugin_dialog_controller.dart';
 export 'package:lumina_editor_api/src/dialogs/plugin_dialog_frame.dart';

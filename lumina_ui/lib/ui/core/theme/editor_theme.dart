@@ -2,6 +2,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme_data.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme_store.dart';
+import 'package:lumina_ui/ui/core/widgets/editor_island.dart' show EditorIslandThemeData, luminaIslandTheme;
 
 /// Lumina Studio's palette: the **Aurora** design language.
 ///
@@ -671,6 +672,8 @@ ColorScheme luminaColorSchemeFor(EditorThemeData theme) {
 /// fonts. [light] asks for Lumina Light's scheme while a dark theme is active
 /// (kept for callers that still pass it).
 ThemeData luminaEditorTheme({bool light = false}) {
+  // Islands (the editor's and plugins') paint with the live theme tokens.
+  EditorIslandThemeData.active = luminaIslandTheme;
   final active = EditorTheme.current;
   final theme = light && active.brightness == Brightness.dark ? EditorThemeData.luminaLight : active;
   final mono = theme.monoFamily == 'GeistMono'

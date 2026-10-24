@@ -69,7 +69,9 @@ lists and selects them, and the active tab is always kept visible.
 
 ## Islands (stage 2)
 
-`EditorIsland` (`lib/ui/core/widgets/editor_island.dart`) is a docked panel: the island fill (`sidebar`), a 1 px
+`EditorIsland` (`lib/ui/core/widgets/editor_island.dart`, which re-exports the plugin API's islands from
+`lumina_editor_api` so plugin panels use the same widget, painted with the editor's theme through
+`EditorIslandThemeData.active`) is a docked panel: the island fill (`sidebar`), a 1 px
 `border` and a 12 px radius, its content clipped to the corners, with an optional `EditorIslandHeader` on top (36 px,
 the title in upper case at 11 px bold with a little tracking, an optional mono `trailingInfo` and `actions` at the right
 end, over a 1 px border). `EditorIslandStyle` holds the measurements (`radius` 12, `gap` 8, `gripGap` 10,

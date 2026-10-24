@@ -585,6 +585,41 @@ Implemented by the context a running Lumina Studio hands to `LuminaEditorPlugin.
 | :--- | :--- | :--- |
 | `theme` | `EditorThemeAccess get theme` |  |
 
+## `lib/src/editor_island.dart`
+
+The islands Lumina Studio lays its panels out with, for plugin panels and tabs too, so they look like the editor's own
+(PANEL_AND_TREE_UNIFORMITY). The host editor paints them with its live theme; outside the editor (a plugin's widget test)
+they use Lumina Dark's values.
+
+### `class EditorIslandThemeData`
+
+The colours and type islands paint with: `island`, `ground`, `border`, `fieldBorder`, `foreground`,
+`secondaryForeground`, `mutedForeground`, `muted`, `primary`, `primaryForeground`, `rowHover`, `uiFamily` (Manrope),
+`monoFamily` (JetBrains Mono); `ui()` and `mono()` build text styles from them. `EditorIslandThemeData.active` is what
+islands paint with now: Lumina Studio sets it to its theme tokens at startup, so a plugin island follows a theme switch;
+`aurora` holds the Lumina Dark values it starts from. A plugin reads it, it does not set it.
+
+### `class EditorIsland`, `EditorIslandHeader`, `EditorIslandTabHeader`, `EditorIslandSectionLabel`, `EditorIslandGround`
+
+| Widget | What it draws |
+| :--- | :--- |
+| `EditorIsland({header, child, color})` | The island fill, a 1 px border, a 12 px radius, the content clipped to the corners, an optional header on top. |
+| `EditorIslandHeader({title, leading, trailingInfo, actions})` | The 36 px header: the title in upper case (11 px bold), an optional icon, a mono count, actions at the right. |
+| `EditorIslandTabHeader({tabs, active, onSelect, actions, keyPrefix, tabKeys})` | A header whose tabs switch the island's view: the active one bold on the `muted` chip; a narrow island shortens the labels. |
+| `EditorIslandSectionLabel(label, {trailing, padding})` | A section label inside an island: upper case, 10 px bold, muted. |
+| `EditorIslandGround({child, padding})` | The window's ground under a row of islands, with the 8 px gutter. |
+
+### `abstract final class EditorIslandStyle`, `EditorIslandDividers`, `EditorTreeRowStyle`
+
+`EditorIslandStyle` holds the measurements (`radius` 12, `gap` 8, `gripGap` 10, `headerHeight` 36, `rowHeight` 24,
+`rowRadius` 6, `indentStep` 14) and `decoration()`. `EditorIslandDividers.gap` / `.grip` / `.groundGrip` are the
+`dividerBuilder`s of a `ResizablePanel` between islands (the panel's resize handle sits over them, so the islands stay
+resizable). `EditorTreeRowStyle.margin(depth)`, `decoration(selected:, dropTarget:, hover:)` and `foreground(selected:)`
+draw a tree row whose selection starts at its own indent.
+
+In Lumina Studio a plugin's right-dock panel and a plugin's tab or asset editor already sit on an island the host
+draws: build the panel's own sections with these (a header for a sub-view, section labels, trees).
+
 ## `lib/src/plugin_storage.dart`
 
 ### `class PluginStorage`
