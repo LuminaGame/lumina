@@ -459,6 +459,7 @@ class LuminaRtxController {
         _dlssOutputSize = null;
         view.dynamicResolutionOptions = baseDynamicResolution;
         view.temporalAntiAliasingOptions = baseTaa;
+        view.motionVectorsOptions = const MotionVectorsOptions();
         _fsr3OnView = false; // FSR3, if wanted, is put back by _applyFsr3
       }
     }
@@ -485,7 +486,9 @@ class LuminaRtxController {
     }
     if (wanted && _dlss == null) {
       _fsr3OnView = false; // DLSS owns the TAA options from here
-      view.temporalAntiAliasingOptions = baseTaa.copyWith(enabled: true, motionVectors: true);
+      // the jittered camera and the motion vectors feed DLSS
+      view.temporalAntiAliasingOptions = baseTaa.copyWith(enabled: true);
+      view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
       try {
         _dlss = Dlss.create(
           engine: engine,
@@ -496,6 +499,7 @@ class LuminaRtxController {
       } catch (e) {
         EngineLoggerService().log('DLSS not created: $e', level: 'warning', source: 'LuminaRtxController');
         view.temporalAntiAliasingOptions = baseTaa;
+        view.motionVectorsOptions = const MotionVectorsOptions();
         view.dynamicResolutionOptions = baseDynamicResolution;
       }
     } else if (wanted && _dlss != null && _appliedDlss?.quality != settings.quality) {

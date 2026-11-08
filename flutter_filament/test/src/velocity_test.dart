@@ -8,10 +8,9 @@ import 'package:test/test.dart';
 
 import '../smoke/smoke_helper.dart';
 
-/// Motion vectors: `TemporalAntiAliasingOptions.motionVectors` makes the
-/// structure pass render, per pixel, how far the visible surface moved on
-/// screen since the previous frame (in texels, x right, y up), exported
-/// through `MotionVectorBuffer`.
+/// Motion vectors: `MotionVectorsOptions` makes the view render, per pixel,
+/// how far the visible surface moved on screen since the previous frame (in
+/// texels, x right, y up), exported through `MotionVectorBuffer`.
 void main() {
   group('motion vector options (noop backend)', () {
     late FilamentEngine engine;
@@ -24,13 +23,37 @@ void main() {
 
     tearDown(() => engine.dispose());
 
-    test('motionVectors defaults to off and round-trips through the view', () {
-      expect(const TemporalAntiAliasingOptions().motionVectors, isFalse);
-      view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
-      expect(view.temporalAntiAliasingOptions.motionVectors, isTrue);
-      expect(view.temporalAntiAliasingOptions.enabled, isTrue);
-      view.temporalAntiAliasingOptions = view.temporalAntiAliasingOptions.copyWith(motionVectors: false);
-      expect(view.temporalAntiAliasingOptions.motionVectors, isFalse);
+    test('motion vectors default to off and round-trip through the view', () {
+      expect(const MotionVectorsOptions().enabled, isFalse);
+      expect(view.motionVectorsOptions.enabled, isFalse);
+      view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
+      expect(view.motionVectorsOptions, const MotionVectorsOptions(enabled: true));
+      view.motionVectorsOptions = view.motionVectorsOptions.copyWith(enabled: false);
+      expect(view.motionVectorsOptions.enabled, isFalse);
+    });
+
+    test('the TAA options carry the upstream history rejection settings', () {
+      const taa = TemporalAntiAliasingOptions(
+        enabled: true,
+        motionAdaptiveHistory: true,
+        motionDeltaThreshold: 2.0,
+        minBoxStrength: 0.25,
+        minAlphaStrength: 0.5,
+        skyDepthThreshold: 0.001953125,
+        motionHoldFrames: 6.0,
+        depthDisocclusion: true,
+        disocclusionDepthThreshold: 0.00390625,
+        disocclusionHistoryNeighborhood: false,
+        exactLanczosSupport: true,
+        algorithm: TaaAlgorithm.fsr3,
+        frameGeneration: true,
+      );
+      view.temporalAntiAliasingOptions = taa;
+      final back = view.temporalAntiAliasingOptions;
+      // the native struct holds floats: compare through float32
+      expect(back.copyWith(feedback: taa.feedback, varianceGamma: taa.varianceGamma), taa);
+      expect(back.feedback, closeTo(taa.feedback, 1e-6));
+      expect(back.varianceGamma, closeTo(0.7, 1e-6));
     });
 
     test('the Dart mirror of the TAA options has the native size', () {
@@ -47,7 +70,8 @@ void main() {
       // A frame with the option on renders without the second attachment and without errors.
       final swapChain = engine.createHeadlessSwapChain(64, 64);
       final renderer = engine.createRenderer();
-      view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+      view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+      view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
       view.setViewport(0, 0, 64, 64);
       if (renderer.beginFrame(swapChain)) {
         renderer.render(view);
@@ -112,7 +136,8 @@ void main() {
       final root = loadCentredProp(r);
       motion = MotionVectorBuffer.attach(engine: r.engine, view: r.view, width: size, height: size);
       expect(r.view.motionVectorTexture, same(motion!.texture));
-      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false, motionVectors: true);
+      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false);
+      r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
 
       final tm = FilamentTransformManager(r.engine);
       final box = gltf!.asset.getBoundingBox();
@@ -139,7 +164,8 @@ void main() {
       }
       loadCentredProp(r);
       motion = MotionVectorBuffer.attach(engine: r.engine, view: r.view, width: size, height: size);
-      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false, motionVectors: true);
+      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false);
+      r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
 
       r.renderFrame(warmup: 1);
       // Panning the camera 0.06 units to the left moves everything 6 texels to the right.
@@ -160,7 +186,8 @@ void main() {
       }
       loadCentredProp(r);
       motion = MotionVectorBuffer.attach(engine: r.engine, view: r.view, width: size, height: size);
-      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false, motionVectors: true);
+      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false);
+      r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
       r.renderFrame(warmup: 2);
       final still = await motion!.read(r.renderer);
       var maxAbs = 0.0;
@@ -170,7 +197,8 @@ void main() {
       expect(maxAbs, lessThan(0.05), reason: 'nothing moved between the last two frames');
 
       // With motion vectors off the structure pass no longer writes the texture.
-      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false, motionVectors: false);
+      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false);
+      r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: false);
       final tm = FilamentTransformManager(r.engine);
       final center = gltf!.asset.getBoundingBox().center;
       tm.setTransform(gltf!.asset.rootEntity, _translation(-center.x + 0.3, -center.y, -center.z));
@@ -196,7 +224,8 @@ void main() {
       const step = 0.03; // 3 texels per frame
 
       Uint8List run({required bool taa, required bool motionVectors}) {
-        r.view.temporalAntiAliasingOptions = TemporalAntiAliasingOptions(enabled: taa, motionVectors: motionVectors);
+        r.view.temporalAntiAliasingOptions = TemporalAntiAliasingOptions(enabled: taa);
+        r.view.motionVectorsOptions = MotionVectorsOptions(enabled: motionVectors);
         var x = -center.x - step * frames / 2;
         tm.setTransform(root, _translation(x, -center.y, -center.z));
         r.renderFrame(warmup: 3);
@@ -248,7 +277,8 @@ void main() {
       final animator = gltf!.asset.animator;
       final duration = animator.getAnimationDuration(0);
       motion = MotionVectorBuffer.attach(engine: r.engine, view: r.view, width: size, height: size);
-      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false, motionVectors: true);
+      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false);
+      r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
 
       animator.applyAnimation(0, 0.0);
       animator.updateBoneMatrices();
@@ -291,7 +321,8 @@ void main() {
       r.entities.add(entity);
       final rm = FilamentRenderableManager(r.engine);
       motion = MotionVectorBuffer.attach(engine: r.engine, view: r.view, width: size, height: size);
-      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false, motionVectors: true);
+      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false);
+      r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
 
       try {
         rm.setMorphWeights(entity, Float32List.fromList([0.0]));

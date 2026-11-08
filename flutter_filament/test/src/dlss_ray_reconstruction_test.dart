@@ -299,7 +299,7 @@ void main() {
         expect(rh, inInclusiveRange(560, 680));
         expect(r.view.guideBufferOptions.enabled, isTrue);
         expect(r.view.temporalAntiAliasingOptions.enabled, isTrue);
-        expect(r.view.temporalAntiAliasingOptions.motionVectors, isTrue);
+        expect(r.view.motionVectorsOptions.enabled, isTrue);
         expect(r.view.dynamicResolutionOptions.upscaler, Upscaler.external);
         final frame = r.renderFrame(warmup: 29);
         expect(rr!.lastError, isNull);
@@ -341,11 +341,8 @@ void main() {
           r.view.restirOptions = entry.value;
           rr?.destroy();
           rr = null;
-          r.view.temporalAntiAliasingOptions =
-              const TemporalAntiAliasingOptions(
-                enabled: true,
-                motionVectors: true,
-              );
+          r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+          r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
           r.view.resetRestirHistory();
           // reference: 128 accumulated native frames with Filament's TAA
           r.renderFrame(warmup: 30);

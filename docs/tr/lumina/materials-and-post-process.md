@@ -181,7 +181,7 @@ Bir view için donanımsal ışın izleme: sahnenin hızlandırma yapıları, ı
 
 ### `class LuminaFsr3Settings`
 
-Filament'in fragment pass portu (patch 0009) üzerinden bir view için FidelityFX Super Resolution 3: structure pass hareket vektörleri olan her backend'de çalışır. Aynı view'daki DLSS önceliklidir.
+Filament'in fragment pass portu (patch 0009) üzerinden bir view için FidelityFX Super Resolution 3: view'ın hareket vektörleri olan her backend'de çalışır. Aynı view'daki DLSS önceliklidir.
 
 | Üye | İmza | Amaç ve Açıklama |
 | :--- | :--- | :--- |

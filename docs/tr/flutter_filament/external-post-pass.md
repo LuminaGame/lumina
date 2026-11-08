@@ -37,7 +37,7 @@ Geçiş, yama `0006`'nın `externalPass` sürücü komutuyla Filament'in komut t
 
 `ExternalPassContext::frame` render ve çıktı boyutlarını, TAA jitter'ını, kare kimliğini, `exposure` değerini (`1 / (1.2 · 2^ev100)`), `viewFromWorld` matrisini, jitter'sız `clipFromView` projeksiyonunu ve `FLAG_VELOCITY_BUFFER` (hareket structure pass hız tamponundan geldi) ile `FLAG_HISTORY_RESET` (ilk kare ya da sıfırlama) bayraklarını taşır.
 
-Hareket görüntüsünü Filament'in `postPassMotion` malzemesi üretir: hız tamponunun (`TemporalAntiAliasingOptions.motionVectors`) değer yazdığı yerde değer geçişin çözünürlüğüne ölçeklenir; başka yerde (hareket vektörleri kapalı, gökyüzü) jitter'lı derinliğin tarif ettiği yüzey bu ve önceki karenin jitter'sız kameralarıyla izdüşürülür; böylece duran kamera sıfır hareket, dönen kamera hareket eden gökyüzü verir. `View::resetExternalPostPassHistory()` sonraki karede hiçbir geçmişin kullanılamadığını bildirir (kamera kesmeleri).
+Hareket görüntüsünü Filament'in `postPassMotion` malzemesi üretir: hız tamponunun (`FilamentView.motionVectorsOptions`) değer yazdığı yerde değer geçişin çözünürlüğüne ölçeklenir; başka yerde (hareket vektörleri kapalı, gökyüzü) jitter'lı derinliğin tarif ettiği yüzey bu ve önceki karenin jitter'sız kameralarıyla izdüşürülür; böylece duran kamera sıfır hareket, dönen kamera hareket eden gökyüzü verir. `View::resetExternalPostPassHistory()` sonraki karede hiçbir geçmişin kullanılamadığını bildirir (kamera kesmeleri).
 
 ## HDR aşamasındaki harici upscaler'lar
 

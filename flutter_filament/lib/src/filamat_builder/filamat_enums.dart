@@ -222,5 +222,9 @@ abstract final class UserVariantFilterBit {
   static const int vsm = 0x20;
   static const int ssr = 0x40;
   static const int ste = 0x80;
-  static const int all = 0xFF;
+
+  /// The motion vectors depth variants (`MotionVectorsOptions`); a material
+  /// filtering them draws no object motion.
+  static const int motionVectors = 0x100;
+  static const int all = 0x1FF;
 }

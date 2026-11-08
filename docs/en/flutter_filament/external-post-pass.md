@@ -37,7 +37,7 @@ The pass runs on the backend thread inside Filament's command buffer through the
 
 `ExternalPassContext::frame` carries the render and output sizes, the TAA jitter, a frame id, `exposure` (`1 / (1.2 · 2^ev100)`), the `viewFromWorld` matrix, the unjittered `clipFromView` projection and the flags `FLAG_VELOCITY_BUFFER` (the motion came from the structure pass velocity buffer) and `FLAG_HISTORY_RESET` (first frame or a reset).
 
-The motion image is built by Filament's `postPassMotion` material: where the velocity buffer (`TemporalAntiAliasingOptions.motionVectors`) has a value it is rescaled to the pass resolution; elsewhere (motion vectors off, the sky) the surface the jittered depth describes is projected by this and the previous frame's unjittered cameras, so a still camera reports zero motion and a turning one moves the sky. `View::resetExternalPostPassHistory()` makes the next frame report no usable history (camera cuts).
+The motion image is built by Filament's `postPassMotion` material: where the velocity buffer (`FilamentView.motionVectorsOptions`) has a value it is rescaled to the pass resolution; elsewhere (motion vectors off, the sky) the surface the jittered depth describes is projected by this and the previous frame's unjittered cameras, so a still camera reports zero motion and a turning one moves the sky. `View::resetExternalPostPassHistory()` makes the next frame report no usable history (camera cuts).
 
 ## HDR-stage external upscalers
 

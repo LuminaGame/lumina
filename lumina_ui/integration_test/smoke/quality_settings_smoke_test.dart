@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter_filament/flutter_filament.dart' show DlssFrameGeneration, DlssRayReconstruction, FilamentScene, FilamentView, GuideBuffers, QualityLevel, TaaAlgorithm;
+import 'package:flutter_filament/flutter_filament.dart' show DlssFrameGeneration, DlssRayReconstruction, FilamentScene, FilamentView, FilamentViewMotionVectors, GuideBuffers, QualityLevel, TaaAlgorithm;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
@@ -326,7 +326,7 @@ void main() {
       await shot('dlss on');
       if (view != null && LuminaRtxController.dlssAvailable) {
         expect(view.dynamicResolutionOptions.enabled, isTrue, reason: 'DLSS pins the render resolution on the live view');
-        expect(view.temporalAntiAliasingOptions.motionVectors, isTrue);
+        expect(view.motionVectorsOptions.enabled, isTrue);
       }
 
       // Off again: the view returns to the profile's own options.

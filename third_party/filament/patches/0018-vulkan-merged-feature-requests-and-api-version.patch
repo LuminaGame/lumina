@@ -1,28 +1,5 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Can Us <me@canus.dev>
-Date: Sat, 10 Oct 2026 18:00:00 +0300
-Subject: [PATCH] Vulkan: merge client feature requests into Filament's own
- structures; opt-in API version
-
-Patch 0011's VulkanPlatform::Customization::extraDeviceFeatures chains a
-client's feature structures into VkDeviceCreateInfo but skipped a
-structure type Filament already chains: a client could not ask for a core
-feature (shaderInt16 in VkPhysicalDeviceFeatures) or a Vulkan 1.1 one
-(storageBuffer16BitAccess in VkPhysicalDeviceVulkan11Features, also
-reachable as VkPhysicalDevice16BitStorageFeatures, which must not be
-chained next to it). Such a request is now OR-merged into Filament's own
-structure: the requested members the device supports are enabled there,
-VkPhysicalDevice16BitStorageFeatures going into
-VkPhysicalDeviceVulkan11Features (its members are the first four).
-isExtraDeviceFeatureEnabled() reports merged members too.
-
-Customization::apiVersion (0 keeps Filament's 1.1) creates the instance
-with a newer API version, capped at what the loader offers, for clients
-whose shaders need it (SPIR-V 1.6 needs Vulkan 1.3).
-VulkanPlatform::getApiVersion() returns the version the device runs at.
-
 diff --git a/filament/backend/include/backend/platforms/VulkanPlatform.h b/filament/backend/include/backend/platforms/VulkanPlatform.h
-index 34583ac5..c697cd4a 100644
+index bf344f06..c4b6e99f 100644
 --- a/filament/backend/include/backend/platforms/VulkanPlatform.h
 +++ b/filament/backend/include/backend/platforms/VulkanPlatform.h
 @@ -207,12 +207,25 @@ public:
@@ -69,10 +46,10 @@ index 34583ac5..c697cd4a 100644
       * @return The family index of the graphics queue selected for the Vulkan backend.
       */
 diff --git a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
-index 09c0aaa6..ef14a720 100644
+index b83c8294..49358b9b 100644
 --- a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
 +++ b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
-@@ -607,6 +607,11 @@ struct VulkanPlatformPrivate {
+@@ -70,6 +70,11 @@ struct VulkanPlatformPrivate {
      // Customization::extraDeviceFeatures as enabled: one copy of each chained structure with
      // the members that were both requested and supported set to VK_TRUE.
      std::vector<std::vector<uint8_t>> mExtraDeviceFeatures;
@@ -84,7 +61,7 @@ index 09c0aaa6..ef14a720 100644
      // every extension the logical device was created with
      std::vector<std::string> mEnabledDeviceExtensions;
  };
-@@ -1034,11 +1039,26 @@ VkDevice VulkanPlatform::createVkDevice(const VkDeviceCreateInfo& createInfo) no
+@@ -1052,11 +1057,26 @@ VkDevice VulkanPlatform::createVkDevice(const VkDeviceCreateInfo& createInfo) no
  void VulkanPlatform::createInstance(ExtensionSet const& requiredExts,
          bool enableRenderdoc) noexcept {
      // Create the Vulkan instance.
@@ -113,7 +90,7 @@ index 09c0aaa6..ef14a720 100644
      };
  
      VkInstanceCreateInfo instanceCreateInfo = {
-@@ -1451,14 +1471,87 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
+@@ -1631,14 +1651,87 @@ void VulkanPlatform::createLogicalDeviceAndQueues(
  
      // The client's feature structures (Customization::extraDeviceFeatures): each one keeps the
      // requested members the device supports. A structure type already in the chain (Filament's
@@ -202,7 +179,7 @@ index 09c0aaa6..ef14a720 100644
          bool duplicate = false;
          for (auto const* node = static_cast<VkBaseInStructure const*>(deviceCreateInfo.pNext);
                  node; node = node->pNext) {
-@@ -1530,6 +1623,16 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
+@@ -1710,6 +1803,16 @@ void VulkanPlatform::createLogicalDeviceAndQueues(
      }
  
      mImpl->mDevice = createVkDevice(deviceCreateInfo);
@@ -219,7 +196,7 @@ index 09c0aaa6..ef14a720 100644
  }
  
  bool VulkanPlatform::isPresentationTimeSupported() const noexcept {
-@@ -1542,6 +1645,18 @@ bool VulkanPlatform::isPresentationTimeSupported() const noexcept {
+@@ -1722,6 +1825,18 @@ bool VulkanPlatform::isPresentationTimeSupported() const noexcept {
  
  bool VulkanPlatform::isExtraDeviceFeatureEnabled(uint32_t const sType,
          uint32_t const fieldOffset) const noexcept {

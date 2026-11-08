@@ -32,7 +32,8 @@ void main() {
       rig = SmokeRig.adopt(engine, width: w, height: h, swapChainFlags: SwapChainConfig.disableVsync);
       rig!.addSun();
       gltf = loadGltfIntoScene(rig!, 'Props/AC_units/ac_unit_a_300x300.glb');
-      rig!.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(motionVectors: true);
+      rig!.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions();
+      rig!.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
       overlay = FilamentUiOverlay.create(engine)!..setViewport(0, 0, w, h);
       final ui = Uint8List(w * h * 4);
       // A HUD bar along the top and a button in the middle.
@@ -131,7 +132,7 @@ void main() {
       }
       final r = rig!;
       r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(
-          enabled: true, motionVectors: true, algorithm: TaaAlgorithm.fsr3, frameGeneration: true);
+          enabled: true, algorithm: TaaAlgorithm.fsr3, frameGeneration: true);
       measure(r, 20, withOverlay: true);
       final on = measure(r, 100, withOverlay: true);
       smokeLog('overlay, FSR3 frame generation: ${fmt(on)}');

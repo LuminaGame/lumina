@@ -51,10 +51,8 @@ void main() {
           near: dist * 0.01,
           far: dist * 20,
         );
-        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(
-          enabled: true,
-          motionVectors: true,
-        );
+        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+        r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
         pass = DebugPostPass.create(
           engine: r.engine,
           view: r.view,
@@ -333,10 +331,8 @@ void main() {
           spatialSamples: 0,
           temporal: false,
         );
-        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(
-          enabled: true,
-          motionVectors: true,
-        );
+        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+        r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
 
         // the still comparison: Filament's TAA on the left, Ray Reconstruction on the right
         scene.orbit(0.5);
@@ -449,10 +445,8 @@ void main() {
           near: dist * 0.01,
           far: dist * 20,
         );
-        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(
-          enabled: true,
-          motionVectors: true,
-        );
+        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+        r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
         final count = math.min(3, math.max(1, probe.multiFrameCountMax));
         generator = DlssFrameGenerator.create(
           engine: engine,

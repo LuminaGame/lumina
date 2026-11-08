@@ -7,6 +7,7 @@ import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/enums.dart';
 import 'package:flutter_filament/src/filament_bindings.dart' as c;
 import 'package:flutter_filament/src/motion_vectors.dart';
+import 'package:flutter_filament/src/pixel_read.dart';
 import 'package:flutter_filament/src/render_target.dart';
 import 'package:flutter_filament/src/renderer.dart';
 import 'package:flutter_filament/src/texture.dart';
@@ -181,6 +182,9 @@ class GuideBufferReadback {
     final bytes = count * (half ? 2 : 1);
     final buffer = calloc<ffi.Uint8>(bytes);
     try {
+      // Vulkan copies into the buffer on a worker thread after the GPU, so
+      // wait for Filament to hand the buffer back rather than for a fence.
+      final (callback, user, token) = FilamentPixelReads.begin();
       c.filament_renderer_read_pixels_render_target(
         renderer.nativePointer,
         renderTarget.nativePointer,
@@ -192,10 +196,10 @@ class GuideBufferReadback {
         (half ? PixelDataType.half : PixelDataType.ubyte).value,
         buffer.cast(),
         bytes,
-        ffi.nullptr,
-        ffi.nullptr,
+        callback,
+        user,
       );
-      engine.flushAndWait();
+      await FilamentPixelReads.wait(engine, token);
       final out = Float32List(count);
       if (half) {
         final halves = buffer.cast<ffi.Uint16>().asTypedList(count);

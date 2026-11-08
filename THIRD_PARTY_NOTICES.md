@@ -76,8 +76,8 @@ grant trademark rights (section 6).
 
 ## Filament patches
 
-`third_party/filament/patches/` holds three patches applied to Filament
-v1.78.0 (see `third_party/filament/README.md`). They modify files of the
+`third_party/filament/patches/` holds twenty patches applied to Filament
+v1.80.0 (see `third_party/filament/README.md`). They modify files of the
 Filament source tree and are provided under the license of the files they
 change:
 
@@ -86,6 +86,7 @@ change:
 | `0001-libassimp-gltf2-replacedata-joint-bounds.patch` | `third_party/libassimp/code/glTF2/glTF2Asset.inl` | Assimp: BSD 3-Clause (`third_party/libassimp/LICENSE`) |
 | `0002-ssr-skip-skinned-morphed.patch` | `filament/src/RenderPass.cpp` | Filament: Apache License 2.0 |
 | `0003-libwebp-wasm-no-webp-js.patch` | `third_party/libwebp/tnt/CMakeLists.txt` | Filament's build file for libwebp; it carries no license header of its own, the Filament repository is Apache License 2.0 |
+| `0004` to `0020` (motion vectors, external passes, ray query, ReSTIR, FSR3, present pacing, Android build; listed in `third_party/filament/README.md`) | Filament's engine, backend, material compiler, shaders and build files | Filament: Apache License 2.0; the FidelityFX Super Resolution 3.1 shader code `0009` adds is MIT licensed (Advanced Micro Devices), its licence header kept in `fsr3_common.fs` |
 
 ## LLVM libc++ / libc++abi
 

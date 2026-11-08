@@ -40,7 +40,8 @@ void main() {
         final radius = math.max(extent.x, math.max(extent.y, extent.z)) / 2;
         final dist = radius * 2.4 + 0.1;
         rig.camera.setProjection(fovDegrees: 45, aspect: rig.width / rig.height, near: dist * 0.01, far: dist * 20);
-        rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+        rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+        rig.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
 
         void orbit(double t) {
           final angle = 0.6 + t * math.pi * 0.5;
@@ -119,7 +120,8 @@ void main() {
         final radius = math.max(extent.x, math.max(extent.y, extent.z)) / 2;
         final dist = radius * 2.4 + 0.1;
         rig.camera.setProjection(fovDegrees: 45, aspect: rig.width / rig.height, near: dist * 0.01, far: dist * 20);
-        rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+        rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+        rig.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
 
         void orbit(double t) {
           final angle = 0.6 + t * math.pi * 0.5;
@@ -409,7 +411,8 @@ void main() {
         rig.camera.setExposure(aperture: 16, shutterSpeed: 1 / 125, sensitivity: 400);
         rig.scene.rayTracingEnabled = true;
         if (withDlss) {
-          rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+          rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+          rig.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
           dlss = Dlss.create(
             engine: engine,
             view: rig.view,
@@ -523,7 +526,8 @@ void main() {
         final frames = (10 * smokeVideoFps).round();
         orbit(1.0);
         pose(frames);
-        rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+        rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+        rig.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
         Uint8List? reference;
         for (var i = 0; i < 8; i++) {
           reference = rig.renderFrame(warmup: 0);

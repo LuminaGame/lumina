@@ -75,7 +75,7 @@ enum TaaAlgorithm {
   filament,
 
   /// The FidelityFX Super Resolution 3 upscaler as fragment passes: uses the
-  /// structure pass motion vectors (implied), honours `upscaling`, `sharpness`,
+  /// view's motion vectors (implied, see [MotionVectorsOptions]), honours `upscaling`, `sharpness`,
   /// `lodBias` and `jitterPattern`; feature level 1 and no stereo. An external
   /// upscaler (DLSS) takes precedence.
   fsr3;
@@ -116,14 +116,35 @@ class TemporalAntiAliasingOptions {
   final bool preventFlickering;
   final bool historyReprojection;
 
-  /// Renders per-pixel motion vectors in the structure pass (which then runs
-  /// at full resolution) and reprojects the TAA history with them instead of
-  /// with the camera matrices alone, so moving, transform-animated, skinned
-  /// and morphed objects stop ghosting (a shared skinning buffer keeps no
-  /// previous palette). The buffer can be exported with
-  /// [FilamentView.motionVectorTexture]; needs
-  /// [FilamentView.motionVectorsSupported].
-  final bool motionVectors;
+  /// Relaxes history rejection under low camera motion to reduce flickering on static content.
+  final bool motionAdaptiveHistory;
+
+  /// Camera motion, in texels, above which history rejection is applied at full strength.
+  final double motionDeltaThreshold;
+
+  /// Minimum history clamping strength when the camera is static, in (0, 1].
+  final double minBoxStrength;
+
+  /// Minimum history feedback scale when the camera is static, in (0, 1].
+  final double minAlphaStrength;
+
+  /// Normalized depth below which distant and sky pixels always use full history rejection.
+  final double skyDepthThreshold;
+
+  /// Frames to keep full history rejection after camera motion stops (0 disables).
+  final double motionHoldFrames;
+
+  /// Depth-based disocclusion detection, which reduces ghosting around moving objects.
+  final bool depthDisocclusion;
+
+  /// Depth difference threshold of the disocclusion detection.
+  final double disocclusionDepthThreshold;
+
+  /// Reduces false disocclusions on thin static geometry, at a higher GPU cost.
+  final bool disocclusionHistoryNeighborhood;
+
+  /// A wider reconstruction filter for more sharpness at 1:1 resolution, at a higher GPU cost.
+  final bool exactLanczosSupport;
 
   /// Filament's TAA or the FSR3 upscaler. Default [TaaAlgorithm.filament].
   final TaaAlgorithm algorithm;
@@ -148,10 +169,19 @@ class TemporalAntiAliasingOptions {
     this.boxType = TaaBoxType.aabb,
     this.boxClipping = TaaBoxClipping.accurate,
     this.jitterPattern = TaaJitterPattern.halton23X16,
-    this.varianceGamma = 1.0,
+    this.varianceGamma = 0.7,
     this.preventFlickering = false,
     this.historyReprojection = true,
-    this.motionVectors = false,
+    this.motionAdaptiveHistory = false,
+    this.motionDeltaThreshold = 1.0,
+    this.minBoxStrength = 0.1,
+    this.minAlphaStrength = 0.3,
+    this.skyDepthThreshold = 0.001,
+    this.motionHoldFrames = 12.0,
+    this.depthDisocclusion = false,
+    this.disocclusionDepthThreshold = 0.001,
+    this.disocclusionHistoryNeighborhood = true,
+    this.exactLanczosSupport = false,
     this.algorithm = TaaAlgorithm.filament,
     this.frameGeneration = false,
   });
@@ -173,7 +203,16 @@ class TemporalAntiAliasingOptions {
     double? varianceGamma,
     bool? preventFlickering,
     bool? historyReprojection,
-    bool? motionVectors,
+    bool? motionAdaptiveHistory,
+    double? motionDeltaThreshold,
+    double? minBoxStrength,
+    double? minAlphaStrength,
+    double? skyDepthThreshold,
+    double? motionHoldFrames,
+    bool? depthDisocclusion,
+    double? disocclusionDepthThreshold,
+    bool? disocclusionHistoryNeighborhood,
+    bool? exactLanczosSupport,
     TaaAlgorithm? algorithm,
     bool? frameGeneration,
   }) {
@@ -194,7 +233,16 @@ class TemporalAntiAliasingOptions {
       varianceGamma: varianceGamma ?? this.varianceGamma,
       preventFlickering: preventFlickering ?? this.preventFlickering,
       historyReprojection: historyReprojection ?? this.historyReprojection,
-      motionVectors: motionVectors ?? this.motionVectors,
+      motionAdaptiveHistory: motionAdaptiveHistory ?? this.motionAdaptiveHistory,
+      motionDeltaThreshold: motionDeltaThreshold ?? this.motionDeltaThreshold,
+      minBoxStrength: minBoxStrength ?? this.minBoxStrength,
+      minAlphaStrength: minAlphaStrength ?? this.minAlphaStrength,
+      skyDepthThreshold: skyDepthThreshold ?? this.skyDepthThreshold,
+      motionHoldFrames: motionHoldFrames ?? this.motionHoldFrames,
+      depthDisocclusion: depthDisocclusion ?? this.depthDisocclusion,
+      disocclusionDepthThreshold: disocclusionDepthThreshold ?? this.disocclusionDepthThreshold,
+      disocclusionHistoryNeighborhood: disocclusionHistoryNeighborhood ?? this.disocclusionHistoryNeighborhood,
+      exactLanczosSupport: exactLanczosSupport ?? this.exactLanczosSupport,
       algorithm: algorithm ?? this.algorithm,
       frameGeneration: frameGeneration ?? this.frameGeneration,
     );
@@ -221,7 +269,16 @@ class TemporalAntiAliasingOptions {
           varianceGamma == other.varianceGamma &&
           preventFlickering == other.preventFlickering &&
           historyReprojection == other.historyReprojection &&
-          motionVectors == other.motionVectors &&
+          motionAdaptiveHistory == other.motionAdaptiveHistory &&
+          motionDeltaThreshold == other.motionDeltaThreshold &&
+          minBoxStrength == other.minBoxStrength &&
+          minAlphaStrength == other.minAlphaStrength &&
+          skyDepthThreshold == other.skyDepthThreshold &&
+          motionHoldFrames == other.motionHoldFrames &&
+          depthDisocclusion == other.depthDisocclusion &&
+          disocclusionDepthThreshold == other.disocclusionDepthThreshold &&
+          disocclusionHistoryNeighborhood == other.disocclusionHistoryNeighborhood &&
+          exactLanczosSupport == other.exactLanczosSupport &&
           algorithm == other.algorithm &&
           frameGeneration == other.frameGeneration;
 
@@ -243,7 +300,16 @@ class TemporalAntiAliasingOptions {
         varianceGamma,
         preventFlickering,
         historyReprojection,
-        motionVectors,
+        motionAdaptiveHistory,
+        motionDeltaThreshold,
+        minBoxStrength,
+        minAlphaStrength,
+        skyDepthThreshold,
+        motionHoldFrames,
+        depthDisocclusion,
+        disocclusionDepthThreshold,
+        disocclusionHistoryNeighborhood,
+        exactLanczosSupport,
         algorithm,
         frameGeneration,
       ]);
@@ -265,7 +331,16 @@ class TemporalAntiAliasingOptions {
     out.varianceGamma = varianceGamma;
     out.preventFlickering = preventFlickering;
     out.historyReprojection = historyReprojection;
-    out.motionVectors = motionVectors;
+    out.motionAdaptiveHistory = motionAdaptiveHistory;
+    out.motionDeltaThreshold = motionDeltaThreshold;
+    out.minBoxStrength = minBoxStrength;
+    out.minAlphaStrength = minAlphaStrength;
+    out.skyDepthThreshold = skyDepthThreshold;
+    out.motionHoldFrames = motionHoldFrames;
+    out.depthDisocclusion = depthDisocclusion;
+    out.disocclusionDepthThreshold = disocclusionDepthThreshold;
+    out.disocclusionHistoryNeighborhood = disocclusionHistoryNeighborhood;
+    out.exactLanczosSupport = exactLanczosSupport;
     out.algorithm = algorithm.toNative();
     out.frameGeneration = frameGeneration;
   }
@@ -288,9 +363,45 @@ class TemporalAntiAliasingOptions {
       varianceGamma: out.varianceGamma,
       preventFlickering: out.preventFlickering,
       historyReprojection: out.historyReprojection,
-      motionVectors: out.motionVectors,
+      motionAdaptiveHistory: out.motionAdaptiveHistory,
+      motionDeltaThreshold: out.motionDeltaThreshold,
+      minBoxStrength: out.minBoxStrength,
+      minAlphaStrength: out.minAlphaStrength,
+      skyDepthThreshold: out.skyDepthThreshold,
+      motionHoldFrames: out.motionHoldFrames,
+      depthDisocclusion: out.depthDisocclusion,
+      disocclusionDepthThreshold: out.disocclusionDepthThreshold,
+      disocclusionHistoryNeighborhood: out.disocclusionHistoryNeighborhood,
+      exactLanczosSupport: out.exactLanczosSupport,
       algorithm: TaaAlgorithm.fromNative(out.algorithm),
       frameGeneration: out.frameGeneration,
     );
   }
+}
+
+/// The view's motion vectors ([FilamentView.motionVectorsOptions]): the
+/// screen-space motion of every pixel since the previous frame, from the
+/// camera, transform and instance animation, and the pose of skinned and
+/// morphed renderables (a shared skinning buffer keeps no previous palette).
+/// TAA reprojects moving objects with them; DLSS, FSR3 (which implies them),
+/// frame generation and the external post pass read them, and
+/// [FilamentView.motionVectorTexture] exports them. Needs post-processing, a
+/// mono view and [FilamentView.motionVectorsSupported].
+class MotionVectorsOptions {
+  /// Renders the motion vectors. Default false.
+  final bool enabled;
+
+  const MotionVectorsOptions({this.enabled = false});
+
+  MotionVectorsOptions copyWith({bool? enabled}) => MotionVectorsOptions(enabled: enabled ?? this.enabled);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is MotionVectorsOptions && other.enabled == enabled;
+
+  @override
+  int get hashCode => enabled.hashCode;
+
+  @override
+  String toString() => 'MotionVectorsOptions(enabled: $enabled)';
 }

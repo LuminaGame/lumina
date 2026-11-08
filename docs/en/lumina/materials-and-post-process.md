@@ -181,7 +181,7 @@ Hardware ray tracing for a view: the scene's acceleration structures, ray-traced
 
 ### `class LuminaFsr3Settings`
 
-FidelityFX Super Resolution 3 for a view through Filament's fragment-pass port (patch 0009): works on every backend with the structure pass motion vectors. DLSS on the same view takes precedence.
+FidelityFX Super Resolution 3 for a view through Filament's fragment-pass port (patch 0009): works on every backend with the view's motion vectors. DLSS on the same view takes precedence.
 
 | Member | Signature | Purpose & Description |
 | :--- | :--- | :--- |

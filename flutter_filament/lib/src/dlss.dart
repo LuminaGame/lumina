@@ -83,15 +83,17 @@ class DlssOptions {
 /// 2. [requestExtensions] **before** the engine is created: NGX needs Vulkan
 ///    instance and device extensions that cannot be added afterwards.
 /// 3. An engine on the Vulkan backend, a view with
-///    `TemporalAntiAliasingOptions(enabled: true, motionVectors: true)` (the
-///    jittered camera and the motion vectors feed DLSS; Filament's own TAA
-///    resolve is skipped while DLSS is active).
+///    `TemporalAntiAliasingOptions(enabled: true)` and
+///    `MotionVectorsOptions(enabled: true)` (the jittered camera and the
+///    motion vectors feed DLSS; Filament's own TAA resolve is skipped while
+///    DLSS is active).
 ///
 /// ```dart
 /// Dlss.requestExtensions();
 /// final engine = FilamentEngine.create(backend: FilamentBackend.vulkan)!;
 /// // ... view, scene, camera
-/// view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+/// view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+/// view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
 /// final dlss = Dlss.create(engine: engine, view: view,
 ///     options: const DlssOptions(quality: DlssQuality.balanced, outputWidth: 1920, outputHeight: 1080));
 /// // render frames; dlss.renderResolution tells the internal size

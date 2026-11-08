@@ -1,8 +1,8 @@
 diff --git a/filament/backend/include/backend/DriverEnums.h b/filament/backend/include/backend/DriverEnums.h
-index 7392178b..31b8016f 100644
+index b3e26742..c08fbbdc 100644
 --- a/filament/backend/include/backend/DriverEnums.h
 +++ b/filament/backend/include/backend/DriverEnums.h
-@@ -1170,6 +1170,7 @@ enum class UTILS_APIGEN_FLAGS TextureUsage : uint16_t {
+@@ -1174,6 +1174,7 @@ enum class UTILS_APIGEN_FLAGS TextureUsage : uint16_t {
      BLIT_DST            = 0x0080,            //!< Texture can be used the destination of a blit()
      PROTECTED           = 0x0100,            //!< Texture can be used for protected content
      GEN_MIPMAPPABLE     = 0x0200,            //!< Texture can be used with generateMipmaps()
@@ -113,7 +113,7 @@ index 00000000..6d2fa037
 +
 +#endif // TNT_FILAMENT_BACKEND_EXTERNALPASS_H
 diff --git a/filament/backend/include/backend/platforms/VulkanPlatform.h b/filament/backend/include/backend/platforms/VulkanPlatform.h
-index 2f558019..c618b273 100644
+index f1c539dd..cf62da20 100644
 --- a/filament/backend/include/backend/platforms/VulkanPlatform.h
 +++ b/filament/backend/include/backend/platforms/VulkanPlatform.h
 @@ -172,6 +172,20 @@ public:
@@ -150,10 +150,10 @@ index db3d32ae..3e9e1253 100644
  #include <backend/PipelineState.h>
  #include <backend/Platform.h>
 diff --git a/filament/backend/include/private/backend/DriverAPI.inc b/filament/backend/include/private/backend/DriverAPI.inc
-index 4aa4bc08..1e94751c 100644
+index ce004b8a..9c781ea9 100644
 --- a/filament/backend/include/private/backend/DriverAPI.inc
 +++ b/filament/backend/include/private/backend/DriverAPI.inc
-@@ -680,6 +680,12 @@ DECL_DRIVER_API_N(blit,
+@@ -688,6 +688,12 @@ DECL_DRIVER_API_N(blit,
          math::uint2, srcOrigin,
          math::uint2, size)
  
@@ -167,10 +167,10 @@ index 4aa4bc08..1e94751c 100644
          uint32_t, indexOffset,
          uint32_t, indexCount,
 diff --git a/filament/backend/src/metal/MetalDriver.mm b/filament/backend/src/metal/MetalDriver.mm
-index 241af3c1..33587b31 100644
+index 6d65f4f9..ad2c33ca 100644
 --- a/filament/backend/src/metal/MetalDriver.mm
 +++ b/filament/backend/src/metal/MetalDriver.mm
-@@ -2151,6 +2151,16 @@ void MetalDriver::resolve(
+@@ -2216,6 +2216,16 @@ void MetalDriver::resolve(
              { dstTexture->width, dstTexture->height });
  }
  
@@ -188,10 +188,10 @@ index 241af3c1..33587b31 100644
          Handle<HwTexture> dst, uint8_t srcLevel, uint8_t srcLayer, math::uint2 dstOrigin,
          Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer, math::uint2 srcOrigin,
 diff --git a/filament/backend/src/noop/NoopDriver.cpp b/filament/backend/src/noop/NoopDriver.cpp
-index 17e281d1..131da71c 100644
+index 6f695081..ae0c4b89 100644
 --- a/filament/backend/src/noop/NoopDriver.cpp
 +++ b/filament/backend/src/noop/NoopDriver.cpp
-@@ -420,6 +420,9 @@ void NoopDriver::blit(
+@@ -441,6 +441,9 @@ void NoopDriver::blit(
          math::uint2 size) {
  }
  
@@ -202,10 +202,10 @@ index 17e281d1..131da71c 100644
  }
  
 diff --git a/filament/backend/src/opengl/OpenGLDriver.cpp b/filament/backend/src/opengl/OpenGLDriver.cpp
-index 8bb724e2..7b3c90c1 100644
+index 5edf26f2..6a7c14fa 100644
 --- a/filament/backend/src/opengl/OpenGLDriver.cpp
 +++ b/filament/backend/src/opengl/OpenGLDriver.cpp
-@@ -4785,6 +4785,16 @@ void OpenGLDriver::resolve(
+@@ -4806,6 +4806,16 @@ void OpenGLDriver::resolve(
              { d->width, d->height });
  }
  
@@ -223,10 +223,10 @@ index 8bb724e2..7b3c90c1 100644
          Handle<HwTexture> dst, uint8_t const srcLevel, uint8_t const srcLayer, uint2 const dstOrigin,
          Handle<HwTexture> src, uint8_t const dstLevel, uint8_t const dstLayer, uint2 const srcOrigin,
 diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
-index cafee5c8..67bc2b84 100644
+index 055a1b3b..c33ad249 100644
 --- a/filament/backend/src/vulkan/VulkanDriver.cpp
 +++ b/filament/backend/src/vulkan/VulkanDriver.cpp
-@@ -2675,6 +2675,65 @@ void VulkanDriver::blit(
+@@ -2711,6 +2711,65 @@ void VulkanDriver::blit(
              { .texture = srcTexture, .level = srcLevel, .layer = srcLayer }, srcOffsets);
  }
  
@@ -293,7 +293,7 @@ index cafee5c8..67bc2b84 100644
          Handle<HwRenderTarget> dst, Viewport dstRect,
          Handle<HwRenderTarget> src, Viewport srcRect,
 diff --git a/filament/backend/src/vulkan/VulkanTexture.cpp b/filament/backend/src/vulkan/VulkanTexture.cpp
-index e8b712cf..8445c4dc 100644
+index f75f2600..bceb9826 100644
 --- a/filament/backend/src/vulkan/VulkanTexture.cpp
 +++ b/filament/backend/src/vulkan/VulkanTexture.cpp
 @@ -171,6 +171,9 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
@@ -307,10 +307,10 @@ index e8b712cf..8445c4dc 100644
      constexpr TextureUsage DEPTH_STENCIL_USAGE =
              TextureUsage::DEPTH_ATTACHMENT | TextureUsage::STENCIL_ATTACHMENT;
 diff --git a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
-index 508297c8..5c9e93d2 100644
+index 13dd518c..1bb5a45b 100644
 --- a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
 +++ b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
-@@ -679,6 +679,26 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
+@@ -695,6 +695,26 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
          for (auto const& ext: getRequiredInstanceExtensions()) {
              setInsert(instExts, ext);
          }
@@ -337,7 +337,7 @@ index 508297c8..5c9e93d2 100644
      }
      if (mImpl->mInstance == VK_NULL_HANDLE) {
          createInstance(instExts, enableRenderDocCapture);
-@@ -708,6 +728,26 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
+@@ -724,6 +744,26 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
                  pruneExtensions(mImpl->mPhysicalDevice, driverConfig, instExts, deviceExts);
          instExts = prunedInstExts;
          deviceExts = prunedDeviceExts;
@@ -364,8 +364,8 @@ index 508297c8..5c9e93d2 100644
      }
  
      // Query all the supported physical device features and enable/disable any feature as needed
-@@ -1325,6 +1365,26 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
-         chainStruct(&deviceCreateInfo, &protectedMemory);
+@@ -1505,6 +1545,26 @@ void VulkanPlatform::createLogicalDeviceAndQueues(
+         chainStruct(&deviceCreateInfo, &pipelineProtectedAccess);
      }
  
 +    // Features that go with the client's extra extensions: an external upscaler's compute
@@ -392,10 +392,10 @@ index 508297c8..5c9e93d2 100644
          .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GLOBAL_PRIORITY_QUERY_FEATURES_KHR,
          .globalPriorityQuery = VK_TRUE,
 diff --git a/filament/backend/src/webgpu/WebGPUDriver.cpp b/filament/backend/src/webgpu/WebGPUDriver.cpp
-index d2a4f3f2..17ca793d 100644
+index d256f00a..5e2f2c52 100644
 --- a/filament/backend/src/webgpu/WebGPUDriver.cpp
 +++ b/filament/backend/src/webgpu/WebGPUDriver.cpp
-@@ -1984,6 +1984,16 @@ void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uin
+@@ -2184,6 +2184,16 @@ void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uin
      mMsaaTextureResolver.resolve(request);
  }
  
@@ -413,7 +413,7 @@ index d2a4f3f2..17ca793d 100644
          const uint8_t sourceLayer, const math::uint2 destinationOrigin,
          Handle<HwTexture> sourceTextureHandle, const uint8_t destinationLevel,
 diff --git a/filament/include/filament/Options.h b/filament/include/filament/Options.h
-index b2b8281f..b60ba56b 100644
+index 613562c8..ee8f44c4 100644
 --- a/filament/include/filament/Options.h
 +++ b/filament/include/filament/Options.h
 @@ -77,6 +77,15 @@ enum class BlendMode : uint8_t {
@@ -439,7 +439,7 @@ index b2b8281f..b60ba56b 100644
 +
 +    /**
 +     * Which upscaler reconstructs the output. EXTERNAL hands the low-resolution colour, depth
-+     * and motion vectors (TemporalAntiAliasingOptions::motionVectors) to the
++     * and motion vectors (View::setMotionVectorsOptions) to the
 +     * ExternalUpscaler registered with View::setExternalUpscaler(); when none is registered
 +     * or it declines the resolution, Filament falls back to its FSR1 path. Default BUILTIN.
 +     */
@@ -448,7 +448,7 @@ index b2b8281f..b60ba56b 100644
  
  /**
 diff --git a/filament/include/filament/View.h b/filament/include/filament/View.h
-index 01ad5800..6a4183fe 100644
+index 221f28a9..304a6fbd 100644
 --- a/filament/include/filament/View.h
 +++ b/filament/include/filament/View.h
 @@ -22,6 +22,8 @@
@@ -515,7 +515,7 @@ index 01ad5800..6a4183fe 100644
  class UTILS_PUBLIC View : public FilamentAPI {
  public:
      using QualityLevel = filament::QualityLevel;
-@@ -413,6 +456,21 @@ public:
+@@ -448,6 +491,21 @@ public:
       */
      Texture const* UTILS_NULLABLE getMotionVectorTexture() const noexcept;
  
@@ -535,13 +535,13 @@ index 01ad5800..6a4183fe 100644
 +    ExternalUpscaler* UTILS_NULLABLE getExternalUpscaler() const noexcept;
 +
      /**
-      * Enables or disable screen-space guard band. Disabled by default.
-      *
+      * Enables or disable multi-sample antialiasing (MSAA). Disabled by default.
+      * Note that MSAA is a post-processing effect, and post-processing is disabled at FL0. 
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index 6c9d8805..76669fa4 100644
+index 52c62584..fe547a97 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
-@@ -67,6 +67,7 @@
+@@ -68,6 +68,7 @@
  #include <filament/Material.h>
  #include <filament/MaterialEnums.h>
  #include <filament/Options.h>
@@ -549,7 +549,7 @@ index 6c9d8805..76669fa4 100644
  #include <filament/Viewport.h>
  
  #include <private/backend/BackendUtils.h>
-@@ -3353,6 +3354,74 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
+@@ -3553,6 +3554,74 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
      return upscaleFSR1(fg, dsrOptions, input, vp, outDesc);
  }
  
@@ -625,10 +625,10 @@ index 6c9d8805..76669fa4 100644
          bool const translucent,
          DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> const input,
 diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
-index f540fd99..9b880e51 100644
+index 117cbb5f..c6d61b43 100644
 --- a/filament/src/PostProcessManager.h
 +++ b/filament/src/PostProcessManager.h
-@@ -65,6 +65,7 @@ class FMaterial;
+@@ -66,6 +66,7 @@ class FMaterial;
  class FMaterialInstance;
  class FTexture;
  class FrameGraph;
@@ -636,7 +636,7 @@ index f540fd99..9b880e51 100644
  class RenderPass;
  class RenderPassBuilder;
  class ShadowMapManager;
-@@ -269,6 +270,25 @@ public:
+@@ -292,6 +293,25 @@ public:
              FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
              FrameGraphTexture::Descriptor const& outDesc, backend::SamplerMagFilter filter) noexcept;
  
@@ -663,11 +663,19 @@ index f540fd99..9b880e51 100644
              DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
              Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
 diff --git a/filament/src/View.cpp b/filament/src/View.cpp
-index 771f7698..5645dcf8 100644
+index 2e7f2803..8336dff4 100644
 --- a/filament/src/View.cpp
 +++ b/filament/src/View.cpp
-@@ -168,6 +168,14 @@ Texture const* UTILS_NULLABLE View::getMotionVectorTexture() const noexcept {
-     return downcast(this)->getMotionVectorTexture();
+@@ -31,7 +31,6 @@ Scene* View::getScene() noexcept {
+     return downcast(this)->getScene();
+ }
+ 
+-
+ void View::setCamera(Camera* camera) noexcept {
+     downcast(this)->setCameraUser(downcast(camera));
+ }
+@@ -160,6 +159,14 @@ const View::ScreenSpaceReflectionsOptions& View::getScreenSpaceReflectionsOption
+     return downcast(this)->getScreenSpaceReflectionsOptions();
  }
  
 +void View::setExternalUpscaler(ExternalUpscaler* UTILS_NULLABLE upscaler) noexcept {
@@ -682,10 +690,10 @@ index 771f7698..5645dcf8 100644
      downcast(this)->setGuardBandOptions(options);
  }
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index e874cde9..e728b89e 100644
+index 041c4de0..a9ed8085 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -1484,8 +1484,27 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1598,8 +1598,27 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      //       dedicated TAA pass for the DoF, as explained in
      //       "Life of a Bokeh" by Guillaume Abadie, SIGGRAPH 2018
  
@@ -711,10 +719,10 @@ index e874cde9..e728b89e 100644
      // TAA for color pass
 -    if (taaOptions.enabled) {
 +    if (taaOptions.enabled && !useExternalUpscaler) {
-         input = ppm.taa(fg, input, depth, velocity, xvp, vp,
-                 view.getFrameHistory(), &FrameHistoryEntry::taa,
-                 taaOptions, colorGradingConfig);
-@@ -1565,16 +1584,29 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+         // null unless a visible renderable moved while motion vectors are active
+         auto const objectMotionVectors = hasObjectMotionVectorsPass ?
+                 blackboard.get<FrameGraphTexture>("objectMotionVectors") :
+@@ -1683,16 +1702,29 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
              svp = xvp;
          }
  
@@ -748,12 +756,20 @@ index e874cde9..e728b89e 100644
              xvp = viewport;
              xvp.left = xvp.bottom = 0;
 diff --git a/filament/src/details/View.h b/filament/src/details/View.h
-index 15c05933..86f444bd 100644
+index a8aea38f..a98180a9 100644
 --- a/filament/src/details/View.h
 +++ b/filament/src/details/View.h
-@@ -307,6 +307,9 @@ public:
-     void setMotionVectorTexture(FTexture const* texture) noexcept { mMotionVectorTexture = texture; }
-     FTexture const* getMotionVectorTexture() const noexcept { return mMotionVectorTexture; }
+@@ -177,7 +177,6 @@ public:
+     void setTransparentPickingEnabled(bool const enabled) noexcept { mIsTransparentPickingEnabled = enabled; }
+     bool isTransparentPickingEnabled() const noexcept { return mIsTransparentPickingEnabled; }
+ 
+-
+     void setVisibleLayers(uint8_t select, uint8_t values) noexcept;
+     uint8_t getVisibleLayers() const noexcept {
+         return mVisibleLayers;
+@@ -317,6 +316,9 @@ public:
+ 
+     void setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept ;
  
 +    void setExternalUpscaler(ExternalUpscaler* upscaler) noexcept { mExternalUpscaler = upscaler; }
 +    ExternalUpscaler* getExternalUpscaler() const noexcept { return mExternalUpscaler; }
@@ -761,10 +777,10 @@ index 15c05933..86f444bd 100644
      const TemporalAntiAliasingOptions& getTemporalAntiAliasingOptions() const noexcept {
          return mTemporalAntiAliasingOptions;
      }
-@@ -643,6 +646,7 @@ private:
+@@ -721,6 +723,7 @@ private:
+     DepthOfFieldOptions mDepthOfFieldOptions;
      VignetteOptions mVignetteOptions;
      TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
-     FTexture const* mMotionVectorTexture = nullptr;
 +    ExternalUpscaler* mExternalUpscaler = nullptr;
      MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
      ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;

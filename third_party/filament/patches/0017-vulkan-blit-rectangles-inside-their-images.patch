@@ -1,37 +1,16 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Can Us <me@canus.dev>
-Date: Sat, 10 Oct 2026 18:00:00 +0300
-Subject: [PATCH] Vulkan: keep blit rectangles inside their images
-
-Frame generation (0009, 0013) presents its extra frames with
-blitDEPRECATED into the view's viewport of the SwapChain. When a window
-shrinks, the SwapChain is recreated at the new size before the
-application has seen the resize, so for a frame or two the view's
-viewport is larger than the SwapChain image: the destination rectangle
-reaches past the image (a negative top after the Y flip), an invalid
-vkCmdBlitImage that loses the device or hangs the queue. A game that
-presents directly into its window (resize, Alt+Enter, a smaller screen
-resolution) with frame generation on hit it every time.
-
-VulkanDriver::blitDEPRECATED now keeps the part of both rectangles that
-lies inside both images, in the same proportion, and skips a blit with
-nothing left.
-
 diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
-index 9fbe0b1b..cd9281a9 100644
+index d15f8826..117b0a59 100644
 --- a/filament/backend/src/vulkan/VulkanDriver.cpp
 +++ b/filament/backend/src/vulkan/VulkanDriver.cpp
-@@ -48,7 +48,9 @@
- #include <utils/ImmutableCString.h>
- #include <utils/Panic.h>
+@@ -50,6 +50,7 @@
  
-+#include <algorithm>
+ #include <algorithm>
  #include <chrono>
 +#include <cmath>
  #include <mutex>
  #ifndef NDEBUG
  #include <set>  // For VulkanDriver::debugCommandBegin
-@@ -2937,6 +2939,37 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
+@@ -2973,6 +2974,37 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
      VkExtent2D const srcExtent = srcTarget->getExtent();
      VkExtent2D const dstExtent = dstTarget->getExtent();
  

@@ -1,8 +1,8 @@
 diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
-index e624a8db..1367c774 100644
+index b065bd4a..88216a29 100644
 --- a/filament/CMakeLists.txt
 +++ b/filament/CMakeLists.txt
-@@ -345,6 +345,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
+@@ -356,6 +356,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
          src/materials/rt/restirSpatial.mat
          src/materials/rt/restirShade.mat
          src/materials/rt/postPassMotion.mat
@@ -11,10 +11,10 @@ index e624a8db..1367c774 100644
      list(APPEND MATERIAL_SRCS ${MATERIAL_VULKAN_SRCS})
      set_source_files_properties(src/materials/rt/rt.cpp PROPERTIES COMPILE_DEFINITIONS FILAMENT_RAY_QUERY_MATERIALS)
 diff --git a/filament/include/filament/Options.h b/filament/include/filament/Options.h
-index beb22e21..394c09e2 100644
+index 49c4e54e..f151f843 100644
 --- a/filament/include/filament/Options.h
 +++ b/filament/include/filament/Options.h
-@@ -932,6 +932,31 @@ struct RestirOptions {
+@@ -981,6 +981,31 @@ struct RestirOptions {
      bool shadeEmissive = false;         //!< reserved: emissive triangles as lights (not implemented)
  };
  
@@ -47,7 +47,7 @@ index beb22e21..394c09e2 100644
  
  #endif //TNT_FILAMENT_OPTIONS_H
 diff --git a/filament/include/filament/View.h b/filament/include/filament/View.h
-index 1111bbfd..5fd295d3 100644
+index 4bacb1f4..0f1ac789 100644
 --- a/filament/include/filament/View.h
 +++ b/filament/include/filament/View.h
 @@ -93,8 +93,20 @@ public:
@@ -78,9 +78,9 @@ index 1111bbfd..5fd295d3 100644
 +    using GuideBufferOptions = filament::GuideBufferOptions;
 +    using GuideBuffer = filament::GuideBuffer;
      using GuardBandOptions = filament::GuardBandOptions;
+     using MotionVectorsOptions = filament::MotionVectorsOptions;
      using StereoscopicOptions = filament::StereoscopicOptions;
- 
-@@ -592,6 +606,25 @@ public:
+@@ -627,6 +641,25 @@ public:
       */
      void resetExternalPostPassHistory() noexcept;
  
@@ -104,13 +104,13 @@ index 1111bbfd..5fd295d3 100644
 +    void setGuideBufferTexture(GuideBuffer which, Texture* UTILS_NULLABLE texture) noexcept;
 +
      /**
-      * Enables or disable screen-space guard band. Disabled by default.
-      *
+      * Enables or disable multi-sample antialiasing (MSAA). Disabled by default.
+      * Note that MSAA is a post-processing effect, and post-processing is disabled at FL0. 
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index ad847644..5615e145 100644
+index 81e82a68..c5220deb 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
-@@ -4373,6 +4373,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
+@@ -4573,6 +4573,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
          FrameGraphId<FrameGraphTexture> depth;
          FrameGraphId<FrameGraphTexture> velocity;
          FrameGraphId<FrameGraphTexture> output;
@@ -118,7 +118,7 @@ index ad847644..5615e145 100644
      };
  
      auto const& pass = fg.addPass<ExternalData>("external upscaling",
-@@ -4380,6 +4381,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
+@@ -4580,6 +4581,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
                  data.color = builder.read(input, FrameGraphTexture::Usage::SAMPLEABLE);
                  data.depth = builder.read(external.depth, FrameGraphTexture::Usage::SAMPLEABLE);
                  data.velocity = builder.read(external.velocity, FrameGraphTexture::Usage::SAMPLEABLE);
@@ -131,7 +131,7 @@ index ad847644..5615e145 100644
                  auto desc = outDesc;
                  desc.samples = 1;
                  data.output = builder.createTexture("external upscaled output", desc);
-@@ -4407,6 +4414,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
+@@ -4607,6 +4614,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
                  descriptor.textures[ExternalUpscaler::VELOCITY] = resources.getTexture(data.velocity);
                  descriptor.textures[ExternalUpscaler::OUTPUT] = resources.getTexture(data.output);
                  descriptor.writeMask = 1u << ExternalUpscaler::OUTPUT;
@@ -145,7 +145,7 @@ index ad847644..5615e145 100644
                  descriptor.frame.jitter[0] = external.jitter.x;
                  descriptor.frame.jitter[1] = external.jitter.y;
                  descriptor.frame.renderWidth = vp.width;
-@@ -4426,6 +4440,109 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
+@@ -4626,6 +4640,109 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
      return pass->output;
  }
  
@@ -256,10 +256,10 @@ index ad847644..5615e145 100644
          ExternalPostPassInputs const& external, FrameGraphId<FrameGraphTexture> const input,
          CameraInfo const& cameraInfo, FrameHistory& frameHistory) noexcept {
 diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
-index 6613bd7b..a41c5697 100644
+index 94e9f72a..759f4dc7 100644
 --- a/filament/src/PostProcessManager.h
 +++ b/filament/src/PostProcessManager.h
-@@ -283,8 +283,25 @@ public:
+@@ -306,8 +306,25 @@ public:
          math::mat4f viewFromWorld;
          math::mat4f clipFromView;
          uint32_t flags = 0;
@@ -412,10 +412,10 @@ index 8076e01e..edb96884 100644
  
      static ColorPassOutput colorPass(
 diff --git a/filament/src/View.cpp b/filament/src/View.cpp
-index 1076465f..ea2ee7f4 100644
+index d77ed564..d918983c 100644
 --- a/filament/src/View.cpp
 +++ b/filament/src/View.cpp
-@@ -208,6 +208,18 @@ void View::resetExternalPostPassHistory() noexcept {
+@@ -199,6 +199,18 @@ void View::resetExternalPostPassHistory() noexcept {
      downcast(this)->resetExternalPostPassHistory();
  }
  
@@ -435,10 +435,10 @@ index 1076465f..ea2ee7f4 100644
      downcast(this)->setGuardBandOptions(options);
  }
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index aa19d14a..9be116f0 100644
+index 6f109400..d2f9af84 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -940,6 +940,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -968,6 +968,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
               // an external post pass works on the HDR frame, before colour grading
               !view.getExternalPostPass();
  
@@ -451,7 +451,7 @@ index aa19d14a..9be116f0 100644
      // whether we're scaled at all
      bool scaled = any(notEqual(scale, float2(1.0f)));
  
-@@ -1283,6 +1289,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1338,6 +1344,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
              .featureLevel = mFeatureLevel,
              .isAutoDepthResolveSupported = mIsAutoDepthResolveSupported,
              .fogAsPostProcess = view.hasFog() && engine.features.material.enable_fog_as_postprocess,
@@ -459,7 +459,7 @@ index aa19d14a..9be116f0 100644
      };
  
      /*
-@@ -1530,7 +1537,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1602,7 +1609,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      // if MSAA is enabled, we end-up rendering in an intermediate buffer. This is the only case where
      // "!hasPostProcess" doesn't guarantee rendering into the swapchain.
      const bool useIntermediateBuffer = hasPostProcess || msaaOptions.enabled ||
@@ -468,7 +468,7 @@ index aa19d14a..9be116f0 100644
              (isRenderingMultiview && engine.debug.stereo.
              combine_multiview_images);
  
-@@ -1540,6 +1547,15 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1612,6 +1619,15 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
  
      const_cast<RenderPass&>(pass).finalize(engine, driver);
  
@@ -484,7 +484,7 @@ index aa19d14a..9be116f0 100644
      // the color pass itself + color-grading as subpass if needed
      auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view, {
                  .shadows = blackboard.get<FrameGraphTexture>("shadows"),
-@@ -1547,7 +1563,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1619,7 +1635,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                  .ssr = ssrConfig.ssr,
                  .structure = structure,
                  .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow"),
@@ -494,7 +494,7 @@ index aa19d14a..9be116f0 100644
              },
              colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
  
-@@ -1560,11 +1577,31 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1632,11 +1649,31 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                          .ssr = ssrConfig.ssr,
                  .structure = structure,
                  .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow"),
@@ -527,7 +527,7 @@ index aa19d14a..9be116f0 100644
      if (colorGradingConfig.customResolve) {
          assert_invariant(fg.getDescriptor(colorPassOutput.linearColor).samples <= 1);
          // TODO: we have to "uncompress" (i.e. detonemap) the color buffer here because it's used
-@@ -1646,6 +1683,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1763,6 +1800,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
          externalUpscale.viewFromWorld = cameraInfo.view;
          externalUpscale.clipFromView = cameraInfo.projection;
          externalUpscale.flags = velocity ? ExternalPassFrame::FLAG_VELOCITY_BUFFER : 0u;
@@ -543,10 +543,10 @@ index aa19d14a..9be116f0 100644
                  externalUpscale.upscaler->stage() == ExternalUpscaler::Stage::HDR;
          useExternalUpscaler = PostProcessManager::useExternalUpscaler(dsrOptions, externalUpscale,
 diff --git a/filament/src/details/View.h b/filament/src/details/View.h
-index d4b8cac4..b42afeb2 100644
+index 85bd9147..845782f6 100644
 --- a/filament/src/details/View.h
 +++ b/filament/src/details/View.h
-@@ -356,6 +356,18 @@ public:
+@@ -365,6 +365,18 @@ public:
      void setExternalPostPass(ExternalPostPass* pass) noexcept { mExternalPostPass = pass; }
      ExternalPostPass* getExternalPostPass() const noexcept { return mExternalPostPass; }
      void resetExternalPostPassHistory() noexcept { mExternalPostPassReset = true; }
@@ -565,7 +565,7 @@ index d4b8cac4..b42afeb2 100644
      // true once after resetExternalPostPassHistory()
      bool consumeExternalPostPassReset() noexcept {
          bool const reset = mExternalPostPassReset;
-@@ -736,6 +748,8 @@ private:
+@@ -813,6 +825,8 @@ private:
      ExternalUpscaler* mExternalUpscaler = nullptr;
      ExternalPostPass* mExternalPostPass = nullptr;
      bool mExternalPostPassReset = false;
@@ -678,7 +678,7 @@ index 00000000..66707151
 +    }
 +}
 diff --git a/shaders/src/surface_main.fs b/shaders/src/surface_main.fs
-index 005a679c..6d7930c4 100644
+index ca637678..6772911b 100644
 --- a/shaders/src/surface_main.fs
 +++ b/shaders/src/surface_main.fs
 @@ -6,6 +6,64 @@ layout(location = 0) out vec4 fragColor;

@@ -105,9 +105,7 @@ void main() {
           return;
         }
         gltf = loadGltfIntoScene(r, 'Props/AC_units/ac_unit_a_300x300.glb');
-        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(
-          motionVectors: true,
-        );
+        r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
         final tm = FilamentTransformManager(r.engine);
         final root = gltf!.asset.rootEntity;
         void place(double x) => tm.setTransform(root, [
@@ -256,8 +254,7 @@ void main() {
             return;
           }
           gltf = loadGltfIntoScene(r, 'Props/AC_units/ac_unit_a_300x300.glb');
-          r.view.temporalAntiAliasingOptions =
-              const TemporalAntiAliasingOptions(motionVectors: true);
+          r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
           presentsOf(r, 3);
           final generator = DlssFrameGenerator.create(
             engine: r.engine,
@@ -314,8 +311,7 @@ void main() {
         final ownGltf = gltf!;
         DlssFrameGenerator? generator;
         try {
-          r.view.temporalAntiAliasingOptions =
-              const TemporalAntiAliasingOptions(motionVectors: true);
+          r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
           final plain = presentsOf(r, 40);
           final (plainMean, plainSd) = intervalStats(plain);
           final count = math.min(3, math.max(1, probe.multiFrameCountMax));

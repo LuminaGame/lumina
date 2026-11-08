@@ -1138,6 +1138,17 @@ external bool filament_view_motion_vectors_supported(
   ffi.Pointer<ffi.Void> engine,
 );
 
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Bool)>()
+external void filament_view_set_motion_vectors_options(
+  ffi.Pointer<ffi.Void> view,
+  bool enabled,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_view_get_motion_vectors_options(
+  ffi.Pointer<ffi.Void> view,
+);
+
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Void>)>()
 external void filament_view_set_motion_vector_texture(
   ffi.Pointer<ffi.Void> view,
@@ -11013,7 +11024,34 @@ final class filament_temporal_anti_aliasing_options extends ffi.Struct {
   external bool historyReprojection;
 
   @ffi.Bool()
-  external bool motionVectors;
+  external bool motionAdaptiveHistory;
+
+  @ffi.Float()
+  external double motionDeltaThreshold;
+
+  @ffi.Float()
+  external double minBoxStrength;
+
+  @ffi.Float()
+  external double minAlphaStrength;
+
+  @ffi.Float()
+  external double skyDepthThreshold;
+
+  @ffi.Float()
+  external double motionHoldFrames;
+
+  @ffi.Bool()
+  external bool depthDisocclusion;
+
+  @ffi.Float()
+  external double disocclusionDepthThreshold;
+
+  @ffi.Bool()
+  external bool disocclusionHistoryNeighborhood;
+
+  @ffi.Bool()
+  external bool exactLanczosSupport;
 
   @ffi.Uint8()
   external int algorithm;

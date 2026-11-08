@@ -66,7 +66,8 @@ void main() {
       test('upscales from two thirds of the viewport and renders a shaded frame', () {
         if (skipWithoutMotionVectors()) return;
         final r = rig!;
-        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+        r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
         Uint8List? taa;
         for (var i = 0; i < 6; i++) {
           taa = r.renderFrame(warmup: 0);

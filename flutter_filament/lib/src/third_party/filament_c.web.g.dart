@@ -583,6 +583,13 @@ void filament_camera_set_exposure(ffi.Pointer<ffi.Void> camera, double aperture,
 bool filament_view_motion_vectors_supported(ffi.Pointer<ffi.Void> engine) =>
     _m.filament_view_motion_vectors_supported(engine.address.toJS).toDartInt != 0;
 
+void filament_view_set_motion_vectors_options(ffi.Pointer<ffi.Void> view, bool enabled) {
+  _m.filament_view_set_motion_vectors_options(view.address.toJS, (enabled ? 1 : 0).toJS);
+}
+
+bool filament_view_get_motion_vectors_options(ffi.Pointer<ffi.Void> view) =>
+    _m.filament_view_get_motion_vectors_options(view.address.toJS).toDartInt != 0;
+
 void filament_view_set_motion_vector_texture(ffi.Pointer<ffi.Void> view, ffi.Pointer<ffi.Void> texture) {
   _m.filament_view_set_motion_vector_texture(view.address.toJS, texture.address.toJS);
 }
@@ -5211,14 +5218,41 @@ final class filament_temporal_anti_aliasing_options extends ffi.Struct {
   bool get historyReprojection => FlutterFilamentModule.heap.getUint8($address + 37) != 0;
   set historyReprojection(bool value) => FlutterFilamentModule.heap.setUint8($address + 37, value ? 1 : 0);
 
-  bool get motionVectors => FlutterFilamentModule.heap.getUint8($address + 38) != 0;
-  set motionVectors(bool value) => FlutterFilamentModule.heap.setUint8($address + 38, value ? 1 : 0);
+  bool get motionAdaptiveHistory => FlutterFilamentModule.heap.getUint8($address + 38) != 0;
+  set motionAdaptiveHistory(bool value) => FlutterFilamentModule.heap.setUint8($address + 38, value ? 1 : 0);
 
-  int get algorithm => FlutterFilamentModule.heap.getUint8($address + 39);
-  set algorithm(int value) => FlutterFilamentModule.heap.setUint8($address + 39, value);
+  double get motionDeltaThreshold => FlutterFilamentModule.heap.getFloat32($address + 40, Endian.little);
+  set motionDeltaThreshold(double value) => FlutterFilamentModule.heap.setFloat32($address + 40, value, Endian.little);
 
-  bool get frameGeneration => FlutterFilamentModule.heap.getUint8($address + 40) != 0;
-  set frameGeneration(bool value) => FlutterFilamentModule.heap.setUint8($address + 40, value ? 1 : 0);
+  double get minBoxStrength => FlutterFilamentModule.heap.getFloat32($address + 44, Endian.little);
+  set minBoxStrength(double value) => FlutterFilamentModule.heap.setFloat32($address + 44, value, Endian.little);
+
+  double get minAlphaStrength => FlutterFilamentModule.heap.getFloat32($address + 48, Endian.little);
+  set minAlphaStrength(double value) => FlutterFilamentModule.heap.setFloat32($address + 48, value, Endian.little);
+
+  double get skyDepthThreshold => FlutterFilamentModule.heap.getFloat32($address + 52, Endian.little);
+  set skyDepthThreshold(double value) => FlutterFilamentModule.heap.setFloat32($address + 52, value, Endian.little);
+
+  double get motionHoldFrames => FlutterFilamentModule.heap.getFloat32($address + 56, Endian.little);
+  set motionHoldFrames(double value) => FlutterFilamentModule.heap.setFloat32($address + 56, value, Endian.little);
+
+  bool get depthDisocclusion => FlutterFilamentModule.heap.getUint8($address + 60) != 0;
+  set depthDisocclusion(bool value) => FlutterFilamentModule.heap.setUint8($address + 60, value ? 1 : 0);
+
+  double get disocclusionDepthThreshold => FlutterFilamentModule.heap.getFloat32($address + 64, Endian.little);
+  set disocclusionDepthThreshold(double value) => FlutterFilamentModule.heap.setFloat32($address + 64, value, Endian.little);
+
+  bool get disocclusionHistoryNeighborhood => FlutterFilamentModule.heap.getUint8($address + 68) != 0;
+  set disocclusionHistoryNeighborhood(bool value) => FlutterFilamentModule.heap.setUint8($address + 68, value ? 1 : 0);
+
+  bool get exactLanczosSupport => FlutterFilamentModule.heap.getUint8($address + 69) != 0;
+  set exactLanczosSupport(bool value) => FlutterFilamentModule.heap.setUint8($address + 69, value ? 1 : 0);
+
+  int get algorithm => FlutterFilamentModule.heap.getUint8($address + 70);
+  set algorithm(int value) => FlutterFilamentModule.heap.setUint8($address + 70, value);
+
+  bool get frameGeneration => FlutterFilamentModule.heap.getUint8($address + 71) != 0;
+  set frameGeneration(bool value) => FlutterFilamentModule.heap.setUint8($address + 71, value ? 1 : 0);
 }
 
 enum filament_taa_algorithm {
@@ -7194,6 +7228,10 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_camera_set_exposure(JSNumber camera, JSNumber aperture, JSNumber shutter_speed, JSNumber sensitivity);
   @JS('_filament_view_motion_vectors_supported')
   external JSNumber filament_view_motion_vectors_supported(JSNumber engine);
+  @JS('_filament_view_set_motion_vectors_options')
+  external void filament_view_set_motion_vectors_options(JSNumber view, JSNumber enabled);
+  @JS('_filament_view_get_motion_vectors_options')
+  external JSNumber filament_view_get_motion_vectors_options(JSNumber view);
   @JS('_filament_view_set_motion_vector_texture')
   external void filament_view_set_motion_vector_texture(JSNumber view, JSNumber texture);
   @JS('_filament_view_get_motion_vector_texture')
@@ -9414,7 +9452,7 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_ambient_occlusion_options_gtao>(20, 4, filament_ambient_occlusion_options_gtao.$at);
   ffi.$registerStruct<filament_ambient_occlusion_options>(100, 4, filament_ambient_occlusion_options.$at);
   ffi.$registerStruct<filament_multi_sample_anti_aliasing_options>(3, 1, filament_multi_sample_anti_aliasing_options.$at);
-  ffi.$registerStruct<filament_temporal_anti_aliasing_options>(44, 4, filament_temporal_anti_aliasing_options.$at);
+  ffi.$registerStruct<filament_temporal_anti_aliasing_options>(72, 4, filament_temporal_anti_aliasing_options.$at);
   ffi.$registerStruct<filament_screen_space_reflections_options>(20, 4, filament_screen_space_reflections_options.$at);
   ffi.$registerStruct<filament_guard_band_options>(1, 1, filament_guard_band_options.$at);
   ffi.$registerStruct<filament_vsm_shadow_options>(12, 4, filament_vsm_shadow_options.$at);

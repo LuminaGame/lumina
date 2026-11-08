@@ -162,7 +162,8 @@ void main() {
       if (skipWithoutDlss()) return;
       final r = rig!;
       gltf = loadGltfIntoScene(r, 'Props/Barrels/empty_barrel.glb');
-      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+      r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
 
       // Native reference: full resolution, Filament's own TAA, no upscaling.
       r.view.dynamicResolutionOptions = const DynamicResolutionOptions(enabled: false);
@@ -202,7 +203,8 @@ void main() {
       if (skipWithoutDlss()) return;
       final r = rig!;
       gltf = loadGltfIntoScene(r, 'Props/Barrels/empty_barrel.glb');
-      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+      r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
       dlss = Dlss.create(
         engine: r.engine,
         view: r.view,
@@ -222,7 +224,8 @@ void main() {
       if (skipWithoutDlss()) return;
       final r = rig!;
       gltf = loadGltfIntoScene(r, 'Props/Barrels/empty_barrel.glb');
-      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+      r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
       dlss = Dlss.create(
         engine: r.engine,
         view: r.view,
@@ -236,7 +239,8 @@ void main() {
         options: const DlssOptions(quality: DlssQuality.maxQuality, outputWidth: 1280, outputHeight: 720),
       );
       try {
-        second.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+        second.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+        second.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
         Uint8List? a;
         Uint8List? b;
         for (var i = 0; i < 8; i++) {
@@ -261,7 +265,8 @@ void main() {
       if (skipWithoutDlss()) return;
       final r = rig!;
       gltf = loadGltfIntoScene(r, 'Props/Barrels/empty_barrel.glb');
-      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+      r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
       r.engine.flushAndWait();
       final before = r.engine.resourceCounts;
       final d = Dlss.create(

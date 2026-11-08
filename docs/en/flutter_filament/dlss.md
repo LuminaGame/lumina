@@ -41,7 +41,7 @@ The hook declares the SDK's header and entry-point library as dependencies; whil
 1. `Dlss.available` is true: the runtime was found and an NVIDIA Vulkan device exists.
 2. `Dlss.requestExtensions()` **before** `FilamentEngine.create`: NGX needs Vulkan instance and device extensions that cannot be added to an existing device. `Dlss.clearExtensionRequest()` undoes it for later engines.
 3. Create the engine on the Vulkan backend, the view, scene and camera as usual.
-4. `view.temporalAntiAliasingOptions = TemporalAntiAliasingOptions(enabled: true, motionVectors: true)`: the jittered camera and the velocity buffer feed DLSS; Filament's TAA resolve is skipped while DLSS is active.
+4. `view.temporalAntiAliasingOptions = TemporalAntiAliasingOptions(enabled: true)` and `view.motionVectorsOptions = MotionVectorsOptions(enabled: true)`: the jittered camera and the velocity buffer feed DLSS; Filament's TAA resolve is skipped while DLSS is active.
 5. `Dlss.create(engine:, view:, options: DlssOptions(quality:, outputWidth:, outputHeight:))`. The output size is the view's viewport. The call initialises NGX for the device, reads the optimal render resolution (`renderResolution`), registers the upscaler and sets `DynamicResolutionOptions(enabled: true, upscaler: Upscaler.external, minScale == maxScale == render / output)`.
 6. Render frames. `quality` changes the mode (the feature is recreated on the next frame), `resetHistory()` clears the temporal history for a camera cut.
 7. `destroy()` releases the feature and returns the view to `Upscaler.builtin` with dynamic resolution disabled. Destroy every `Dlss` before its engine.
@@ -103,7 +103,8 @@ Dlss.requestExtensions();
 final engine = FilamentEngine.create(backend: FilamentBackend.vulkan)!;
 final view = engine.createView();
 // ... scene, camera, viewport 1920x1080
-view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
 final dlss = Dlss.create(
   engine: engine,
   view: view,

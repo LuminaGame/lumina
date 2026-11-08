@@ -1,25 +1,25 @@
 diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
-index 3994f508..00895622 100644
+index 81003e53..62d1ca68 100644
 --- a/filament/CMakeLists.txt
 +++ b/filament/CMakeLists.txt
-@@ -62,6 +62,7 @@ set(SRCS
-         src/materials/flare/flare.cpp
+@@ -63,6 +63,7 @@ set(SRCS
          src/materials/fog/fog.cpp
          src/materials/fsr/fsr.cpp
+         src/materials/motionVectors/motionVectors.cpp
 +        src/materials/fsr3/fsr3.cpp
          src/materials/sgsr/sgsr.cpp
          src/materials/ssao/ssao.cpp
          src/materials/rt/rt.cpp
-@@ -267,6 +268,8 @@ set(PRIVATE_HDRS
-         src/materials/fsr/ffx_a.h
+@@ -271,6 +272,8 @@ set(PRIVATE_HDRS
          src/materials/fsr/ffx_fsr1.h
          src/materials/fsr/ffx_fsr1_mobile.fs
+         src/materials/motionVectors/motionVectors.h
 +        src/materials/fsr3/fsr3.h
 +        src/materials/fsr3/fsr3_common.fs
          src/ZstdHelper.h
  )
  
-@@ -304,6 +307,14 @@ set(MATERIAL_SRCS
+@@ -308,6 +311,14 @@ set(MATERIAL_SRCS
          src/materials/fsr/fsr_easu_mobile.mat
          src/materials/fsr/fsr_easu_mobileF.mat
          src/materials/fsr/fsr_rcas.mat
@@ -34,7 +34,7 @@ index 3994f508..00895622 100644
          src/materials/sgsr/sgsr1.mat
          src/materials/resolveDepth.mat
          src/materials/separableGaussianBlur.mat
-@@ -604,6 +615,18 @@ add_custom_command(
+@@ -615,6 +626,18 @@ add_custom_command(
          APPEND
  )
  
@@ -54,7 +54,7 @@ index 3994f508..00895622 100644
      add_custom_command(
              OUTPUT "${MATERIAL_DIR}/gtao.filamat"
 diff --git a/filament/backend/include/backend/DriverEnums.h b/filament/backend/include/backend/DriverEnums.h
-index 717a6cde..746a8dce 100644
+index 41650fd3..3615c4af 100644
 --- a/filament/backend/include/backend/DriverEnums.h
 +++ b/filament/backend/include/backend/DriverEnums.h
 @@ -111,6 +111,12 @@ static constexpr uint64_t SWAP_CHAIN_CONFIG_PROTECTED_CONTENT   = 0x40;
@@ -70,7 +70,7 @@ index 717a6cde..746a8dce 100644
  static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
  static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 3.
  static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.
-@@ -500,6 +506,7 @@ constexpr std::string_view to_string(DescriptorType type) noexcept {
+@@ -504,6 +510,7 @@ constexpr std::string_view to_string(DescriptorType type) noexcept {
          DESCRIPTOR_TYPE_CASE(UNIFORM_BUFFER)
          DESCRIPTOR_TYPE_CASE(SHADER_STORAGE_BUFFER)
          DESCRIPTOR_TYPE_CASE(INPUT_ATTACHMENT)
@@ -231,20 +231,20 @@ index a44c62e7..7676f94e 100644
      UTILS_UNUSED void* mNativeWindow = nullptr;
  
 diff --git a/filament/include/filament/Options.h b/filament/include/filament/Options.h
-index 8413d8fe..beb22e21 100644
+index 3b520e2d..49c4e54e 100644
 --- a/filament/include/filament/Options.h
 +++ b/filament/include/filament/Options.h
-@@ -658,6 +658,32 @@ struct TemporalAntiAliasingOptions {
-      * through View::setMotionVectorTexture().
-      */
-     bool motionVectors = false;
+@@ -690,6 +690,32 @@ struct TemporalAntiAliasingOptions {
+ 
+     /** uses a wider reconstruction filter kernel for higher sharpness at 1:1 resolution, at a higher GPU cost */
+     bool exactLanczosSupport = false;
 +
 +    enum class Algorithm : uint8_t {
 +        /** Filament's temporal anti-aliasing */
 +        FILAMENT,
 +        /**
 +         * FidelityFX Super Resolution 3 temporal upscaler, as fragment passes. Uses the
-+         * per-pixel motion vectors of the structure pass (motionVectors is implied). Only
++         * motion vectors of View::setMotionVectorsOptions (implied). Only
 +         * `upscaling`, `sharpness`, `lodBias` and `jitterPattern` apply. Requires feature
 +         * level 1 and no stereo. An external upscaler (DynamicResolutionOptions::upscaler)
 +         * takes precedence. [BETA]
@@ -286,10 +286,10 @@ index 653e0030..71791249 100644
       * Return whether createSwapChain supports the CONFIG_PROTECTED_CONTENT flag.
       * The default implementation returns false.
 diff --git a/filament/src/FrameHistory.h b/filament/src/FrameHistory.h
-index 6b9a38a3..96f75c29 100644
+index fc73e97d..441ac824 100644
 --- a/filament/src/FrameHistory.h
 +++ b/filament/src/FrameHistory.h
-@@ -54,6 +54,26 @@ struct FrameHistoryEntry {
+@@ -63,6 +63,26 @@ struct FrameHistoryEntry {
          FrameGraphTexture::Descriptor desc;
          math::mat4 clipFromWorld;
      } restir;
@@ -317,10 +317,10 @@ index 6b9a38a3..96f75c29 100644
  
  /*
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index ceb00737..8da36387 100644
+index bfe402af..d256a981 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
-@@ -64,6 +64,9 @@
+@@ -65,6 +65,9 @@
  #include "materials/sgsr/sgsr.h"
  #include "materials/ssao/ssao.h"
  #include "materials/rt/rt.h"
@@ -330,7 +330,7 @@ index ceb00737..8da36387 100644
  
  #include <private/filament/EngineEnums.h>
  #include <private/filament/UibStructs.h>
-@@ -684,6 +687,9 @@ void PostProcessManager::init() noexcept {
+@@ -693,6 +696,9 @@ void PostProcessManager::init() noexcept {
      mSsrPassDescriptorSet.init(engine);
      mPostProcessDescriptorSet.init(engine);
      mRayQueryDescriptorSet.init(engine, descriptor_sets::getRayQueryPostProcessLayout());
@@ -340,7 +340,7 @@ index ceb00737..8da36387 100644
      // ray query materials exist only in Vulkan builds and load only when the device traces rays
      if (driver.isRayQuerySupported()) {
          auto const rayQueryMaterials = getRayQueryMaterialList();
-@@ -3598,6 +3604,667 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
+@@ -3798,6 +3804,667 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
      return input;
  }
  
@@ -1009,10 +1009,10 @@ index ceb00737..8da36387 100644
          FrameGraph& fg,
          float const sharpness,
 diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
-index 7b640824..94468276 100644
+index 00e4a2b6..c8c76e43 100644
 --- a/filament/src/PostProcessManager.h
 +++ b/filament/src/PostProcessManager.h
-@@ -427,6 +427,25 @@ public:
+@@ -472,6 +472,25 @@ public:
      // Answers the view's pending View::traceRay() queries: one 1x1 pass each, read back.
      void rayQueries(FrameGraph& fg, FView& view) noexcept;
  
@@ -1039,10 +1039,10 @@ index 7b640824..94468276 100644
      // Returns the (light index, W, visibility) texture the colour pass shades with and keeps the
      // reservoirs in the frame history for the next frame.
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index c52a0092..26c64007 100644
+index 419107d6..5ce46374 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -448,6 +448,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
+@@ -477,6 +477,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
  
      mBeginFrameInternal = {};
  
@@ -1052,7 +1052,7 @@ index c52a0092..26c64007 100644
      mSwapChain = swapChain;
      swapChain->makeCurrent(driver);
  
-@@ -564,7 +567,19 @@ void FRenderer::endFrame() {
+@@ -593,7 +596,19 @@ void FRenderer::endFrame() {
              << "SwapChain must remain valid until endFrame is called.";
  
      // mSwapChain cannot be null by construction
@@ -1072,7 +1072,7 @@ index c52a0092..26c64007 100644
      mSwapChain = nullptr;
  
      mFrameInfoManager.endFrame(driver);
-@@ -730,10 +745,89 @@ void FRenderer::render(FView const* view) {
+@@ -759,10 +774,89 @@ void FRenderer::render(FView const* view) {
      assert_invariant(mSwapChain);
  
      if (UTILS_LIKELY(view && view->getScene() && view->hasCamera())) {
@@ -1162,41 +1162,46 @@ index c52a0092..26c64007 100644
  void FRenderer::renderInternal(DriverApi& driver, FView const* view, bool const flush) {
      FEngine& engine = mEngine;
  
-@@ -1032,9 +1126,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
-     // Motion vectors (TemporalAntiAliasingOptions::motionVectors) are rendered by the structure
-     // pass, at full resolution so they can drive TAA and upscalers; they need a second color
-     // attachment, which feature level 0 cannot provide.
--    bool const motionVectors = taaOptions.motionVectors
-+    // The FSR3 upscaler replaces TAA; it implies the motion vectors and needs a mono view.
+@@ -1056,6 +1150,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+     // at the same resolution. We set only the values that are relevant to both user-materials
+     // and the concerned passes. The PER_VIEW UBO contains data that is needed by the user
+     // materials public APIs.
++    // The FSR3 upscaler replaces TAA; it implies the motion vectors (see
++    // FView::evaluateMotionVectorsActive()) and needs a mono view.
 +    bool const fsr3Requested = taaOptions.enabled &&
 +            taaOptions.algorithm == TemporalAntiAliasingOptions::Algorithm::FSR3 &&
 +            !view.hasStereo() && view.hasPostProcessPass();
-+    bool const motionVectors = (taaOptions.motionVectors || fsr3Requested)
-             && engine.getSupportedFeatureLevel() != FeatureLevel::FEATURE_LEVEL_0
-             && driver.isRenderTargetFormatSupported(TextureFormat::RG16F);
-+    bool const useFsr3 = fsr3Requested && motionVectors;
++    bool const useFsr3 = fsr3Requested && view.isMotionVectorsActive();
      // the ray-traced shadow mask is traced from the structure depth, at the colour pass's resolution
-     float const structureScale = (motionVectors || rayTracedShadows || restir) ? 1.0f : aoOptions.resolution;
+     float const structureScale = (rayTracedShadows || restir) ? 1.0f : aoOptions.resolution;
  
-@@ -1543,9 +1642,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1659,13 +1759,18 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
  
      // TAA for color pass
      if (taaOptions.enabled && !useExternalUpscaler) {
--        input = ppm.taa(fg, input, depth, velocity, xvp, vp,
+-        // null unless a visible renderable moved while motion vectors are active
+-        auto const objectMotionVectors = hasObjectMotionVectorsPass ?
+-                blackboard.get<FrameGraphTexture>("objectMotionVectors") :
+-                FrameGraphId<FrameGraphTexture>{};
+-        input = ppm.taa(fg, input, depth, objectMotionVectors, xvp, vp,
 -                view.getFrameHistory(), &FrameHistoryEntry::taa,
 -                taaOptions, colorGradingConfig);
 +        if (useFsr3 && velocity) {
 +            input = ppm.fsr3(fg, input, depth, velocity, view.getFrameHistory(), cameraInfo,
 +                    taaOptions, colorGradingConfig.translucent);
 +        } else {
-+            input = ppm.taa(fg, input, depth, velocity, xvp, vp,
++            // null unless a visible renderable moved while motion vectors are active
++            auto const objectMotionVectors = hasObjectMotionVectorsPass ?
++                    blackboard.get<FrameGraphTexture>("objectMotionVectors") :
++                    FrameGraphId<FrameGraphTexture>{};
++            input = ppm.taa(fg, input, depth, objectMotionVectors, xvp, vp,
 +                    view.getFrameHistory(), &FrameHistoryEntry::taa,
 +                    taaOptions, colorGradingConfig);
 +        }
          if (taaOptions.upscaling > 1.0f) {
              scale = 1.0f;
              scaled = false;
-@@ -1730,6 +1834,15 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1860,6 +1965,15 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                  engine.debug.shadowmap.display_shadow_texture_power);
      }
  
@@ -1261,10 +1266,10 @@ index 333e4626..3502d856 100644
          return (mConfigFlags & CONFIG_PROTECTED_CONTENT) != 0;
      }
 diff --git a/filament/src/details/View.cpp b/filament/src/details/View.cpp
-index aed17870..334fd623 100644
+index efd962a9..9f6f2e6e 100644
 --- a/filament/src/details/View.cpp
 +++ b/filament/src/details/View.cpp
-@@ -1573,6 +1573,16 @@ FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FEngine& engine, FrameGr
+@@ -1598,6 +1598,16 @@ FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FEngine& engine, FrameGr
      return mShadowMapManager->render(engine, fg, passBuilder, *this, cameraInfo, userTime);
  }
  
@@ -1281,24 +1286,36 @@ index aed17870..334fd623 100644
  void FView::commitFrameHistory(FEngine& engine) noexcept {
      // Here we need to destroy resources in mFrameHistory.back()
      auto& disposer = engine.getResourceAllocatorDisposer();
-@@ -1582,6 +1592,8 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
-     disposer.destroy(std::move(last.taa.color.handle));
+@@ -1608,6 +1618,8 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
+     disposer.destroy(std::move(last.taa.depth.handle));
      disposer.destroy(std::move(last.ssr.color.handle));
      disposer.destroy(std::move(last.restir.reservoir.handle));
 +    destroyFsr3History(disposer, last.fsr3);
 +    disposer.destroy(std::move(last.frameGeneration.color.handle));
  
-     // and then push the new history entry to the history stack
-     frameHistory.commit();
-@@ -1596,6 +1608,8 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
-         disposer.destroy(std::move(last.taa.color.handle));
+     // (last.motionVectors holds no resources)
+ 
+@@ -1629,6 +1641,8 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
+         disposer.destroy(std::move(last.taa.depth.handle));
          disposer.destroy(std::move(last.ssr.color.handle));
          disposer.destroy(std::move(last.restir.reservoir.handle));
 +        destroyFsr3History(disposer, last.fsr3);
 +        disposer.destroy(std::move(last.frameGeneration.color.handle));
      }
+     resetMotionVectorsHistory();
  }
- 
+@@ -1811,7 +1825,10 @@ void FView::setMotionVectorsReadback(MotionVectorsReadback const& readback) {
+ bool FView::evaluateMotionVectorsActive(FEngine const& engine) const noexcept {
+     // Motion vectors are mono only and are only consumed by post-processing; their depth variant
+     // isn't built for feature level 0, and the object motion vectors pass renders into RG16F.
+-    return mMotionVectorsOptions.enabled && hasPostProcessPass() && !hasStereo() &&
++    // The FSR3 upscaler implies them (TemporalAntiAliasingOptions::Algorithm::FSR3).
++    bool const fsr3 = mTemporalAntiAliasingOptions.enabled &&
++            mTemporalAntiAliasingOptions.algorithm == TemporalAntiAliasingOptions::Algorithm::FSR3;
++    return (mMotionVectorsOptions.enabled || fsr3) && hasPostProcessPass() && !hasStereo() &&
+            engine.getActiveFeatureLevel() >= FeatureLevel::FEATURE_LEVEL_1 &&
+            engine.isRG16FColorRenderTargetSupported();
+ }
 diff --git a/filament/src/materials/fsr3/fsr3.cpp b/filament/src/materials/fsr3/fsr3.cpp
 new file mode 100644
 index 00000000..f9c25ba9
@@ -3203,34 +3220,3 @@ index 410a9698..5f4b0bc9 100644
      }
      return "--";
  }
-diff --git a/shaders/src/surface_getters.vs b/shaders/src/surface_getters.vs
-index 56b1c1ac..b7568814 100644
---- a/shaders/src/surface_getters.vs
-+++ b/shaders/src/surface_getters.vs
-@@ -271,7 +271,7 @@ vec4 getPosition() {
-     return pos;
- }
- 
--#if defined(VARIANT_DEPTH)
-+#if defined(VARIANT_DEPTH) && MATERIAL_FEATURE_LEVEL > 0
- #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
- // The previous frame's pose (motion vectors): the same morphing and skinning as getPosition(),
- // read from the previous frame's weights and bone palette.
-diff --git a/shaders/src/surface_main.vs b/shaders/src/surface_main.vs
-index f240345d..f71f2c49 100644
---- a/shaders/src/surface_main.vs
-+++ b/shaders/src/surface_main.vs
-@@ -226,9 +226,11 @@ void main() {
-     // this must happen before we compensate for vulkan below
-     vertex_position = position;
- 
--#if defined(VARIANT_DEPTH)
-+#if defined(VARIANT_DEPTH) && MATERIAL_FEATURE_LEVEL > 0
-     // motion vectors: where this vertex was on the previous frame (same clip convention as
--    // vertex_position, i.e. before the Vulkan Y flip and the clip-control remap below)
-+    // vertex_position, i.e. before the Vulkan Y flip and the clip-control remap below).
-+    // Feature level 0 renders no motion vectors (its uniform block lacks the velocity
-+    // parameters) and leaves the varying alone.
-     vertex_prevPosition = computePreviousClipPosition(position);
- #endif
- 

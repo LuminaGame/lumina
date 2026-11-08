@@ -19,6 +19,21 @@
   `setBufferAsync` and `FilamentAsyncUpload` (`done`, `cancel`, `group`, `allCompleted`). Completions arrive through the
   callback bridge as the engine renders (Vulkan and OpenGL amortize a few jobs per frame); without an asynchronous mode
   the same calls run synchronously and complete at once.
+- Filament upgraded to v1.80.0 (prebuilt `1.80.0-lumina.1`): upstream now renders motion vectors itself
+  (`View::setMotionVectorsOptions`), so Lumina patch `0004` is rewritten on top of them
+  (`0004-motion-vectors-skinned-pose-and-velocity.patch`): it adds the previous pose of skinned and morphed renderables
+  and resolves the motion into the texel velocity buffer DLSS, FSR3, frame generation and the external post pass read
+  (`View::setMotionVectorTexture` exports it; the sky now moves with the camera instead of reading zero). The other
+  nineteen patches are rebased. **API change**: `TemporalAntiAliasingOptions.motionVectors` is gone; turn the motion
+  vectors on with `FilamentView.motionVectorsOptions = const MotionVectorsOptions(enabled: true)` (`TaaAlgorithm.fsr3`
+  implies them). `TemporalAntiAliasingOptions` gains upstream's history rejection settings (`motionAdaptiveHistory`,
+  `motionDeltaThreshold`, `minBoxStrength`, `minAlphaStrength`, `skyDepthThreshold`, `motionHoldFrames`,
+  `depthDisocclusion`, `disocclusionDepthThreshold`, `disocclusionHistoryNeighborhood`, `exactLanczosSupport`), and
+  `varianceGamma` defaults to 0.7. `UserVariantFilterBit.motionVectors` (`0x100`) is new and `all` is `0x1FF`. Every
+  compiled material is rebuilt for material version 80, and the vendored filament-matp takes the new `motionVectors`
+  variant filter. `color_transform_c.cpp` calls `image::linearToSRGB` (renamed upstream).
+- `tool/ffigen_web.dart` maps `math_types.dart`'s `package:` import of `ffi_platform.dart` to the web layer again (it
+  only matched the relative import, so regenerating wrote a `math_types.web.g.dart` that did not compile).
 - Filament upgraded to v1.78.1 (prebuilt `1.78.1-lumina.1`): the twenty Lumina patches apply unchanged to the new tag
   (upstream changed its blob-cache key, the Metal and Vulkan platform code, gltfio's extended loader and the build
   scripts, and added a tvOS target; no public header moved), the vendored filament-matp and basisu copies are the

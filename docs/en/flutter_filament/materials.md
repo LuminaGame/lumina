@@ -425,7 +425,7 @@ Interpolation mode for attributes in fragment shader.
 
 #### `class UserVariantFilterBit`
 
-Bitmask constants for user variant filtering. Since Filament 1.78 directional and dynamic lighting are specialization constants: `directionalLighting` and `dynamicLighting` only prune the pipelines a runtime `Material.compile` builds. In a `.mat` `variantFilter` matc ignores `directionalLighting` and rejects `dynamicLighting`.
+Bitmask constants for user variant filtering. Since Filament 1.78 directional and dynamic lighting are specialization constants: `directionalLighting` and `dynamicLighting` only prune the pipelines a runtime `Material.compile` builds. In a `.mat` `variantFilter` matc ignores `directionalLighting` and rejects `dynamicLighting`. Since 1.80 `motionVectors` (`0x100`) drops the motion vectors depth variants (`MotionVectorsOptions`), and `all` is `0x1FF`.
 
 #### `class FilamentMaterialBuilder`
 

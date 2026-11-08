@@ -86,7 +86,7 @@ void main() {
         rig.camera.setProjection(fovDegrees: 40, aspect: w / h, near: 0.05, far: 100);
         // FSR3 frame generation: the overlay is drawn again over each present.
         rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(
-            enabled: true, motionVectors: true, algorithm: TaaAlgorithm.fsr3, frameGeneration: true);
+            enabled: true, algorithm: TaaAlgorithm.fsr3, frameGeneration: true);
 
         // A game HUD as Flutter would hand it over (premultiplied RGBA8, top
         // row first): a translucent top bar, a health bar that drains, a

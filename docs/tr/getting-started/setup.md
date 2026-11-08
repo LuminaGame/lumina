@@ -14,7 +14,7 @@ Lumina repository'leri yan yana checkout edilmek üzere tasarlanmıştır:
   tools/         https://github.com/LuminaGame/tools
   plugins/       https://github.com/LuminaGame/plugins
   marketplace/   https://github.com/LuminaGame/marketplace
-  filament/      prebuilt out/ klasörleriyle yamalı Filament v1.78.1
+  filament/      prebuilt out/ klasörleriyle yamalı Filament v1.80.0
   test-assets/   https://github.com/LuminaGame/test-assets (isteğe bağlı, Git LFS)
 ```
 
@@ -67,12 +67,12 @@ Git'ten çözülen bir paket pub cache'te durur ve yanında Filament yoktur; use
 
 ## Filament'i build etmek
 
-Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) ya da `filament/out/cmake-release-windows/` (Windows) altında bekler. Lumina, upstream Filament v1.78.1'ı yirmi yerel yamayla kullanır; yamalar `third_party/filament/patches/` altındadır ve `third_party/filament/README.md` içinde açıklanır:
+Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) ya da `filament/out/cmake-release-windows/` (Windows) altında bekler. Lumina, upstream Filament v1.80.0'ı yirmi yerel yamayla kullanır; yamalar `third_party/filament/patches/` altındadır ve `third_party/filament/README.md` içinde açıklanır:
 
 - gömülü `libassimp` içinde bir sınır (bounds) düzeltmesi;
 - skinned ve morph'lu renderable'ları screen-space reflections pass'inin dışında tutan bir `RenderPass.cpp` değişikliği (bu olmadan Vulkan backend'i device'ı kaybeder);
 - WebP texture'lı bir WebAssembly build'inin SDL2 olmadan configure edilebilmesi için bir `third_party/libwebp/tnt` değişikliği;
-- structure pass'ten piksel başına hareket vektörleri (`TemporalAntiAliasingOptions::motionVectors`); TAA bunları kullanır ve `View::setMotionVectorTexture` ile dışa aktarılabilir;
+- upstream'in hareket vektörlerine skinned ve morph'lu renderable'ların önceki pozu (`View::setMotionVectorsOptions`) ve upscaler'lar için `View::setMotionVectorTexture` ile dışa aktarılabilen tam hareketli bir velocity buffer;
 - bir `Engine::shutdown` sıralama düzeltmesi: temizliği motora bırakılan view'lar, shadow map'lerinin sahip olduğu kameralardan ve TAA geçmişlerini iade ettikleri disposer'dan önce sonlandırılır (önceden sonra sonlandırılıyor, serbest bırakılmış belleği okuyor ve `Engine::destroy` çöküyordu);
 - harici bir upscaler pass'i: `DynamicResolutionOptions::upscaler`, `View::setExternalUpscaler` ve Vulkan `externalPass` sürücü komutu düşük çözünürlüklü kareyi dış bir kütüphaneye (`flutter_filament` içindeki DLSS) verir; istemcinin istediği Vulkan uzantılarıyla birlikte;
 - Vulkan ray query: hızlandırma yapıları, ışın izlemeli güneş gölgeleri (`ShadowOptions::rayTraced`) ve `View::traceRay`;

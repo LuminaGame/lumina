@@ -73,7 +73,8 @@ void main() {
         ]);
         final dist = radius * 5.0 + 0.1;
         r.camera.setProjection(fovDegrees: 45, aspect: r.width / r.height, near: dist * 0.01, far: dist * 20);
-        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true);
+        r.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
         void place(double t) {
           final angle = 0.4 + t * math.pi * 0.5;
           r.camera.lookAt(

@@ -1,25 +1,8 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Can Us <me@canus.dev>
-Date: Sat, 10 Oct 2026 12:00:00 +0300
-Subject: [PATCH] Offset ray query origins by a few texels, not by the near plane
-
-The ray-traced sun shadow (0007), the ReSTIR visibility ray (0008) and the
-specular hit distance ray (0012) moved their origin off the surface by
-max(0.002, near * 0.5), and the sun shadow and hit distance rays grew it by
-2 % per world unit of camera distance. Both terms assume a scene in metres.
-In a centimetre level (near plane 10, camera 13 m = 1300 units away) the
-shadow ray started 135 units toward the sun, past a 115 unit barrel: only
-the far rim of its shadow survived, or nothing.
-
-The offset is now a number of texels' world size at the pixel's distance
-(perspective) or a constant texel size (orthographic), from the projection
-and the target height: the same on screen whatever the scene's unit.
----
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index 52d554a6..c37fea2d 100644
+index 99908f2e..5ed49231 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
-@@ -232,6 +232,19 @@ static constexpr auto halton() {
+@@ -239,6 +239,19 @@ static constexpr auto halton() {
  const PostProcessManager::JitterSequence<32>
          PostProcessManager::sHaltonSamples = { halton<32>() };
  
@@ -39,7 +22,7 @@ index 52d554a6..c37fea2d 100644
  PostProcessManager::PostProcessManager(FEngine& engine) noexcept
          : mEngine(engine),
            mWorkaroundSplitEasu(false),
-@@ -298,8 +311,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rayTracedShadows(FrameGraph&
+@@ -305,8 +318,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rayTracedShadows(FrameGraph&
                  mi->setParameter("toLight", toLight);
                  mi->setParameter("cameraPosition", math::float3(
                          (trueWorldFromShaderWorld * math::double4(cameraInfo.getPosition(), 1.0)).xyz));
@@ -50,7 +33,7 @@ index 52d554a6..c37fea2d 100644
  
                  commitAndRenderFullScreenQuad(driver, out, mi);
                  unbindAllDescriptorSets(driver);
-@@ -468,7 +481,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::restir(FrameGraph& fg,
+@@ -475,7 +488,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::restir(FrameGraph& fg,
                  mi->setParameter("cameraPosition", cameraInfo.getPosition());
                  mi->setParameter("trueWorldOffset", trueWorldOffset);
                  mi->setParameter("visibilityRays", int32_t(options.visibilityRays ? 1 : 0));
@@ -59,7 +42,7 @@ index 52d554a6..c37fea2d 100644
                  commitAndRenderFullScreenQuad(driver, out, mi);
                  unbindAllDescriptorSets(driver);
                  if (timeThisFrame) {
-@@ -4508,7 +4521,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::specularHitDistance(FrameGra
+@@ -4708,7 +4721,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::specularHitDistance(FrameGra
                          1.0f / float(desc.width), 1.0f / float(desc.height) });
                  mi->setParameter("cameraPosition", math::float3(
                          (trueWorldFromShaderWorld * math::double4(cameraInfo.getPosition(), 1.0)).xyz));

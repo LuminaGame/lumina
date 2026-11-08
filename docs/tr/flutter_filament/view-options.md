@@ -524,11 +524,29 @@ Fluent builder for creating a [ColorGrading] object.
 | `varianceGamma` | `double varianceGamma` | `varianceGamma` alanını (field/property) ve ilişkili veriyi saklar. |
 | `preventFlickering` | `bool preventFlickering` | `preventFlickering` alanını (field/property) ve ilişkili veriyi saklar. |
 | `historyReprojection` | `bool historyReprojection` | `historyReprojection` alanını (field/property) ve ilişkili veriyi saklar. |
-| `motionVectors` | `bool motionVectors` | Structure pass'te piksel başına hareket vektörü üretir (pass bu durumda tam çözünürlükte çalışır) ve TAA geçmişini yalnızca kamera matrisleri yerine bu vektörlerle yeniden projekte eder; hareket eden, transform ile canlandırılan, skinned ve morph'lu nesnelerdeki gölgelenme (ghosting) biter (paylaşılan bir `SkinningBuffer` önceki paleti tutmaz). Tamponu `FilamentView.motionVectorTexture` / `MotionVectorBuffer` ile dışa aktarın; `FilamentView.motionVectorsSupported` gerekir. Varsayılan `false`. |
-| `algorithm` | `TaaAlgorithm algorithm` | `TaaAlgorithm.filament` (Filament'in TAA'sı) ya da `TaaAlgorithm.fsr3`: structure pass hareket vektörleriyle (örtük) beslenen, fragment pass'lerden oluşan FidelityFX Super Resolution 3.1 upscaler; yalnızca `upscaling`, `sharpness`, `lodBias` ve `jitterPattern` geçerlidir; özellik düzeyi 1, stereo yok; harici bir upscaler (DLSS) önceliklidir. Varsayılan `filament`. |
+| `motionAdaptiveHistory` | `bool motionAdaptiveHistory` | Kamera az hareket ederken geçmiş reddini gevşetir; durağan içerikte titremeyi azaltır. Varsayılan `false`. |
+| `motionDeltaThreshold` | `double motionDeltaThreshold` | Geçmiş reddinin tam güçle uygulandığı kamera hareketi eşiği, texel cinsinden. Varsayılan `1.0`. |
+| `minBoxStrength` | `double minBoxStrength` | Kamera durağanken en düşük geçmiş kırpma gücü, (0, 1] aralığında. Varsayılan `0.1`. |
+| `minAlphaStrength` | `double minAlphaStrength` | Kamera durağanken en düşük geçmiş geri besleme ölçeği, (0, 1] aralığında. Varsayılan `0.3`. |
+| `skyDepthThreshold` | `double skyDepthThreshold` | Bu normalize derinliğin altındaki uzak ve gökyüzü pikselleri her zaman tam geçmiş reddi kullanır. Varsayılan `0.001`. |
+| `motionHoldFrames` | `double motionHoldFrames` | Kamera hareketi durduktan sonra tam geçmiş reddinin sürdüğü kare sayısı (0 kapatır). Varsayılan `12`. |
+| `depthDisocclusion` | `bool depthDisocclusion` | Derinliğe dayalı disocclusion tespiti; hareketli nesnelerin çevresindeki gölgelenmeyi (ghosting) azaltır. Varsayılan `false`. |
+| `disocclusionDepthThreshold` | `double disocclusionDepthThreshold` | Disocclusion tespitinin derinlik farkı eşiği. Varsayılan `0.001`. |
+| `disocclusionHistoryNeighborhood` | `bool disocclusionHistoryNeighborhood` | İnce durağan geometride yanlış disocclusion'ları azaltır, GPU maliyeti daha yüksektir. Varsayılan `true`. |
+| `exactLanczosSupport` | `bool exactLanczosSupport` | 1:1 çözünürlükte daha keskin sonuç için daha geniş bir yeniden yapılandırma filtresi, GPU maliyeti daha yüksektir. Varsayılan `false`. |
+| `algorithm` | `TaaAlgorithm algorithm` | `TaaAlgorithm.filament` (Filament'in TAA'sı) ya da `TaaAlgorithm.fsr3`: view'ın hareket vektörleriyle (örtük) beslenen, fragment pass'lerden oluşan FidelityFX Super Resolution 3.1 upscaler; yalnızca `upscaling`, `sharpness`, `lodBias` ve `jitterPattern` geçerlidir; özellik düzeyi 1, stereo yok; harici bir upscaler (DLSS) önceliklidir. Varsayılan `filament`. |
 | `frameGeneration` | `bool frameGeneration` | FSR3 kare üretimi: her çizilen kareden önce ara değerlenmiş bir kare sunulur (sunulan hız iki katı, yarım kare gecikme). `TaaAlgorithm.fsr3` ve koruma bandı olmadan swap chain'e çizen bir view gerekir; `SwapChainConfig.disableVsync` ile iki sunum Vulkan'da SwapChain'in kendi sunum thread'inde eşit aralıklarla tempolanır (render döngüsü beklemez; diğer arka uçlarda renderer tempolar). Varsayılan `false`. |
 | `hashCode` | `int get hashCode` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 | `copyToNative` | `void copyToNative(ffi_gen.filament_temporal_anti_aliasing_options out)` | `copyToNative` işlemini gerçekleştirir. |
+
+#### `class MotionVectorsOptions`
+
+View'ın hareket vektörleri (`FilamentView.motionVectorsOptions`, Filament'in `View::setMotionVectorsOptions`'ı): her pikselin önceki kareden bu yana ekrandaki hareketi; kamera, transform ve instance animasyonu ile skinned ve morph'lu renderable'ların pozu dahil (paylaşılan bir `SkinningBuffer` önceki paleti tutmaz). TAA hareketli nesneleri bunlarla yeniden projekte eder; DLSS, FSR3 (bunları örtük olarak açar), frame generation ve harici post pass bunları okur; `FilamentView.motionVectorTexture` / `MotionVectorBuffer` dışa aktarır. Post-processing, mono bir view ve `FilamentView.motionVectorsSupported` gerekir.
+
+| Metot / Getter | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `enabled` | `bool enabled` | Hareket vektörlerini çizer. Varsayılan `false`. |
+| `copyWith` | `MotionVectorsOptions copyWith({bool? enabled})` | `enabled` değiştirilmiş bir kopya. |
 
 #### `class ScreenSpaceReflectionsOptions`
 

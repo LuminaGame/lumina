@@ -31,7 +31,8 @@ void main() {
       rig = SmokeRig.adopt(engine, width: 1024, height: 768, swapChainFlags: SwapChainConfig.disableVsync);
       rig!.addSun();
       gltf = loadGltfIntoScene(rig!, 'Props/AC_units/ac_unit_a_300x300.glb');
-      rig!.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(motionVectors: true);
+      rig!.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions();
+      rig!.view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
     });
 
     tearDown(() {
@@ -115,12 +116,12 @@ void main() {
       }
       final r = rig!;
       r.view.temporalAntiAliasingOptions =
-          const TemporalAntiAliasingOptions(enabled: true, motionVectors: true, algorithm: TaaAlgorithm.fsr3);
+          const TemporalAntiAliasingOptions(enabled: true, algorithm: TaaAlgorithm.fsr3);
       measure(r, 20);
       final off = measure(r, 100);
       r.view.temporalAntiAliasingOptions =
           const TemporalAntiAliasingOptions(
-          enabled: true, motionVectors: true, algorithm: TaaAlgorithm.fsr3, frameGeneration: true);
+          enabled: true, algorithm: TaaAlgorithm.fsr3, frameGeneration: true);
       measure(r, 20);
       final on = measure(r, 100);
       smokeLog('FSR3 frame generation off: ${fmt(off)}; on: ${fmt(on)} (${(on.$1 / off.$1).toStringAsFixed(2)}x)');
@@ -170,7 +171,8 @@ void main() {
       final resources = FilamentResourceLoader.create(engine: engine)..registerDefaultProviders(engine);
       resources.loadResources(asset);
       asset.addToScene(scene);
-      view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(motionVectors: true);
+      view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions();
+      view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
       final tm = FilamentTransformManager(engine);
 
       (double, double, double) measure(int frames) {

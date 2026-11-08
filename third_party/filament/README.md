@@ -1,21 +1,21 @@
 # Filament patches
 
 Lumina renders with [Google Filament](https://github.com/google/filament) at the
-upstream tag **v1.78.1**, plus the patches in `patches/`. Nothing else in the
+upstream tag **v1.80.0**, plus the patches in `patches/`. Nothing else in the
 Filament tree is changed: the prebuilt archives the engine and the editor link
-are upstream v1.78.1 with exactly these files applied in order.
+are upstream v1.80.0 with exactly these files applied in order.
 
 | Patch | Touches | Why |
 |---|---|---|
 | `0001-libassimp-gltf2-replacedata-joint-bounds.patch` | `third_party/libassimp/code/glTF2/glTF2Asset.inl` | Memory-safety fix in the bundled Assimp's glTF 2 exporter. |
 | `0002-ssr-skip-skinned-morphed.patch` | `filament/src/RenderPass.cpp` | Keeps skinned and morphed renderables out of the screen-space reflections pass, which otherwise loses the Vulkan device. |
 | `0003-libwebp-wasm-no-webp-js.patch` | `third_party/libwebp/tnt/CMakeLists.txt` | Lets a WebAssembly build with WebP textures configure without SDL2. |
-| `0004-velocity-buffer-motion-vectors.patch` | `filament/include/filament/{Options,View}.h`, `filament/src/{PostProcessManager,FrameHistory,View}.*`, `filament/src/details/{Renderer,Scene,View}.*`, `filament/src/ds/StructureDescriptorSet.*`, `filament/src/materials/antiAliasing/taa/taa.mat`, `libs/filabridge/.../UibStructs.h`, `libs/filamat/src/shaders/UibGenerator.cpp`, `shaders/src/surface_*` | Per-pixel motion vectors from the structure pass (`TemporalAntiAliasingOptions::motionVectors`), consumed by TAA and exportable through `View::setMotionVectorTexture`. |
+| `0004-motion-vectors-skinned-pose-and-velocity.patch` | `filament/include/filament/View.h`, `filament/src/{PostProcessManager,View}.*`, `filament/src/components/RenderableManager.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/materials/motionVectors/{velocity.mat (new),motionVectors.cpp}`, `filament/CMakeLists.txt`, `libs/filabridge/{include/private/filament/EngineEnums.h,src/DescriptorSets.cpp}`, `libs/filamat/src/shaders/{ShaderGenerator,UibGenerator}.*`, `shaders/src/surface_{getters,main}.vs` | Adds the previous pose of skinned and morphed renderables to upstream's motion vectors (`View::setMotionVectorsOptions`), and resolves them into a full-motion velocity buffer for the upscalers, exportable through `View::setMotionVectorTexture`. |
 | `0005-shutdown-terminates-views-before-cameras.patch` | `filament/src/details/Engine.cpp` | `Engine::shutdown` terminates leaked views before it frees the cameras their shadow maps own and the resource allocator disposer their frame history returns to; the upstream order reads freed memory and crashes `Engine::destroy`. |
 | `0006-external-upscaler-pass.patch` | `filament/backend/include/backend/ExternalPass.h` (new), `backend/{DriverEnums.h,platforms/VulkanPlatform.h}`, `backend/src/vulkan/{VulkanDriver,VulkanTexture,platform/VulkanPlatform}.cpp`, the other drivers' no-ops, `filament/include/filament/{Options,View}.h`, `filament/src/{PostProcessManager,View}.*`, `filament/src/details/{Renderer,View}.*` | An external upscaler (DLSS) behind dynamic resolution: `DynamicResolutionOptions::upscaler`, `View::setExternalUpscaler`, the `externalPass` driver command that hands Vulkan images and the recording command buffer to a client callback, and client-requested Vulkan extensions. |
 | `0008-restir-direct-lighting.patch` | `filament/include/filament/{Options,View,LightManager}.h`, `filament/src/{PostProcessManager,RendererUtils,FrameHistory}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/components/LightManager.*`, `filament/src/ds/ColorPassDescriptorSet.*`, `filament/src/materials/rt/restir*.mat` (new), `libs/filabridge` (bindings 14/15, `restirMode` uniform), `libs/filamat/src/shaders/{Sib,Uib}Generator.cpp`, `shaders/src/surface_light_punctual.fs` | ReSTIR direct lighting: `RestirOptions` on the view, a per-frame light buffer texture of every punctual light, candidate / temporal / spatial resampling and visibility passes as ray query materials, and the lit shaders shading the one resampled light; also fixes the vertical flip of the ray query materials' depth reconstruction. |
 | `0007-vulkan-ray-query.patch` | `filament/backend/include/backend/AccelerationStructure.h` (new), `backend/src/vulkan/VulkanAccelerationStructure.*` (new), `backend/{DriverEnums.h,Handle.h,private/backend/{Driver.h,DriverAPI.inc}}`, the Vulkan driver, context, platform, handles, buffer and descriptor-set caches, the other drivers' no-ops, `filament/include/filament/{Engine,LightManager,RenderableManager,Scene,View}.h`, `filament/src/{PostProcessManager,RenderPrimitive,RendererUtils,MaterialParser,MaterialDefinition}.*`, `filament/src/details/{Renderer,Scene,View,VertexBuffer,IndexBuffer,Engine}.*`, `filament/src/ds/*`, `filament/src/materials/rt/` (new), `libs/filabridge` (binding points, chunk type), `libs/filamat` (the `rayQuery` material flag, GLSL 460 + `GL_EXT_ray_query`, SPIR-V 1.4), `shaders/src/surface_light_directional.fs`, `third_party/smol-v/source/smolv.cpp` | Vulkan ray query: acceleration structures as backend objects, a per-scene BLAS/TLAS kept by `Scene::setRayTracingEnabled`, hard ray-traced sun shadows (`ShadowOptions::rayTraced`) and single-ray visibility queries (`View::traceRay`). |
-| `0009-fsr3-upscaler-frame-generation.patch` | `filament/include/filament/{Options,SwapChain}.h`, `filament/src/{PostProcessManager,FrameHistory}.*`, `filament/src/details/{Renderer,View,SwapChain}.*`, `filament/src/materials/fsr3/*` (new), `filament/CMakeLists.txt`, `backend/DriverEnums.h`, `backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.*`, `backend/{include/backend/platforms/PlatformWGL.h,src/opengl/platforms/PlatformWGL.cpp}` | The FidelityFX Super Resolution 3.1 upscaler and frame generation as fragment passes (`TemporalAntiAliasingOptions::algorithm`, `frameGeneration`), fed by the structure pass motion vectors of 0004, and the `SwapChain::CONFIG_DISABLE_VSYNC` flag (Vulkan, WGL). FidelityFX SDK shader code is MIT licensed (AMD). |
+| `0009-fsr3-upscaler-frame-generation.patch` | `filament/include/filament/{Options,SwapChain}.h`, `filament/src/{PostProcessManager,FrameHistory}.*`, `filament/src/details/{Renderer,View,SwapChain}.*`, `filament/src/materials/fsr3/*` (new), `filament/CMakeLists.txt`, `backend/DriverEnums.h`, `backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.*`, `backend/{include/backend/platforms/PlatformWGL.h,src/opengl/platforms/PlatformWGL.cpp}` | The FidelityFX Super Resolution 3.1 upscaler and frame generation as fragment passes (`TemporalAntiAliasingOptions::algorithm`, `frameGeneration`), fed by the velocity buffer of 0004 (FSR3 implies the view's motion vectors), and the `SwapChain::CONFIG_DISABLE_VSYNC` flag (Vulkan, WGL). FidelityFX SDK shader code is MIT licensed (AMD). |
 | `0010-ray-query-samplers-vulkan-only.patch` | `shaders/src/surface_light_{directional,punctual}.fs` | The ray-traced shadow fetch of 0007 and the ReSTIR light evaluation of 0008 are compiled for Vulkan only, so OpenGL and WebGL lit shaders spend no fragment sampler on them (Chrome's ANGLE/Direct3D 11 crashed on a 16th). |
 | `0011-external-post-pass-and-device-features.patch` | `backend/include/backend/{ExternalPass.h,platforms/VulkanPlatform.h}`, `backend/src/vulkan/platform/VulkanPlatform.cpp`, `filament/include/filament/View.h`, `filament/src/{PostProcessManager,FrameHistory,View}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/materials/rt/{postPassMotion.mat (new),rt.*}`, `filament/CMakeLists.txt` | An external post pass on the HDR frame before colour grading (`View::setExternalPostPass`) with output-resolution motion and a history-valid flag, an `HDR` stage for external upscalers, eight external-pass images, and client-requested Vulkan device feature structures (`Customization::extraDeviceFeatures`). |
 | `0012-guide-buffers.patch` | `filament/include/filament/{Options,View}.h`, `filament/src/{RendererUtils,PostProcessManager,View}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/materials/rt/{rtSpecularHitDistance.mat (new),rt.cpp}`, `filament/CMakeLists.txt`, `shaders/src/surface_main.fs` | Guide buffers for neural denoisers: normal + roughness, diffuse and specular albedo written by the lit shaders as colour attachments 1-3 (Vulkan), the ray-traced specular hit distance, `View::setGuideBufferOptions` / `setGuideBufferTexture`, and `ExternalUpscaler::guideBuffers()`. |
@@ -69,30 +69,26 @@ builds. `webp.js` is libwebp's demo viewer and requires SDL2
 `flutter_filament`'s web module, which loads glTF assets that use
 `EXT_texture_webp`; desktop builds are unaffected.
 
-## 0004: motion vectors from the structure pass
+## 0004: motion vectors with the skinned pose, and the velocity buffer
 
-Filament's TAA reprojects its history with one camera matrix, which is only right for a
-still scene under a moving camera. With `TemporalAntiAliasingOptions::motionVectors` the
-structure pass (now at full resolution) also renders a velocity buffer: the picking
-variant of every material gets a second colour output, `outVelocity` (RG16F, texels of
-screen motion since the previous frame, x right and y up), computed from a new
-`vertex_prevPosition` varying. That varying comes from the renderable's previous world
-transform (`PerRenderableData::prevWorldFromModelMatrix`, kept per entity by `FScene`
-and advanced once per renderer frame) and the previous frame's unjittered
-`clipFromWorld` (`PerViewUib::prevClipFromWorldMatrix`, kept in the view's frame
-history). Both fields live in space the UBOs reserved, so their layout and
-`MATERIAL_VERSION` are unchanged; materials compiled before this patch still load and
-simply write no velocity. Skinned and morphed renderables also keep the pose the previous
-frame rendered with: `FRenderableManager` shadows each owned bone palette and weight set on
-the CPU, and the first `setBones` / `setMorphWeights` of a frame (the renderer advances a
-motion-frame counter in `endFrame`) uploads that copy into a second buffer bound as
-`PrevBonesUniforms` / `PrevMorphingUniforms` (per-renderable bindings 6 and 7, emitted for
-the skinning variants). A renderable not updated in a frame binds its current pose as the
-previous one (no motion); a shared `SkinningBuffer` has no previous palette. Custom vertex
-displacement is not captured. The TAA material
-samples the velocity buffer (`useVelocity` constant) instead of reprojecting by matrix,
-and `View::setMotionVectorTexture` renders the buffer into a user texture of the render
-target's size for upscalers and tests.
+Upstream Filament (since v1.80.0) renders object motion vectors (`View::setMotionVectorsOptions`):
+renderables whose transform or instances moved draw their motion, in the previous frame's
+render-target UV space, with the `MOT` depth variant, and TAA reprojects the camera motion from the
+depth buffer. Two things the upscalers and frame generators need are missing, and this patch adds
+them. Skinned and morphed renderables: `FRenderableManager` shadows each owned bone palette and
+weight set on the CPU, and the first `setBones` / `setMorphWeights` of a frame (the renderer advances
+a motion-frame counter in `endFrame`) uploads that copy into a second buffer bound as
+`PrevBonesUniforms` / `PrevMorphingUniforms` (per-renderable bindings 6 and 7, emitted for the
+skinning variants). A renderable whose pose changed this frame counts as moving
+(`FRenderableManager::hasPoseMotion`), and its `MOT` variant adds the change from the previous pose
+(`getPreviousPosition()`) to the previous position in world space; one not updated in a frame binds
+its current pose as the previous one (no motion). A shared `SkinningBuffer` has no previous palette.
+The velocity buffer: `PostProcessManager::velocity` (`velocity.mat`) reconstructs the full motion of
+every pixel from the depth buffer and the object motion vectors, as upstream's debug view does, into
+RG16F texels of the depth buffer (x right, y up; the sky moves with the camera, a pixel without a
+valid previous position reports none). The renderer hands it to the external upscaler, FSR3, the
+external post pass and frame generator, and `View::setMotionVectorTexture` renders it into a user
+texture of the render target's size. The view's TAA options carry no motion vector flag any more.
 
 ## 0008: ReSTIR direct lighting
 
@@ -116,7 +112,8 @@ downwards). The implementation is Lumina's own GLSL; it contains no RTXDI SDK co
 
 Filament's only temporal upscaler is its own TAA (`TemporalAntiAliasingOptions::upscaling`). This patch
 adds `TemporalAntiAliasingOptions::algorithm` (`FILAMENT` or `FSR3`) and `frameGeneration`. With `FSR3`
-the renderer forces the structure pass motion vectors of patch 0004 and `PostProcessManager::fsr3`
+the view's motion vectors are on regardless of its `MotionVectorsOptions` (`FView::evaluateMotionVectorsActive`)
+and `PostProcessManager::fsr3`
 replaces the TAA pass with a port of the AMD FidelityFX Super Resolution 3.1 upscaler to Filament
 post-process materials (`filament/src/materials/fsr3/`): `prepare_inputs` converts the texel-space
 velocity into the FSR UV motion the SDK expects (camera reprojection where no motion vector was
@@ -135,17 +132,14 @@ in `fsr3_common.fs`.
 The patch also completes patch 0007 for clang's `-Werror` build on Linux and WebAssembly: the
 `ACCELERATION_STRUCTURE` descriptor type in `to_string`, the matdbg writer and the Vulkan resource
 manager's destroy switch, and a `struct` forward declaration of `VulkanContext`.
-It also completes patch 0004 for feature level 0 (the WebAssembly / GLES 2.0 build): the vertex shaders
-read the velocity uniforms only when `MATERIAL_FEATURE_LEVEL > 0`, since feature level 0 has no motion
-vectors and its uniform block omits them.
 
 ## Working with the patches
 
-The patches are `git format-patch` output against the v1.78.1 tag, and apply
+The patches are `git format-patch` output against the v1.80.0 tag, and apply
 with either `git apply` or `git am`:
 
 ```bash
-git clone --depth 1 --branch v1.78.1 https://github.com/google/filament.git
+git clone --depth 1 --branch v1.80.0 https://github.com/google/filament.git
 cd filament
 git apply ../lumina/third_party/filament/patches/*.patch
 ```
@@ -155,11 +149,11 @@ git apply ../lumina/third_party/filament/patches/*.patch
 libraries the native-assets hooks link, and pack them into the archives each
 Lumina release carries. To change a patch or add one:
 
-1. Apply the existing patches to a clean v1.78.1 checkout and commit them
+1. Apply the existing patches to a clean v1.80.0 checkout and commit them
    there (`git am patches/*.patch`).
 2. Make the change as a new commit, or amend the commit it belongs to.
 3. Regenerate the series with
-   `git format-patch --zero-commit --no-signature --no-stat -o <this folder> v1.78.1`
+   `git format-patch --zero-commit --no-signature --no-stat -o <this folder> v1.80.0`
    and give the new files short, descriptive names in the same `NNNN-` order.
 4. Bump the suffix in `tool/filament/VERSION` (`1.78.0-lumina.N`), so that
    the release publishes a new archive and installed editors download it.
@@ -187,8 +181,8 @@ Filament upscales a dynamically scaled frame with its own bilinear, SGSR1 or FSR
 This patch lets a library outside Filament do it instead. `DynamicResolutionOptions::upscaler`
 (`BUILTIN` or `EXTERNAL`, in padding so the struct keeps its size) selects the
 `ExternalUpscaler` registered with `View::setExternalUpscaler()`. When it is active the
-renderer still jitters the camera as for TAA (`TemporalAntiAliasingOptions` must be on, with
-`motionVectors` for the velocity buffer of patch 0004) but skips the TAA resolve, and
+renderer still jitters the camera as for TAA (`TemporalAntiAliasingOptions` must be on, and
+`View::setMotionVectorsOptions` for the velocity buffer of patch 0004) but skips the TAA resolve, and
 `PostProcessManager::upscaleExternal()` adds a side-effect frame-graph pass that issues the
 new `DriverApi::externalPass` command with the low-resolution colour, depth and motion vectors
 and a full-resolution storage output (`TextureUsage::STORAGE` maps to

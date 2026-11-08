@@ -13,13 +13,13 @@ void main() {
 
   test('the version pin is an upstream release with a lumina suffix', () {
     expect(RegExp(r'^\d+\.\d+\.\d+-lumina\.\d+$').hasMatch(version), isTrue, reason: version);
-    expect(upstream, '1.78.1');
+    expect(upstream, '1.80.0');
   });
 
   test('the patch README documents the pinned upstream tag only', () {
     final readme = File('${root.path}/third_party/filament/README.md').readAsStringSync();
     expect(readme, contains('v$upstream'));
-    expect(readme, isNot(contains('v1.78.0')), reason: 'the previous tag must not linger in the patch workflow');
+    expect(readme, isNot(contains('v1.78.1')), reason: 'the previous tag must not linger in the patch workflow');
   });
 
   test('the shared prebuilt is the pinned version, built from the pinned tag', () {

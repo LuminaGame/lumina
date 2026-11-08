@@ -524,11 +524,29 @@ Fluent builder for creating a [ColorGrading] object.
 | `varianceGamma` | `double varianceGamma` | Holds the `varianceGamma` property or configuration state. |
 | `preventFlickering` | `bool preventFlickering` | Holds the `preventFlickering` property or configuration state. |
 | `historyReprojection` | `bool historyReprojection` | Holds the `historyReprojection` property or configuration state. |
-| `motionVectors` | `bool motionVectors` | Renders per-pixel motion vectors in the structure pass (which then runs at full resolution) and reprojects the TAA history with them instead of the camera matrices alone, so moving, transform-animated, skinned and morphed objects stop ghosting (a shared `SkinningBuffer` keeps no previous palette). Export the buffer with `FilamentView.motionVectorTexture` / `MotionVectorBuffer`; needs `FilamentView.motionVectorsSupported`. Default `false`. |
-| `algorithm` | `TaaAlgorithm algorithm` | `TaaAlgorithm.filament` (Filament's TAA) or `TaaAlgorithm.fsr3`: the FidelityFX Super Resolution 3.1 upscaler as fragment passes, fed by the structure pass motion vectors (implied); only `upscaling`, `sharpness`, `lodBias` and `jitterPattern` apply; feature level 1, no stereo; an external upscaler (DLSS) takes precedence. Default `filament`. |
+| `motionAdaptiveHistory` | `bool motionAdaptiveHistory` | Relaxes history rejection under low camera motion to reduce flickering on static content. Default `false`. |
+| `motionDeltaThreshold` | `double motionDeltaThreshold` | Camera motion, in texels, above which history rejection is applied at full strength. Default `1.0`. |
+| `minBoxStrength` | `double minBoxStrength` | Minimum history clamping strength when the camera is static, in (0, 1]. Default `0.1`. |
+| `minAlphaStrength` | `double minAlphaStrength` | Minimum history feedback scale when the camera is static, in (0, 1]. Default `0.3`. |
+| `skyDepthThreshold` | `double skyDepthThreshold` | Normalized depth below which distant and sky pixels always use full history rejection. Default `0.001`. |
+| `motionHoldFrames` | `double motionHoldFrames` | Frames to keep full history rejection after camera motion stops (0 disables). Default `12`. |
+| `depthDisocclusion` | `bool depthDisocclusion` | Depth-based disocclusion detection, which reduces ghosting around moving objects. Default `false`. |
+| `disocclusionDepthThreshold` | `double disocclusionDepthThreshold` | Depth difference threshold of the disocclusion detection. Default `0.001`. |
+| `disocclusionHistoryNeighborhood` | `bool disocclusionHistoryNeighborhood` | Reduces false disocclusions on thin static geometry, at a higher GPU cost. Default `true`. |
+| `exactLanczosSupport` | `bool exactLanczosSupport` | A wider reconstruction filter for more sharpness at 1:1 resolution, at a higher GPU cost. Default `false`. |
+| `algorithm` | `TaaAlgorithm algorithm` | `TaaAlgorithm.filament` (Filament's TAA) or `TaaAlgorithm.fsr3`: the FidelityFX Super Resolution 3.1 upscaler as fragment passes, fed by the view's motion vectors (implied); only `upscaling`, `sharpness`, `lodBias` and `jitterPattern` apply; feature level 1, no stereo; an external upscaler (DLSS) takes precedence. Default `filament`. |
 | `frameGeneration` | `bool frameGeneration` | FSR3 frame generation: an interpolated frame is presented before each rendered frame (double the presented rate, half a frame of latency). Needs `TaaAlgorithm.fsr3` and a view rendering into the swap chain without guard band; with `SwapChainConfig.disableVsync` the two presents are paced evenly on the SwapChain's own present thread on Vulkan (the render loop does not wait; elsewhere the renderer paces them). Default `false`. |
 | `hashCode` | `int get hashCode` | Checks current state or capability and returns a boolean value. |
 | `copyToNative` | `void copyToNative(ffi_gen.filament_temporal_anti_aliasing_options out)` | Executes `copyToNative` operation. |
+
+#### `class MotionVectorsOptions`
+
+The view's motion vectors (`FilamentView.motionVectorsOptions`, Filament's `View::setMotionVectorsOptions`): the screen-space motion of every pixel since the previous frame, from the camera, transform and instance animation, and the pose of skinned and morphed renderables (a shared `SkinningBuffer` keeps no previous palette). TAA reprojects moving objects with them; DLSS, FSR3 (which implies them), frame generation and the external post pass read them, and `FilamentView.motionVectorTexture` / `MotionVectorBuffer` export them. Needs post-processing, a mono view and `FilamentView.motionVectorsSupported`.
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `enabled` | `bool enabled` | Renders the motion vectors. Default `false`. |
+| `copyWith` | `MotionVectorsOptions copyWith({bool? enabled})` | A copy with `enabled` replaced. |
 
 #### `class ScreenSpaceReflectionsOptions`
 

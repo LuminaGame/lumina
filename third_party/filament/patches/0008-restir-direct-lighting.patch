@@ -1,8 +1,8 @@
 diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
-index 9caa9fb5..3994f508 100644
+index d4121ea4..81003e53 100644
 --- a/filament/CMakeLists.txt
 +++ b/filament/CMakeLists.txt
-@@ -330,6 +330,9 @@ if (FILAMENT_SUPPORTS_VULKAN)
+@@ -341,6 +341,9 @@ if (FILAMENT_SUPPORTS_VULKAN)
      set(MATERIAL_VULKAN_SRCS
          src/materials/rt/rtShadow.mat
          src/materials/rt/rayVisibility.mat
@@ -13,10 +13,10 @@ index 9caa9fb5..3994f508 100644
      list(APPEND MATERIAL_SRCS ${MATERIAL_VULKAN_SRCS})
      set_source_files_properties(src/materials/rt/rt.cpp PROPERTIES COMPILE_DEFINITIONS FILAMENT_RAY_QUERY_MATERIALS)
 diff --git a/filament/include/filament/LightManager.h b/filament/include/filament/LightManager.h
-index 23d37f3c..a6b574f0 100644
+index 74e8ee3b..1afc85b4 100644
 --- a/filament/include/filament/LightManager.h
 +++ b/filament/include/filament/LightManager.h
-@@ -981,6 +981,18 @@ public:
+@@ -982,6 +982,18 @@ public:
       */
      float getFalloff(Instance i) const noexcept;
  
@@ -36,10 +36,10 @@ index 23d37f3c..a6b574f0 100644
       * Dynamically updates a spot light's cone as angles
       *
 diff --git a/filament/include/filament/Options.h b/filament/include/filament/Options.h
-index b60ba56b..8413d8fe 100644
+index ee8f44c4..3b520e2d 100644
 --- a/filament/include/filament/Options.h
 +++ b/filament/include/filament/Options.h
-@@ -880,6 +880,32 @@ struct StereoscopicOptions {
+@@ -929,6 +929,32 @@ struct StereoscopicOptions {
      bool enabled = false;
  };
  
@@ -73,7 +73,7 @@ index b60ba56b..8413d8fe 100644
  
  #endif //TNT_FILAMENT_OPTIONS_H
 diff --git a/filament/include/filament/View.h b/filament/include/filament/View.h
-index 650da732..6fad9b9b 100644
+index d696d46a..58c21bab 100644
 --- a/filament/include/filament/View.h
 +++ b/filament/include/filament/View.h
 @@ -134,6 +134,7 @@ public:
@@ -82,9 +82,9 @@ index 650da732..6fad9b9b 100644
      using ScreenSpaceReflectionsOptions = filament::ScreenSpaceReflectionsOptions;
 +    using RestirOptions = filament::RestirOptions;
      using GuardBandOptions = filament::GuardBandOptions;
+     using MotionVectorsOptions = filament::MotionVectorsOptions;
      using StereoscopicOptions = filament::StereoscopicOptions;
- 
-@@ -426,6 +427,39 @@ public:
+@@ -427,6 +428,39 @@ public:
       */
      TemporalAntiAliasingOptions const& getTemporalAntiAliasingOptions() const noexcept;
  
@@ -125,13 +125,13 @@ index 650da732..6fad9b9b 100644
       * Enables or disable screen-space reflections. Disabled by default.
       *
 diff --git a/filament/src/FrameHistory.h b/filament/src/FrameHistory.h
-index 749b6e56..6b9a38a3 100644
+index eb0f3ce4..fc73e97d 100644
 --- a/filament/src/FrameHistory.h
 +++ b/filament/src/FrameHistory.h
-@@ -48,6 +48,12 @@ struct FrameHistoryEntry {
-         math::mat4f clipFromWorld;
-         bool valid = false;
-     } velocity;
+@@ -57,6 +57,12 @@ struct FrameHistoryEntry {
+         math::float4 clipTransform{};   // ts as {sx, sy, tx, ty}
+         bool valid = false;             // set on frames rendered with motion vectors active
+     } motionVectors;
 +    // ReSTIR direct lighting: the reservoirs after spatial reuse and the matrix that frame used
 +    struct {
 +        FrameGraphTexture reservoir;
@@ -161,10 +161,10 @@ index 62ba46f5..dd0d0b95 100644
      downcast(this)->setSpotLightCone(i, inner, outer);
  }
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index 8dec7f2d..ceb00737 100644
+index 573f9c31..bfe402af 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
-@@ -304,6 +304,190 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rayTracedShadows(FrameGraph&
+@@ -311,6 +311,190 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rayTracedShadows(FrameGraph&
      return pass->mask;
  }
  
@@ -356,10 +356,10 @@ index 8dec7f2d..ceb00737 100644
      FView::FRayQuery* list = view.takeRayQueries();
      while (list) {
 diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
-index 436220fd..7b640824 100644
+index 00185310..00e4a2b6 100644
 --- a/filament/src/PostProcessManager.h
 +++ b/filament/src/PostProcessManager.h
-@@ -427,6 +427,13 @@ public:
+@@ -472,6 +472,13 @@ public:
      // Answers the view's pending View::traceRay() queries: one 1x1 pass each, read back.
      void rayQueries(FrameGraph& fg, FView& view) noexcept;
  
@@ -422,10 +422,10 @@ index 2c3a4327..8076e01e 100644
      struct ColorPassOutput {
          FrameGraphId<FrameGraphTexture> linearColor;
 diff --git a/filament/src/View.cpp b/filament/src/View.cpp
-index ccdc982e..d2861d6f 100644
+index cea9cb17..301b89e6 100644
 --- a/filament/src/View.cpp
 +++ b/filament/src/View.cpp
-@@ -140,6 +140,26 @@ void View::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) n
+@@ -139,6 +139,26 @@ void View::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) n
      downcast(this)->setTemporalAntiAliasingOptions(options);
  }
  
@@ -453,10 +453,10 @@ index ccdc982e..d2861d6f 100644
      return downcast(this)->getTemporalAntiAliasingOptions();
  }
 diff --git a/filament/src/components/LightManager.cpp b/filament/src/components/LightManager.cpp
-index a342b8c2..26b68d21 100644
+index ef99de31..1a78a66d 100644
 --- a/filament/src/components/LightManager.cpp
 +++ b/filament/src/components/LightManager.cpp
-@@ -203,6 +203,7 @@ void FLightManager::create(const Builder& builder, Entity const entity) {
+@@ -205,6 +205,7 @@ void FLightManager::create(const Builder& builder, Entity const entity) {
          lightType.lightCaster = builder->mCastLight;
  
          mManager[i].channels = builder->mChannels;
@@ -464,7 +464,7 @@ index a342b8c2..26b68d21 100644
  
          // set default values by calling the setters
          setShadowOptions(i, builder->mShadowOptions);
-@@ -415,6 +416,12 @@ void FLightManager::setIntensity(Instance const i, float const intensity, Intens
+@@ -449,6 +450,12 @@ void FLightManager::setIntensity(Instance const i, float const intensity, Intens
      }
  }
  
@@ -478,10 +478,10 @@ index a342b8c2..26b68d21 100644
      auto& manager = mManager;
      if (i && !isDirectionalLight(i)) {
 diff --git a/filament/src/components/LightManager.h b/filament/src/components/LightManager.h
-index a5f2d79a..8a300c7f 100644
+index 6ab41021..d84e3edf 100644
 --- a/filament/src/components/LightManager.h
 +++ b/filament/src/components/LightManager.h
-@@ -222,6 +222,12 @@ public:
+@@ -240,6 +240,12 @@ public:
          return mManager[i].squaredFallOffInv;
      }
  
@@ -494,7 +494,7 @@ index a5f2d79a..8a300c7f 100644
      float getFalloff(Instance const i) const noexcept {
          return getRadius(i);
      }
-@@ -280,6 +286,7 @@ private:
+@@ -298,6 +304,7 @@ private:
          INTENSITY,
          FALLOFF,
          CHANNELS,
@@ -502,7 +502,7 @@ index a5f2d79a..8a300c7f 100644
      };
  
      using Base = utils::SingleInstanceComponentManager<  // 120 bytes
-@@ -294,7 +301,8 @@ private:
+@@ -312,7 +319,8 @@ private:
              float,          //  4
              float,          //  4
              float,          //  4
@@ -512,7 +512,7 @@ index a5f2d79a..8a300c7f 100644
      >;
  
      struct Sim : public Base {
-@@ -322,6 +330,7 @@ private:
+@@ -340,6 +348,7 @@ private:
                  Field<INTENSITY>            intensity;
                  Field<FALLOFF>              squaredFallOffInv;
                  Field<CHANNELS>             channels;
@@ -521,10 +521,10 @@ index a5f2d79a..8a300c7f 100644
          };
  
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index a0e5b0ec..c52a0092 100644
+index e5b73acc..419107d6 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -1008,6 +1008,11 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1035,6 +1035,11 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
          view.failRayQueries();
      }
      bool const rayTracedShadows = rayTracing && view.hasRayTracedDirectionalShadows();
@@ -536,16 +536,16 @@ index a0e5b0ec..c52a0092 100644
      // There might be a bug here with svp's origin; normally the origin could offset when the
      // target is the swapchain (width/height are the same though). This would mean that we'd have
      // to wait for the color pass to execute to set the viewport. For now, I wasn't able to
-@@ -1031,7 +1036,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
-             && engine.getSupportedFeatureLevel() != FeatureLevel::FEATURE_LEVEL_0
-             && driver.isRenderTargetFormatSupported(TextureFormat::RG16F);
+@@ -1052,7 +1057,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+     // and the concerned passes. The PER_VIEW UBO contains data that is needed by the user
+     // materials public APIs.
      // the ray-traced shadow mask is traced from the structure depth, at the colour pass's resolution
--    float const structureScale = (motionVectors || rayTracedShadows) ? 1.0f : aoOptions.resolution;
-+    float const structureScale = (motionVectors || rayTracedShadows || restir) ? 1.0f : aoOptions.resolution;
+-    float const structureScale = rayTracedShadows ? 1.0f : aoOptions.resolution;
++    float const structureScale = (rayTracedShadows || restir) ? 1.0f : aoOptions.resolution;
  
      { // the scope helps to guarantee that we're not modifying the descriptor-set later
          StructureDescriptorSet& ds = ppm.getStructureDescriptorSet();
-@@ -1257,6 +1262,9 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1305,6 +1310,9 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      if (rayTracing && view.hasRayQueries()) {
          ppm.rayQueries(fg, view);
      }
@@ -555,7 +555,7 @@ index a0e5b0ec..c52a0092 100644
  
      // --------------------------------------------------------------------------------------------
      // screen-space reflections pass
-@@ -1435,7 +1443,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1506,7 +1514,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                  .ssao = blackboard.get<FrameGraphTexture>("ssao"),
                  .ssr = ssrConfig.ssr,
                  .structure = structure,
@@ -565,7 +565,7 @@ index a0e5b0ec..c52a0092 100644
              },
              colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
  
-@@ -1447,7 +1456,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1518,7 +1527,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                          .ssao = blackboard.get<FrameGraphTexture>("ssao"),
                          .ssr = ssrConfig.ssr,
                  .structure = structure,
@@ -576,10 +576,10 @@ index a0e5b0ec..c52a0092 100644
               pass, firstRefractionCommand);
      }
 diff --git a/filament/src/details/View.cpp b/filament/src/details/View.cpp
-index 6eb34c54..aed17870 100644
+index 5f52e29c..efd962a9 100644
 --- a/filament/src/details/View.cpp
 +++ b/filament/src/details/View.cpp
-@@ -108,6 +108,7 @@ FView::FView(FEngine& engine)
+@@ -110,6 +110,7 @@ FView::FView(FEngine& engine)
            mSharedState(std::make_shared<SharedState>())
  {
      DriverApi& driver = engine.getDriverApi();
@@ -587,7 +587,7 @@ index 6eb34c54..aed17870 100644
  
      mIsHighPrecisionEvsmSupported = driver.isTextureFormatFilterable(TextureFormat::RGBA32F);
  
-@@ -242,6 +243,14 @@ void FView::terminate(FEngine& engine) {
+@@ -245,6 +246,14 @@ void FView::terminate(FEngine& engine) {
      failRayQueries();
  
      DriverApi& driver = engine.getDriverApi();
@@ -602,35 +602,36 @@ index 6eb34c54..aed17870 100644
      driver.destroyBufferObject(mLightUbh);
      driver.destroyBufferObject(mRenderableUbh);
      clearFrameHistory(engine);
-@@ -786,6 +795,11 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
+@@ -799,6 +808,11 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
      JobSystem::Job* froxelizeLightsJob = nullptr;
      JobSystem::Job* prepareVisibleLightsJob = nullptr;
-     size_t const lightCount = mSceneCache->lightData.size();
+     size_t const lightCount = cache.lightData.size();
 +    if (mRestirOptions.enabled && engine.isRayQuerySupported()) {
-+        prepareRestirLights(engine, mSceneCache->lightData);
++        prepareRestirLights(engine, cache.lightData);
 +    } else {
 +        mRestir.lightCount = 0;
 +    }
      if (lightCount > FScene::DIRECTIONAL_LIGHTS_COUNT) {
          // create and start the prepareVisibleLights job
          // note: this job updates LightData (non const)
-@@ -1567,6 +1581,7 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
-     FrameHistoryEntry& last = frameHistory.back();
+@@ -1593,6 +1607,8 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
      disposer.destroy(std::move(last.taa.color.handle));
+     disposer.destroy(std::move(last.taa.depth.handle));
      disposer.destroy(std::move(last.ssr.color.handle));
 +    disposer.destroy(std::move(last.restir.reservoir.handle));
++
+     // (last.motionVectors holds no resources)
  
-     // and then push the new history entry to the history stack
-     frameHistory.commit();
-@@ -1580,6 +1595,7 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
-         FrameHistoryEntry& last = frameHistory[i];
+     if (isMotionVectorsActive()) {
+@@ -1612,6 +1628,7 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
          disposer.destroy(std::move(last.taa.color.handle));
+         disposer.destroy(std::move(last.taa.depth.handle));
          disposer.destroy(std::move(last.ssr.color.handle));
 +        disposer.destroy(std::move(last.restir.reservoir.handle));
      }
+     resetMotionVectorsHistory();
  }
- 
-@@ -1642,6 +1658,70 @@ void FView::clearPickingQueries() noexcept {
+@@ -1675,6 +1692,70 @@ void FView::clearPickingQueries() noexcept {
      }
  }
  
@@ -702,10 +703,10 @@ index 6eb34c54..aed17870 100644
      options.feedback = clamp(options.feedback, 0.0f, 1.0f);
      options.filterWidth = std::max(0.2f, options.filterWidth); // below 0.2 causes issues
 diff --git a/filament/src/details/View.h b/filament/src/details/View.h
-index 3fcbfe05..fa1f3b18 100644
+index c3e1125d..d3872bab 100644
 --- a/filament/src/details/View.h
 +++ b/filament/src/details/View.h
-@@ -359,6 +359,36 @@ public:
+@@ -368,6 +368,36 @@ public:
  
      void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept;
  
@@ -742,7 +743,7 @@ index 3fcbfe05..fa1f3b18 100644
      const MultiSampleAntiAliasingOptions& getMultiSampleAntiAliasingOptions() const noexcept {
          return mMultiSampleAntiAliasingOptions;
      }
-@@ -721,6 +751,9 @@ private:
+@@ -803,6 +833,9 @@ private:
      FRayQuery* mActiveRayQueriesList = nullptr;
      mutable bool mRayTracedDirectionalShadows = false;
      mutable math::float3 mRayTracedLightDirection{ 0.0f, 1.0f, 0.0f };
@@ -1280,7 +1281,7 @@ index 8d59f5fb..31e8702e 100644
              world.xyz /= world.w;
              // offset the origin along the ray, scaled with the distance to the camera so that
 diff --git a/libs/filabridge/include/private/filament/EngineEnums.h b/libs/filabridge/include/private/filament/EngineEnums.h
-index 8df407fe..344dfd22 100644
+index 46ad6897..04de87ef 100644
 --- a/libs/filabridge/include/private/filament/EngineEnums.h
 +++ b/libs/filabridge/include/private/filament/EngineEnums.h
 @@ -58,7 +58,9 @@ enum class PerViewBindingPoints : uint8_t  {
@@ -1295,10 +1296,10 @@ index 8df407fe..344dfd22 100644
  
  enum class PerRenderableBindingPoints : uint8_t  {
 diff --git a/libs/filabridge/include/private/filament/UibStructs.h b/libs/filabridge/include/private/filament/UibStructs.h
-index 2c7d1031..76b6a3f6 100644
+index 49f36ade..55ea893b 100644
 --- a/libs/filabridge/include/private/filament/UibStructs.h
 +++ b/libs/filabridge/include/private/filament/UibStructs.h
-@@ -164,7 +164,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
+@@ -166,7 +166,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
      // bit 0-3: cascade count
      // bit 8-11: cascade has visible shadows
      int32_t cascades;
@@ -1308,7 +1309,7 @@ index 2c7d1031..76b6a3f6 100644
  
      // --------------------------------------------------------------------------------------------
 diff --git a/libs/filabridge/src/DescriptorSets.cpp b/libs/filabridge/src/DescriptorSets.cpp
-index 97d63bb1..5b7a6cc7 100644
+index 7712109f..134ef114 100644
 --- a/libs/filabridge/src/DescriptorSets.cpp
 +++ b/libs/filabridge/src/DescriptorSets.cpp
 @@ -85,6 +85,8 @@ static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perViewDes
@@ -1329,7 +1330,7 @@ index 97d63bb1..5b7a6cc7 100644
          { +PerViewBindingPoints::TLAS,          "sceneTlas"sv },
      }};
  
-@@ -251,7 +255,9 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
+@@ -253,7 +257,9 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
                                  [](auto const& entry) {
                                      return  entry.binding == PerViewBindingPoints::IBL_DFG_LUT ||
                                              entry.binding == PerViewBindingPoints::IBL_SPECULAR ||
@@ -1367,7 +1368,7 @@ index 77393866..5d8495c9 100644
              .build() };
  
 diff --git a/libs/filamat/src/shaders/UibGenerator.cpp b/libs/filamat/src/shaders/UibGenerator.cpp
-index 355b83a3..163ce17f 100644
+index 224d60bb..bdd072a1 100644
 --- a/libs/filamat/src/shaders/UibGenerator.cpp
 +++ b/libs/filamat/src/shaders/UibGenerator.cpp
 @@ -176,7 +176,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {

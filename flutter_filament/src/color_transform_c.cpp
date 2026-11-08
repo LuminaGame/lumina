@@ -57,7 +57,7 @@ FilLinearImage* filament_color_linear_to_srgb(const FilLinearImage* src) {
             for (uint32_t x = 0; x < w; ++x) {
                 for (uint32_t ch = 0; ch < c; ++ch) {
                     if (ch < 3) {
-                        pOut[ch] = image::linearTosRGB(pIn[ch]);
+                        pOut[ch] = image::linearToSRGB(pIn[ch]);
                     } else {
                         pOut[ch] = pIn[ch]; // alpha passes through
                     }
@@ -158,7 +158,7 @@ void filament_color_linear_to_srgb_bytes(
             uint8_t* row = out_bytes + y * bpr;
             for (uint32_t x = 0; x < w; ++x) {
                 for (uint32_t ch = 0; ch < c; ++ch) {
-                    float srgbVal = (ch < 3) ? image::linearTosRGB(pIn[ch]) : pIn[ch];
+                    float srgbVal = (ch < 3) ? image::linearToSRGB(pIn[ch]) : pIn[ch];
                     float clamped = std::clamp(srgbVal, 0.0f, 1.0f);
                     row[ch] = static_cast<uint8_t>(std::round(clamped * 255.0f));
                 }

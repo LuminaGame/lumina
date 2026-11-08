@@ -1,5 +1,5 @@
 diff --git a/filament/include/filament/Renderer.h b/filament/include/filament/Renderer.h
-index e608ad86..6ba025a7 100644
+index 2125a9a8..93db1ece 100644
 --- a/filament/include/filament/Renderer.h
 +++ b/filament/include/filament/Renderer.h
 @@ -130,6 +130,13 @@ public:
@@ -17,7 +17,7 @@ index e608ad86..6ba025a7 100644
       * Use FrameRateOptions to set the desired frame rate and control how quickly the system
       * reacts to GPU load changes.
 diff --git a/filament/include/filament/View.h b/filament/include/filament/View.h
-index 5fd295d3..b66d8f7f 100644
+index 0f1ac789..3b3c19f4 100644
 --- a/filament/include/filament/View.h
 +++ b/filament/include/filament/View.h
 @@ -52,6 +52,7 @@ class Scene;
@@ -85,7 +85,7 @@ index 5fd295d3..b66d8f7f 100644
  class UTILS_PUBLIC View : public FilamentAPI {
  public:
      using QualityLevel = filament::QualityLevel;
-@@ -606,6 +657,15 @@ public:
+@@ -641,6 +692,15 @@ public:
       */
      void resetExternalPostPassHistory() noexcept;
  
@@ -102,10 +102,10 @@ index 5fd295d3..b66d8f7f 100644
       * Enables the guide buffers (see GuideBufferOptions): normal + roughness, diffuse and
       * specular albedo written by the lit shaders in the colour pass, and the specular hit
 diff --git a/filament/src/FrameHistory.h b/filament/src/FrameHistory.h
-index efbc66aa..cf2f5bcd 100644
+index a37157e9..fc2029e2 100644
 --- a/filament/src/FrameHistory.h
 +++ b/filament/src/FrameHistory.h
-@@ -75,10 +75,13 @@ struct FrameHistoryEntry {
+@@ -84,10 +84,13 @@ struct FrameHistoryEntry {
          math::mat4 clipFromWorld;
          bool valid = false;
      } postPass;
@@ -121,10 +121,10 @@ index efbc66aa..cf2f5bcd 100644
  };
  
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index 5615e145..52d554a6 100644
+index c5220deb..99908f2e 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
-@@ -4543,6 +4543,176 @@ void PostProcessManager::exportGuideBuffer(FrameGraph& fg,
+@@ -4743,6 +4743,176 @@ void PostProcessManager::exportGuideBuffer(FrameGraph& fg,
              });
  }
  
@@ -302,10 +302,10 @@ index 5615e145..52d554a6 100644
          ExternalPostPassInputs const& external, FrameGraphId<FrameGraphTexture> const input,
          CameraInfo const& cameraInfo, FrameHistory& frameHistory) noexcept {
 diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
-index a41c5697..21f7c14a 100644
+index 759f4dc7..c2f890e2 100644
 --- a/filament/src/PostProcessManager.h
 +++ b/filament/src/PostProcessManager.h
-@@ -68,6 +68,7 @@ class FView;
+@@ -69,6 +69,7 @@ class FView;
  class FrameGraph;
  class ExternalUpscaler;
  class ExternalPostPass;
@@ -313,7 +313,7 @@ index a41c5697..21f7c14a 100644
  class RenderPass;
  class RenderPassBuilder;
  class ShadowMapManager;
-@@ -298,6 +299,16 @@ public:
+@@ -321,6 +322,16 @@ public:
              FrameGraphId<FrameGraphTexture> depth, FrameGraphId<FrameGraphTexture> normals,
              CameraInfo const& cameraInfo) noexcept;
  
@@ -344,10 +344,10 @@ index e0fe2d6a..a0b8ad3b 100644
 +
  } // namespace filament
 diff --git a/filament/src/View.cpp b/filament/src/View.cpp
-index ea2ee7f4..4a750ca0 100644
+index d918983c..629a41d4 100644
 --- a/filament/src/View.cpp
 +++ b/filament/src/View.cpp
-@@ -208,6 +208,14 @@ void View::resetExternalPostPassHistory() noexcept {
+@@ -199,6 +199,14 @@ void View::resetExternalPostPassHistory() noexcept {
      downcast(this)->resetExternalPostPassHistory();
  }
  
@@ -363,10 +363,10 @@ index ea2ee7f4..4a750ca0 100644
      downcast(this)->setGuideBufferOptions(options);
  }
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index 9be116f0..c17f758f 100644
+index d2f9af84..fc9c8932 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -571,14 +571,9 @@ void FRenderer::endFrame() {
+@@ -600,14 +600,9 @@ void FRenderer::endFrame() {
      // mSwapChain cannot be null by construction
      // With frame generation, this presents the interpolated frame.
      mSwapChain->commit(driver);
@@ -382,7 +382,7 @@ index 9be116f0..c17f758f 100644
          presentRenderedFrame(driver);
      }
  
-@@ -757,27 +752,48 @@ void FRenderer::render(FView const* view) {
+@@ -786,27 +781,48 @@ void FRenderer::render(FView const* view) {
      }
  }
  
@@ -444,7 +444,7 @@ index 9be116f0..c17f758f 100644
      // sleep() is coarse on some platforms, so we sleep most of the wait and yield the rest
      constexpr auto sleepMargin = std::chrono::milliseconds(2);
      if (deadline - std::chrono::steady_clock::now() > sleepMargin) {
-@@ -798,36 +814,58 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
+@@ -827,36 +843,58 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
      auto const& rendered = view.getFrameHistory().getPrevious().frameGeneration;
      assert_invariant(rendered.color.handle);
  
@@ -529,7 +529,7 @@ index 9be116f0..c17f758f 100644
  }
  
  void FRenderer::renderInternal(DriverApi& driver, FView const* view, bool const flush) {
-@@ -1932,6 +1970,33 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -2063,6 +2101,33 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
          mFrameGenerationView = &view;
      }
  
@@ -604,10 +604,10 @@ index 12f251ba..11f0f721 100644
      uint64_t mVsyncSteadyClockTimeNano = 0;
      std::chrono::steady_clock::time_point mRenderingDeadline{};
 diff --git a/filament/src/details/View.cpp b/filament/src/details/View.cpp
-index 334fd623..b665b0af 100644
+index 9f6f2e6e..83ded267 100644
 --- a/filament/src/details/View.cpp
 +++ b/filament/src/details/View.cpp
-@@ -1594,6 +1594,10 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
+@@ -1620,6 +1620,10 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
      disposer.destroy(std::move(last.restir.reservoir.handle));
      destroyFsr3History(disposer, last.fsr3);
      disposer.destroy(std::move(last.frameGeneration.color.handle));
@@ -616,9 +616,9 @@ index 334fd623..b665b0af 100644
 +    }
 +    last.frameGeneration.generatedCount = 0;
  
-     // and then push the new history entry to the history stack
-     frameHistory.commit();
-@@ -1610,6 +1614,10 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
+     // (last.motionVectors holds no resources)
+ 
+@@ -1643,6 +1647,10 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
          disposer.destroy(std::move(last.restir.reservoir.handle));
          destroyFsr3History(disposer, last.fsr3);
          disposer.destroy(std::move(last.frameGeneration.color.handle));
@@ -627,13 +627,13 @@ index 334fd623..b665b0af 100644
 +        }
 +        last.frameGeneration.generatedCount = 0;
      }
+     resetMotionVectorsHistory();
  }
- 
 diff --git a/filament/src/details/View.h b/filament/src/details/View.h
-index b42afeb2..730921ce 100644
+index 845782f6..66937342 100644
 --- a/filament/src/details/View.h
 +++ b/filament/src/details/View.h
-@@ -355,7 +355,20 @@ public:
+@@ -364,7 +364,20 @@ public:
  
      void setExternalPostPass(ExternalPostPass* pass) noexcept { mExternalPostPass = pass; }
      ExternalPostPass* getExternalPostPass() const noexcept { return mExternalPostPass; }
@@ -655,7 +655,7 @@ index b42afeb2..730921ce 100644
  
      // guide buffers (View::setGuideBufferOptions)
      void setGuideBufferOptions(GuideBufferOptions const options) noexcept {
-@@ -748,6 +761,8 @@ private:
+@@ -825,6 +838,8 @@ private:
      ExternalUpscaler* mExternalUpscaler = nullptr;
      ExternalPostPass* mExternalPostPass = nullptr;
      bool mExternalPostPassReset = false;

@@ -1,32 +1,8 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Can Us <me@canus.dev>
-Date: Sun, 11 Oct 2026 19:00:00 +0300
-Subject: [PATCH] Android builds without the ray query materials, from a
- Windows host
-
-Two things kept the patched tree from building for Android:
-
-- The ray query materials (0007, 0008, 0014, 0019) need GL_EXT_ray_query,
-  which matc only accepts with the desktop shader model; an Android build
-  compiles materials with `-p mobile` and failed on rtShadow, rayVisibility,
-  restirCandidates, restirSpatial, restirShade and rtSpecularHitDistance.
-  An Android build now leaves them out (postPassMotion, which traces no
-  rays, stays), rt.cpp guards the two material lists separately, and
-  FEngine::isRayQuerySupported() is false when the build has no ray query
-  materials, so ray-traced shadows, ReSTIR and traceRay report unsupported
-  even on a device whose driver offers VK_KHR_ray_query. Desktop builds
-  are unchanged.
-
-- combine_static_libs runs build/linux/combine-static-libs.sh, which a
-  Windows host cross-compiling for Android cannot execute. On such a host
-  it now combines the archives with the archiver's MRI script mode
-  (build/windows/combine-static-libs.cmake).
-
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 9f1ffac3..c9e5af14 100644
+index f0c34661..7e33d93a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -779,6 +779,7 @@ function(list_licenses OUTPUT MODULES)
+@@ -809,6 +809,7 @@ function(list_licenses OUTPUT MODULES)
  endfunction()
  
  set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/linux/combine-static-libs.sh")
@@ -34,7 +10,7 @@ index 9f1ffac3..c9e5af14 100644
  
  # Add a custom command to TARGET that combines the static libraries in DEPS into a single archive.
  function(combine_static_libs TARGET OUTPUT DEPS)
-@@ -801,6 +802,15 @@ function(combine_static_libs TARGET OUTPUT DEPS)
+@@ -831,6 +832,15 @@ function(combine_static_libs TARGET OUTPUT DEPS)
              COMMENT "Combining ${target} dependencies into single shared library"
              VERBATIM
          )
@@ -88,10 +64,10 @@ index 00000000..b89ea9b5
 +    message(FATAL_ERROR "combining ${archives} into ${OUTPUT} failed (${rc})")
 +endif()
 diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
-index 1367c774..72c8b3b6 100644
+index 88216a29..ea74d3b6 100644
 --- a/filament/CMakeLists.txt
 +++ b/filament/CMakeLists.txt
-@@ -335,20 +335,26 @@ if (NOT FILAMENT_DISABLE_GTAO)
+@@ -346,20 +346,26 @@ if (NOT FILAMENT_DISABLE_GTAO)
  endif()
  
  # Ray query materials compile for Vulkan only (GL_EXT_ray_query); they are loaded only when
@@ -130,7 +106,7 @@ index 1367c774..72c8b3b6 100644
  
  set(MATERIAL_MULTIVIEW_SRCS
 diff --git a/filament/src/details/Engine.h b/filament/src/details/Engine.h
-index eadfb7c7..38833b93 100644
+index e232adbb..3d5f54e8 100644
 --- a/filament/src/details/Engine.h
 +++ b/filament/src/details/Engine.h
 @@ -26,6 +26,7 @@
@@ -141,8 +117,8 @@ index eadfb7c7..38833b93 100644
  #include "UboManager.h"
  
  #include "components/CameraManager.h"
-@@ -249,8 +250,10 @@ public:
-         return getDriver().isStereoSupported();
+@@ -262,8 +263,10 @@ public:
+         return mIsRG16FColorRenderTargetSupported;
      }
  
 +    // A build without the ray query materials (Android) cannot trace rays even on a device

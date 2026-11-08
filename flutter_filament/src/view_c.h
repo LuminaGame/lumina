@@ -209,10 +209,17 @@ typedef struct filament_temporal_anti_aliasing_options {
     float varianceGamma;
     bool preventFlickering;
     bool historyReprojection;
-    // Render per-pixel motion vectors in the structure pass (full resolution) and reproject
-    // the TAA history with them. See filament_view_set_motion_vector_texture.
-    bool motionVectors;
-    // filament_taa_algorithm: 0 Filament's TAA, 1 the FSR3 upscaler (implies motionVectors;
+    bool motionAdaptiveHistory;
+    float motionDeltaThreshold;
+    float minBoxStrength;
+    float minAlphaStrength;
+    float skyDepthThreshold;
+    float motionHoldFrames;
+    bool depthDisocclusion;
+    float disocclusionDepthThreshold;
+    bool disocclusionHistoryNeighborhood;
+    bool exactLanczosSupport;
+    // filament_taa_algorithm: 0 Filament's TAA, 1 the FSR3 upscaler (implies the motion vectors;
     // only upscaling, sharpness, lodBias and jitterPattern apply; needs feature level 1, no
     // stereo; an external upscaler takes precedence).
     uint8_t algorithm;
@@ -421,7 +428,12 @@ typedef struct filament_rt_attachment_t {
 // Whether this engine can render motion vectors: a real GPU backend at feature level 1 or
 // higher with RG16F colour attachments. False on the noop backend.
 FFI_PLUGIN_EXPORT bool filament_view_motion_vectors_supported(void* engine);
-// Exports the motion vectors of a view whose TAA options have motionVectors on into
+// View::setMotionVectorsOptions: renders the view's motion vectors (camera, transforms,
+// instances, and the pose of skinned and morphed renderables), read by TAA, the upscalers and
+// frame generators. Needs post-processing, a mono view and motion vector support.
+FFI_PLUGIN_EXPORT void filament_view_set_motion_vectors_options(void* view, bool enabled);
+FFI_PLUGIN_EXPORT bool filament_view_get_motion_vectors_options(void* view);
+// Exports the motion vectors of a view whose motion vectors are on into
 // `texture` (a two-or-more-channel float colour texture, colour attachment + sampleable,
 // exactly the size of the view's render target; texels of screen motion since the previous
 // frame, x right, y up). NULL stops the export. The texture must outlive its use.

@@ -6,24 +6,26 @@ import 'package:flutter_filament/src/ffi_package_platform.dart';
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/enums.dart';
 import 'package:flutter_filament/src/filament_bindings.dart' as c;
+import 'package:flutter_filament/src/pixel_read.dart';
 import 'package:flutter_filament/src/render_target.dart';
 import 'package:flutter_filament/src/renderer.dart';
 import 'package:flutter_filament/src/texture.dart';
 import 'package:flutter_filament/src/view.dart';
+import 'package:flutter_filament/src/view_options.dart';
 
 /// The motion vectors of a [FilamentView] as a readable buffer: an RGBA16F
-/// texture the view exports into while
-/// [TemporalAntiAliasingOptions.motionVectors] is on, the render target that
+/// texture the view exports into while its [MotionVectorsOptions] are on, the
+/// render target that
 /// reads it back, and the readback itself.
 ///
 /// Each texel holds the screen-space offset of the surface seen there since
 /// the previous frame, in texels of the view's render resolution, x to the
-/// right and y up; the background is zero. The texture must have exactly the
+/// right and y up; the background moves with the camera. The texture must have exactly the
 /// size of the view's render target (its viewport), or the view ignores it.
 ///
 /// ```dart
 /// final motion = MotionVectorBuffer.attach(engine: engine, view: view, width: 256, height: 256);
-/// view.temporalAntiAliasingOptions = view.temporalAntiAliasingOptions.copyWith(enabled: true, motionVectors: true);
+/// view.motionVectorsOptions = const MotionVectorsOptions(enabled: true);
 /// // render frames...
 /// final velocity = await motion.read(renderer);  // width * height * 2 floats
 /// motion.dispose();
@@ -79,6 +81,9 @@ class MotionVectorBuffer {
     final halves = width * height * channels;
     final buffer = calloc<ffi.Uint16>(halves);
     try {
+      // Vulkan copies into the buffer on a worker thread after the GPU, so
+      // wait for Filament to hand the buffer back rather than for a fence.
+      final (callback, user, token) = FilamentPixelReads.begin();
       c.filament_renderer_read_pixels_render_target(
         renderer.nativePointer,
         renderTarget.nativePointer,
@@ -90,10 +95,10 @@ class MotionVectorBuffer {
         PixelDataType.half.value,
         buffer.cast(),
         halves * 2,
-        ffi.nullptr,
-        ffi.nullptr,
+        callback,
+        user,
       );
-      engine.flushAndWait();
+      await FilamentPixelReads.wait(engine, token);
       final rgba = buffer.asTypedList(halves);
       final out = Float32List(width * height * 2);
       for (var i = 0, o = 0; i < halves; i += channels, o += 2) {
@@ -157,5 +162,41 @@ class MotionVectorBuffer {
 
   void _checkDisposed() {
     if (_disposed) throw StateError('MotionVectorBuffer has been disposed');
+  }
+}
+
+// The Dart wrapper of the texture a view exports its motion vectors into.
+final Expando<FilamentTexture> _exportedMotionTextures = Expando<FilamentTexture>('motionVectorTexture');
+
+/// A view's motion vectors: [MotionVectorsOptions] and their export.
+extension FilamentViewMotionVectors on FilamentView {
+  /// The view's motion vectors (see [MotionVectorsOptions]). Default off;
+  /// [TaaAlgorithm.fsr3] implies them.
+  MotionVectorsOptions get motionVectorsOptions {
+    return MotionVectorsOptions(enabled: c.filament_view_get_motion_vectors_options(nativePointer));
+  }
+
+  set motionVectorsOptions(MotionVectorsOptions options) {
+    c.filament_view_set_motion_vectors_options(nativePointer, options.enabled);
+  }
+
+  /// The texture the motion vectors are exported into while
+  /// [motionVectorsOptions] is on (or FSR3 runs), or null.
+  ///
+  /// The texture must be a two-or-more-channel float colour texture created
+  /// with [TextureUsage.colorAttachment] and [TextureUsage.sampleable], exactly
+  /// the size of the view's render target (a texture of another size is
+  /// ignored). Each texel holds the screen-space offset of the surface since
+  /// the previous frame, in texels, x to the right and y up; the background
+  /// moves with the camera. [MotionVectorBuffer] wraps the texture, its render target and the
+  /// readback. The texture must outlive its use by the view.
+  FilamentTexture? get motionVectorTexture {
+    final ptr = c.filament_view_get_motion_vector_texture(nativePointer);
+    return ptr == ffi.nullptr ? null : _exportedMotionTextures[this];
+  }
+
+  set motionVectorTexture(FilamentTexture? texture) {
+    _exportedMotionTextures[this] = texture;
+    c.filament_view_set_motion_vector_texture(nativePointer, texture?.nativePointer ?? ffi.nullptr);
   }
 }

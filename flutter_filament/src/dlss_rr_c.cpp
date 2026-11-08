@@ -124,6 +124,7 @@ public:
         mTimestampPeriod = props.limits.timestampPeriod;
         mSavedGuides = view->getGuideBufferOptions();
         mSavedTaa = view->getTemporalAntiAliasingOptions();
+        mSavedMotionVectors = view->getMotionVectorsOptions();
         mSavedDsr = view->getDynamicResolutionOptions();
     }
 
@@ -133,8 +134,8 @@ public:
         mView->setGuideBufferOptions(guides);
         TemporalAntiAliasingOptions taa = mView->getTemporalAntiAliasingOptions();
         taa.enabled = true;
-        taa.motionVectors = true;
         mView->setTemporalAntiAliasingOptions(taa);
+        mView->setMotionVectorsOptions({ .enabled = true });
         DynamicResolutionOptions dsr = mView->getDynamicResolutionOptions();
         dsr.enabled = true;
         dsr.upscaler = Upscaler::EXTERNAL;
@@ -154,6 +155,7 @@ public:
         }
         mView->setGuideBufferOptions(mSavedGuides);
         mView->setTemporalAntiAliasingOptions(mSavedTaa);
+        mView->setMotionVectorsOptions(mSavedMotionVectors);
         DynamicResolutionOptions dsr = mSavedDsr;
         if (dsr.upscaler == Upscaler::EXTERNAL) {
             dsr.upscaler = Upscaler::BUILTIN;
@@ -374,6 +376,7 @@ private:
     OptimalSettings mOptimal;
     GuideBufferOptions mSavedGuides;
     TemporalAntiAliasingOptions mSavedTaa;
+    MotionVectorsOptions mSavedMotionVectors;
     DynamicResolutionOptions mSavedDsr;
     NVSDK_NGX_Handle* mFeature = nullptr;
     VkQueryPool mQueryPool = VK_NULL_HANDLE;

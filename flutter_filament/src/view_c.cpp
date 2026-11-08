@@ -286,6 +286,14 @@ bool filament_view_motion_vectors_supported(void* engine) {
     FFI_CATCH(false)
 }
 
+void filament_view_set_motion_vectors_options(void* view, bool enabled) {
+    FFI_TRY toView(view)->setMotionVectorsOptions({ .enabled = enabled }); FFI_CATCH()
+}
+
+bool filament_view_get_motion_vectors_options(void* view) {
+    FFI_TRY return toView(view)->getMotionVectorsOptions().enabled; FFI_CATCH(false)
+}
+
 void filament_view_set_motion_vector_texture(void* view, void* texture) {
     FFI_TRY toView(view)->setMotionVectorTexture(reinterpret_cast<Texture const*>(texture)); FFI_CATCH()
 }

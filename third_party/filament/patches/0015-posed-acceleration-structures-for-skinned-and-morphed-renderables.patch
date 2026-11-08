@@ -1,28 +1,5 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Can Us <me@canus.dev>
-Date: Sat, 10 Oct 2026 14:00:00 +0300
-Subject: [PATCH] Trace skinned and morphed renderables in their current pose
-
-The acceleration structures of 0007 read the vertex buffers, so skinned and
-morphed renderables were traced in their bind pose: ray-traced shadows and
-ray queries ignored the animation.
-
-A skinned or morphed primitive now gets its own deformable bottom-level
-structure, built from a posed copy of its positions. The new driver command
-deformAccelerationStructure() records a Vulkan compute pass
-(VulkanBlasDeform.comp, precompiled to SPIR-V in VulkanBlasDeformSpirv.h)
-that applies the morph target deltas and the four-bone palette exactly as the
-vertex shaders do, reading every input by buffer device address (the bone
-palette and morph weight uniform buffers get SHADER_DEVICE_ADDRESS usage when
-ray queries are on) and the morph target texture through one descriptor; then
-it refits the structure (a full build every 32 refits). FScene re-poses a
-renderable only in frames its palette or weights changed (a pose version in
-FRenderableManager; shared SkinningBuffers every frame) and reports
-Scene::getDeformedBlasCount() and the GPU time of the posing passes,
-Scene::getLastBlasDeformTimeNanos(). The other backends ignore the command.
----
 diff --git a/filament/backend/CMakeLists.txt b/filament/backend/CMakeLists.txt
-index 6c3877e0..9b223960 100644
+index e8701da6..c334eda0 100644
 --- a/filament/backend/CMakeLists.txt
 +++ b/filament/backend/CMakeLists.txt
 @@ -209,6 +209,9 @@ if (FILAMENT_SUPPORTS_VULKAN)
@@ -101,10 +78,10 @@ index f572bd9f..76c94944 100644
  
  #endif // TNT_FILAMENT_BACKEND_ACCELERATIONSTRUCTURE_H
 diff --git a/filament/backend/include/private/backend/DriverAPI.inc b/filament/backend/include/private/backend/DriverAPI.inc
-index 62c9bce2..c90ee378 100644
+index cbc15bc0..582d4924 100644
 --- a/filament/backend/include/private/backend/DriverAPI.inc
 +++ b/filament/backend/include/private/backend/DriverAPI.inc
-@@ -708,6 +708,13 @@ DECL_DRIVER_API_N(buildAccelerationStructure,
+@@ -716,6 +716,13 @@ DECL_DRIVER_API_N(buildAccelerationStructure,
          backend::AccelerationStructureHandle, ash,
          backend::AccelerationStructureBuildMode, mode)
  
@@ -119,10 +96,10 @@ index 62c9bce2..c90ee378 100644
  DECL_DRIVER_API_N(updateDescriptorSetAccelerationStructure,
          backend::DescriptorSetHandle, dsh,
 diff --git a/filament/backend/src/metal/MetalDriver.mm b/filament/backend/src/metal/MetalDriver.mm
-index 235c8c2c..a4dd616a 100644
+index eeedac9f..62629221 100644
 --- a/filament/backend/src/metal/MetalDriver.mm
 +++ b/filament/backend/src/metal/MetalDriver.mm
-@@ -2853,6 +2853,10 @@ void MetalDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
+@@ -2918,6 +2918,10 @@ void MetalDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
          AccelerationStructureBuildMode) {
  }
  
@@ -134,10 +111,10 @@ index 235c8c2c..a4dd616a 100644
          descriptor_binding_t, Handle<HwAccelerationStructure>) {
  }
 diff --git a/filament/backend/src/noop/NoopDriver.cpp b/filament/backend/src/noop/NoopDriver.cpp
-index 3b52d96e..ae1836be 100644
+index 3b427858..76d3c8bc 100644
 --- a/filament/backend/src/noop/NoopDriver.cpp
 +++ b/filament/backend/src/noop/NoopDriver.cpp
-@@ -514,6 +514,10 @@ void NoopDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
+@@ -535,6 +535,10 @@ void NoopDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
          AccelerationStructureBuildMode) {
  }
  
@@ -149,10 +126,10 @@ index 3b52d96e..ae1836be 100644
          descriptor_binding_t, Handle<HwAccelerationStructure>) {
  }
 diff --git a/filament/backend/src/opengl/OpenGLDriver.cpp b/filament/backend/src/opengl/OpenGLDriver.cpp
-index 2249c274..e50e4e67 100644
+index ce35358c..d7aa88a9 100644
 --- a/filament/backend/src/opengl/OpenGLDriver.cpp
 +++ b/filament/backend/src/opengl/OpenGLDriver.cpp
-@@ -5297,6 +5297,10 @@ void OpenGLDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
+@@ -5318,6 +5318,10 @@ void OpenGLDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
          AccelerationStructureBuildMode) {
  }
  
@@ -1724,10 +1701,10 @@ index f0578919..8ba8401e 100644
          .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
          .size = numBytes,
 diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
-index 25526087..1c62f34a 100644
+index 8b0770f7..f3b81662 100644
 --- a/filament/backend/src/vulkan/VulkanDriver.cpp
 +++ b/filament/backend/src/vulkan/VulkanDriver.cpp
-@@ -396,6 +396,7 @@ void VulkanDriver::terminate() {
+@@ -397,6 +397,7 @@ void VulkanDriver::terminate() {
      mQueryManager.terminate();
  
      mBlitter.terminate();
@@ -1735,7 +1712,7 @@ index 25526087..1c62f34a 100644
      mReadPixels.terminate();
  
      // Allow the stage pool to clean up.
-@@ -873,6 +874,38 @@ void VulkanDriver::buildAccelerationStructure(Handle<HwAccelerationStructure> as
+@@ -880,6 +881,38 @@ void VulkanDriver::buildAccelerationStructure(Handle<HwAccelerationStructure> as
      as->build(commands, mode);
  }
  
@@ -1795,10 +1772,10 @@ index 8b513e4e..4a374d97 100644
      VulkanDescriptorSetLayoutCache mDescriptorSetLayoutCache;
      VulkanDescriptorSetCache mDescriptorSetCache;
 diff --git a/filament/backend/src/webgpu/WebGPUDriver.cpp b/filament/backend/src/webgpu/WebGPUDriver.cpp
-index 4cbb0bf5..03267b90 100644
+index edcfaf38..b058d5e9 100644
 --- a/filament/backend/src/webgpu/WebGPUDriver.cpp
 +++ b/filament/backend/src/webgpu/WebGPUDriver.cpp
-@@ -2476,6 +2476,10 @@ void WebGPUDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
+@@ -2683,6 +2683,10 @@ void WebGPUDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
          AccelerationStructureBuildMode) {
  }
  
@@ -1810,7 +1787,7 @@ index 4cbb0bf5..03267b90 100644
          descriptor_binding_t, Handle<HwAccelerationStructure>) {
  }
 diff --git a/filament/include/filament/Scene.h b/filament/include/filament/Scene.h
-index 235de770..cf065118 100644
+index 37900e3b..998fc2ab 100644
 --- a/filament/include/filament/Scene.h
 +++ b/filament/include/filament/Scene.h
 @@ -108,6 +108,21 @@ public:
@@ -1855,10 +1832,10 @@ index b8012208..1c0978e8 100644
      downcast(this)->setIndirectLight(downcast(ibl));
  }
 diff --git a/filament/src/components/RenderableManager.cpp b/filament/src/components/RenderableManager.cpp
-index b054b7d7..73b764e8 100644
+index 669ad6ff..83ced217 100644
 --- a/filament/src/components/RenderableManager.cpp
 +++ b/filament/src/components/RenderableManager.cpp
-@@ -1112,6 +1112,7 @@ void FRenderableManager::setBones(Instance const ci,
+@@ -1113,6 +1113,7 @@ void FRenderableManager::setBones(Instance const ci,
          if (bones.handle) {
              boneCount = std::min(boneCount, bones.count - offset);
              keepPreviousBones(bones);
@@ -1866,7 +1843,7 @@ index b054b7d7..73b764e8 100644
              if (bones.shadow) {
                  for (size_t i = 0; i < boneCount; i++) {
                      mat4f transform(transforms[i].unitQuaternion);
-@@ -1146,6 +1147,7 @@ void FRenderableManager::setBones(Instance const ci,
+@@ -1147,6 +1148,7 @@ void FRenderableManager::setBones(Instance const ci,
          if (bones.handle) {
              boneCount = std::min(boneCount, bones.count - offset);
              keepPreviousBones(bones);
@@ -1874,15 +1851,15 @@ index b054b7d7..73b764e8 100644
              if (bones.shadow) {
                  for (size_t i = 0; i < boneCount; i++) {
                      bones.shadow[offset + i] = FSkinningBuffer::makeBone(transforms[i]);
-@@ -1184,6 +1186,7 @@ void FRenderableManager::setSkinningBuffer(Instance const ci,
-     bones.handle = skinningBuffer->getHwHandle();
-     bones.count = uint16_t(count);
-     bones.offset = uint16_t(offset);
-+    bones.version++;
- }
- 
- static void updateMorphWeights(FEngine& engine, Handle<HwBufferObject> handle,
-@@ -1212,6 +1215,7 @@ void FRenderableManager::setMorphWeights(Instance const instance, float const* w
+@@ -1188,6 +1190,7 @@ void FRenderableManager::setSkinningBuffer(Instance const ci,
+         bones.handle = handle;
+         bones.count = uint16_t(count);
+         bones.offset = uint16_t(offset);
++        bones.version++;
+         // SKINNING_BUFFER is cached by the Views' scene caches
+         mManager.notifyChange(getEntity(ci));
+     }
+@@ -1219,6 +1222,7 @@ void FRenderableManager::setMorphWeights(Instance const instance, float const* w
  
          MorphWeights& morphWeights = mManager[instance].morphWeights;
          if (morphWeights.handle) {
@@ -1891,10 +1868,10 @@ index b054b7d7..73b764e8 100644
              if (morphWeights.prevHandle && morphWeights.shadow && morphWeights.prevFrame != mMotionFrame) {
                  auto& driver = mEngine.getDriverApi();
 diff --git a/filament/src/components/RenderableManager.h b/filament/src/components/RenderableManager.h
-index 440a8106..9c176503 100644
+index 468d2f31..f499aed1 100644
 --- a/filament/src/components/RenderableManager.h
 +++ b/filament/src/components/RenderableManager.h
-@@ -235,6 +235,12 @@ public:
+@@ -259,6 +259,12 @@ public:
      inline SkinningBindingInfo getSkinningBufferInfo(Instance instance) const noexcept;
      inline uint32_t getBoneCount(Instance instance) const noexcept;
  
@@ -1907,7 +1884,7 @@ index 440a8106..9c176503 100644
      struct MorphingBindingInfo {
          backend::Handle<backend::HwBufferObject> handle;
          uint32_t count;
-@@ -307,6 +313,8 @@ private:
+@@ -331,6 +337,8 @@ private:
          uint32_t prevFrame = 0;
          bool prevStale = false;         // prevHandle holds an older pose than handle
          PerRenderableBoneUib::BoneData* shadow = nullptr;
@@ -1916,7 +1893,7 @@ index 440a8106..9c176503 100644
      };
  
      struct MorphWeights {
-@@ -317,6 +325,7 @@ private:
+@@ -341,6 +349,7 @@ private:
          uint32_t prevFrame = 0;
          bool prevStale = false;
          math::float4* shadow = nullptr;
@@ -1924,7 +1901,7 @@ index 440a8106..9c176503 100644
      };
  
      enum {
-@@ -611,6 +620,17 @@ inline uint32_t FRenderableManager::getBoneCount(Instance const instance) const
+@@ -635,6 +644,17 @@ inline uint32_t FRenderableManager::getBoneCount(Instance const instance) const
      return bones.count;
  }
  
@@ -1943,10 +1920,10 @@ index 440a8106..9c176503 100644
  FRenderableManager::getMorphingBufferInfo(Instance const instance) const noexcept {
      MorphWeights const& morphWeights = mManager[instance].morphWeights;
 diff --git a/filament/src/details/Scene.cpp b/filament/src/details/Scene.cpp
-index 8f74de8c..c8363d41 100644
+index 1187a747..79e45bf8 100644
 --- a/filament/src/details/Scene.cpp
 +++ b/filament/src/details/Scene.cpp
-@@ -27,6 +27,7 @@
+@@ -29,6 +29,7 @@
  #include "details/Skybox.h"
  #include "details/View.h"
  #include "details/IndexBuffer.h"
@@ -1954,7 +1931,7 @@ index 8f74de8c..c8363d41 100644
  #include "details/VertexBuffer.h"
  #include "RenderPrimitive.h"
  
-@@ -518,6 +519,14 @@ void FScene::terminate(FEngine& engine) {
+@@ -771,6 +772,14 @@ void FScene::terminate(FEngine& engine) {
          driver.destroyAccelerationStructure(entry.second.handle);
      }
      mRayTracing.blas.clear();
@@ -1969,7 +1946,7 @@ index 8f74de8c..c8363d41 100644
      if (mRayTracing.tlas) {
          driver.destroyAccelerationStructure(mRayTracing.tlas);
          mRayTracing.tlas = {};
-@@ -551,6 +560,16 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
+@@ -804,6 +813,16 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
              rt.timerPending = false;
          }
      }
@@ -1986,7 +1963,7 @@ index 8f74de8c..c8363d41 100644
  
      FRenderableManager const& rcm = engine.getRenderableManager();
      FTransformManager const& tcm = engine.getTransformManager();
-@@ -558,6 +577,11 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
+@@ -811,6 +830,11 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
      std::vector<AccelerationStructureInstance> instances;
      rt.entities.clear();
      uint32_t renderableCount = 0;
@@ -1998,7 +1975,7 @@ index 8f74de8c..c8363d41 100644
  
      // every renderable of the scene, not only the ones visible to a view: shadows and ray
      // queries see what is off-screen too
-@@ -571,7 +595,23 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
+@@ -824,7 +848,23 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
          math::mat4f const worldTransform = ti ? tcm.getWorldTransform(ti) : math::mat4f{};
          auto const primitives = rcm.getRenderPrimitives(ri, 0);
          bool contributed = false;
@@ -2022,7 +1999,7 @@ index 8f74de8c..c8363d41 100644
              if (primitive.getPrimitiveType() != PrimitiveType::TRIANGLES) {
                  continue;
              }
-@@ -587,6 +627,108 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
+@@ -840,6 +880,108 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
                  continue; // the buffer object is not uploaded yet
              }
              FIndexBuffer const* const ib = primitive.getIndexBuffer();
@@ -2131,7 +2108,7 @@ index 8f74de8c..c8363d41 100644
              // one bottom-level structure per geometry, shared by the renderables that draw it
              uint64_t key = uint64_t(boh.getId());
              key = key * 1000003u ^ uint64_t(ib ? ib->getHwHandle().getId() : 0u);
-@@ -637,13 +779,21 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
+@@ -890,13 +1032,21 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
      });
      rt.renderableCount = renderableCount;
  
@@ -2160,10 +2137,10 @@ index 8f74de8c..c8363d41 100644
      }
  
 diff --git a/filament/src/details/Scene.h b/filament/src/details/Scene.h
-index 70ecc86f..6f3088b8 100644
+index 42cf8a62..abdd244b 100644
 --- a/filament/src/details/Scene.h
 +++ b/filament/src/details/Scene.h
-@@ -66,6 +66,8 @@ public:
+@@ -439,6 +439,8 @@ public:
      bool isRayTracingEnabled() const noexcept { return mRayTracing.enabled; }
      uint32_t getTlasInstanceCount() const noexcept { return mRayTracing.renderableCount; }
      uint64_t getLastTlasBuildTimeNanos() const noexcept { return mRayTracing.lastBuildNanos; }
@@ -2172,7 +2149,7 @@ index 70ecc86f..6f3088b8 100644
      backend::Handle<backend::HwAccelerationStructure> getTlas() const noexcept { return mRayTracing.tlas; }
      // the entity behind an instance custom index a ray query returned
      utils::Entity getRayTracedEntity(uint32_t customIndex) const noexcept;
-@@ -265,6 +267,10 @@ private:
+@@ -520,6 +522,10 @@ private:
          struct Blas {
              backend::Handle<backend::HwAccelerationStructure> handle;
              uint32_t lastUsedFrame = 0;
@@ -2183,7 +2160,7 @@ index 70ecc86f..6f3088b8 100644
          };
          bool enabled = false;
          backend::Handle<backend::HwAccelerationStructure> tlas;
-@@ -275,6 +281,12 @@ private:
+@@ -530,6 +536,12 @@ private:
          bool timerPending = false;
          uint64_t lastBuildNanos = 0;
          std::unordered_map<uint64_t, Blas> blas;    // keyed by primitive geometry identity

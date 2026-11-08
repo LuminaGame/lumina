@@ -427,7 +427,7 @@ Interpolation mode for attributes in fragment shader.
 
 Bitmask constants for user variant filtering.
 
-Filament 1.78'den beri yönlü ve dinamik aydınlatma specialization constant'tır: `directionalLighting` ve `dynamicLighting` yalnızca çalışma zamanında `Material.compile`'ın kurduğu pipeline'ları budar. Bir `.mat` `variantFilter` içinde matc `directionalLighting`'i yok sayar, `dynamicLighting`'i reddeder.
+Filament 1.78'den beri yönlü ve dinamik aydınlatma specialization constant'tır: `directionalLighting` ve `dynamicLighting` yalnızca çalışma zamanında `Material.compile`'ın kurduğu pipeline'ları budar. Bir `.mat` `variantFilter` içinde matc `directionalLighting`'i yok sayar, `dynamicLighting`'i reddeder. 1.80'den beri `motionVectors` (`0x100`) hareket vektörü derinlik variant'larını (`MotionVectorsOptions`) atar; `all` `0x1FF`'dir.
 
 #### `class FilamentMaterialBuilder`
 
