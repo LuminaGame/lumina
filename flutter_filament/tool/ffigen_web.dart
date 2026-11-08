@@ -325,7 +325,7 @@ class _Transformer {
     }
 
     // Imports: the web ffi layer instead of dart:ffi.
-    out = out.replaceFirst(RegExp(r"import '(?:dart:ffi|(?:\.\./)*ffi_platform\.dart)' as ffi;"), [
+    out = out.replaceFirst(RegExp(r"import '(?:dart:ffi|(?:\.\./)*ffi_platform\.dart|package:flutter_filament/src/ffi_platform\.dart)' as ffi;"), [
       "import 'dart:js_interop';",
       if (!out.contains("import 'dart:typed_data';")) "import 'dart:typed_data';",
       '',
