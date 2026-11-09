@@ -115,7 +115,7 @@ index cfdbd923..52c62584 100644
                                      : float2{ 1.0f };
      if (cameraMotion) {
          // The padding and guard band transform of a render (ts, see FRenderer::renderJob()), as a
-@@ -4336,6 +4331,30 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugDisplayMotionVectors(Fr
+@@ -4336,6 +4331,29 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::debugDisplayMotionVectors(Fr
          reprojection = mat4f{ R * previous.projection * inverse(current.projection) } *
                  normalizedToClip;
      }
@@ -133,8 +133,7 @@ index cfdbd923..52c62584 100644
 +    }
 +
 +    auto const& previous = frameHistory.getPrevious().motionVectors;
-+    auto const& current = frameHistory.getCurrent().motionVectors;
-+    assert_invariant(current.valid);
++    assert_invariant(frameHistory.getCurrent().motionVectors.valid);
 +
 +    // Without a previous render, the motion vectors are all zero (objectMotionVectors is the
 +    // imported zero texture).
